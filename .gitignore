@@ -1,8 +1,10 @@
-build/
-__pycache__/
-/src/*/*.so
-/src/*/_*.c
+__pycache__
 /.cache/
-/.pytest_cache/
 /venv/
+/build/
+/.pytest_cache/
+/MANIFEST
+/dist/
+/src/*/_*.c
+/src/*/*.so
 /src/*.egg-info/
