@@ -4,6 +4,7 @@ from __future__ import print_function, division, absolute_import
 # TODO remove the __future__ imports and set language_level=3
 from .util import _shorten, FormatError, SequenceReader
 
+from libc.string cimport strncmp
 cimport cython
 
 # It would be nice to be able to have the first parameter be a
@@ -105,12 +106,9 @@ def two_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssize_t
 
 cdef class Sequence(object):
 	"""
-	A record in a FASTQ file. Also used for FASTA (then the qualities attribute
-	is None). qualities is a string and it contains the qualities encoded as
-	ascii(qual+33).
-
-	If an adapter has been matched to the sequence, the 'match' attribute is
-	set to the corresponding Match instance.
+	A record in a FASTA or FASTQ file. For FASTA, the qualities attribute
+	is None. For FASTQ, qualities is a string and it contains the qualities
+	encoded as ascii(qual+33).
 	"""
 	cdef:
 		public str name
@@ -178,6 +176,138 @@ class FastqReader(SequenceReader):
 		If file is a filename, then .gz files are supported.
 		"""
 		super(FastqReader, self).__init__(file)
+		self.sequence_class = sequence_class
+		self.delivers_qualities = True
+
+	def __iter__(self):
+		"""
+		Yield Sequence objects
+		"""
+		cdef bytearray buf = bytearray(1048576)
+		cdef char[:] buf_view = buf
+		cdef char* c
+		cdef int endskip
+		cdef bytes name_encoded
+		cdef Py_ssize_t bufstart, bufend, pos, record_start, sequence_start
+		cdef Py_ssize_t second_header_start, sequence_length, qualities_start
+		cdef Py_ssize_t second_header_length, name_length
+		cdef Py_ssize_t line
+		readinto = self._file.readinto
+
+		bufstart = 0
+		line = 1
+		# Read the input file in blocks
+		while True:
+			bufend = readinto(buf_view[bufstart:]) + bufstart
+			if bufstart == bufend:
+				# End of file
+				break
+
+			# Process this block. Parse one FASTQ record per iteration
+			c = buf
+			pos = 0
+
+			# TODO
+			# - an incomplete FASTQ is not seen as an error
+
+			record_start = 0
+			while True:
+				if pos == bufend:
+					break
+
+				# Parse the name
+				if c[pos] != '@':
+					raise FormatError("Line {} in FASTQ file is expected to "
+						"start with '@', but found {!r}".format(line, chr(c[pos])))
+				pos += 1
+				while pos < bufend and c[pos] != '\n':
+					pos += 1
+				if pos == bufend:
+					break
+				endskip = 1 if c[pos-1] == '\r' else 0
+				name_length = pos - endskip - record_start - 1
+				name_encoded = (<char*>buf)[record_start+1:pos-endskip]
+				pos += 1
+				line += 1
+
+				# Parse the sequence
+				sequence_start = pos
+				while pos < bufend and c[pos] != '\n':
+					pos += 1
+				if pos == bufend:
+					break
+				endskip = 1 if c[pos-1] == '\r' else 0
+				sequence = (<char*>buf)[sequence_start:pos-endskip].decode('ascii')
+				sequence_length = pos - endskip - sequence_start
+				pos += 1
+				line += 1
+
+				# Parse second header
+				second_header_start = pos
+				if pos == bufend:
+					break
+				if c[pos] != '+':
+					raise FormatError("Line {} in FASTQ file is expected to "
+						"start with '+', but found '{!r}'".format(line, chr(c[pos])))
+				pos += 1
+				while pos < bufend and c[pos] != '\n':
+					pos += 1
+				if pos == bufend:
+					break
+				line += 1
+				endskip = 1 if c[pos-1] == '\r' else 0
+				second_header_length = pos - endskip - second_header_start - 1
+				if second_header_length == 0:
+					second_header = False
+				else:
+					if (name_length != second_header_length or
+							strncmp(<char*>buf+second_header_start+1,
+								<char*>name_encoded, second_header_length) != 0):
+						raise FormatError(
+							"At line {}: Sequence descriptions in the "
+							"FASTQ file don't match ('{}' != '{}').\n"
+							"The second sequence description must be either "
+							"empty or equal to the first description.".format(
+								line, name_encoded.decode('ascii'),
+								bytes(
+									buf[second_header_start+1:pos-endskip]
+								).decode('ascii')))
+					second_header = True
+				pos += 1
+				line += 1
+
+				# Parse qualities
+				qualities_start = pos
+				while pos < bufend and c[pos] != '\n':
+					pos += 1
+				if pos == bufend:
+					break
+				endskip = 1 if c[pos-1] == '\r' else 0
+				qualities = (<char*>buf)[qualities_start:pos-endskip].decode('ascii')
+				if pos - endskip - qualities_start != sequence_length:
+					raise FormatError("At line {}: Length of sequence and "
+						"qualities differ.".format(line))
+				pos += 1
+				line += 1
+
+				yield Sequence(name_encoded.decode('ascii'), sequence, qualities)
+				record_start = pos
+
+			if pos == bufend:
+				bufstart = bufend - record_start
+				buf[0:bufstart] = buf[record_start:bufend]
+
+
+class FastqReaderOld(SequenceReader):
+	"""
+	Reader for FASTQ files. Does not support multi-line FASTQ files.
+	"""
+	def __init__(self, file, sequence_class=Sequence):
+		"""
+		file is a filename or a file-like object.
+		If file is a filename, then .gz files are supported.
+		"""
+		super(FastqReaderOld, self).__init__(file)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
 
