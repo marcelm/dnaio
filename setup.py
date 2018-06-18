@@ -1,4 +1,4 @@
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 
 setup(
     name='dnaio',
@@ -9,7 +9,12 @@ setup(
     description='',
     long_description='',
     license='MIT',
-    ext_modules=[Extension('_seqio', sources=['src/dnaio/_seqio.pyx'])],
+    packages=['dnaio'],
+    package_dir={'': 'src'},
+    ext_modules=[Extension('dnaio._core', sources=['src/dnaio/_core.pyx'])],
+    extras_require={
+        'dev': ['Cython', 'pytest'],
+    },
     classifiers=[
             "Development Status :: 1 - Planning",
             "Intended Audience :: Science/Research",
