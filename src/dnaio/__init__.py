@@ -1,116 +1,12 @@
-# coding: utf-8
 """
-Sequence I/O classes: Reading and writing of FASTA and FASTQ files.
-
-TODO
-
-- Sequence.name should be Sequence.description or so (reserve .name for the part
-  before the first space)
+Sequence I/O: Read and write FASTA and FASTQ files efficiently
 """
-from __future__ import print_function, division, absolute_import
-
 import sys
 from os.path import splitext
 from xopen import xopen
 
-from .compat import zip, basestring
-
-__author__ = "Marcel Martin"
-
-
-class FormatError(Exception):
-    """
-    Raised when an input file (FASTA or FASTQ) is malformatted.
-    """
-
-
-def _shorten(s, n=100):
-    """Shorten string s to at most n characters, appending "..." if necessary."""
-    if s is None:
-        return None
-    if len(s) > n:
-        s = s[:n-3] + '...'
-    return s
-
-
-class Sequence(object):
-    """qualities is a string and it contains the qualities encoded as ascii(qual+33)."""
-
-    def __init__(self, name, sequence, qualities=None, second_header=False, match=None):
-        """Set qualities to None if there are no quality values"""
-        self.name = name
-        self.sequence = sequence
-        self.qualities = qualities
-        self.second_header = second_header
-        self.match = match
-        self.original_length = len(sequence)
-        if qualities is not None:
-            if len(qualities) != len(sequence):
-                rname = _shorten(name)
-                raise FormatError("In read named {0!r}: Length of quality sequence ({1}) and "
-                    "length of read ({2}) do not match".format(rname, len(qualities), len(sequence)))
-    
-    def __getitem__(self, key):
-        """slicing"""
-        return self.__class__(
-            self.name,
-            self.sequence[key],
-            self.qualities[key] if self.qualities is not None else None,
-            self.second_header,
-            self.match)
-
-    def __repr__(self):
-        qstr = ''
-        if self.qualities is not None:
-            qstr = ', qualities={0!r}'.format(_shorten(self.qualities))
-        return '<Sequence(name={0!r}, sequence={1!r}{2})>'.format(
-            _shorten(self.name), _shorten(self.sequence), qstr)
-
-    def __len__(self):
-        return len(self.sequence)
-
-    def __eq__(self, other):
-        return self.name == other.name and \
-            self.sequence == other.sequence and \
-            self.qualities == other.qualities
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
-class SequenceReader(object):
-    """Read possibly compressed files containing sequences"""
-    _close_on_exit = False
-    paired = False
-
-    def __init__(self, file):
-        """
-        file is a path or a file-like object. In both cases, the file may
-        be compressed (.gz, .bz2, .xz).
-        """
-        if isinstance(file, basestring):
-            file = xopen(file)
-            self._close_on_exit = True
-        self._file = file
-
-    def close(self):
-        if self._close_on_exit and self._file is not None:
-            self._file.close()
-            self._file = None
-
-    def __enter__(self):
-        if self._file is None:
-            raise ValueError("I/O operation on closed SequenceReader")
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
-
-try:
-    from ._seqio import Sequence
-except ImportError:
-    pass
+from .util import FormatError, _shorten, SequenceReader
+from ._core import Sequence, FastqReader, head, fastq_head, two_fastq_heads
 
 
 class ColorspaceSequence(Sequence):
@@ -160,7 +56,7 @@ def sra_colorspace_sequence(name, sequence, qualities, second_header):
     return ColorspaceSequence(name, sequence, qualities[1:], second_header=second_header)
 
 
-class FileWithPrependedLine(object):
+class FileWithPrependedLine:
     """
     A file-like object that allows to "prepend" a single
     line to an already opened file. That is, further
@@ -240,64 +136,6 @@ class ColorspaceFastaReader(FastaReader):
         super(ColorspaceFastaReader, self).__init__(file, keep_linebreaks, sequence_class=ColorspaceSequence)
 
 
-class FastqReader(SequenceReader):
-    """
-    Reader for FASTQ files. Does not support multi-line FASTQ files.
-    """
-    def __init__(self, file, sequence_class=Sequence):  # TODO could be a class attribute
-        """
-        file is a path or a file-like object. compressed files are supported.
-
-        The sequence_class should be a class such as Sequence or
-        ColorspaceSequence.
-        """
-        super(FastqReader, self).__init__(file)
-        self.sequence_class = sequence_class
-        self.delivers_qualities = True
-
-    def __iter__(self):
-        """
-        Return tuples: (name, sequence, qualities).
-        qualities is a string and it contains the unmodified, encoded qualities.
-        """
-        i = 3
-        for i, line in enumerate(self._file):
-            if i % 4 == 0:
-                if not line.startswith('@'):
-                    raise FormatError("Line {0} in FASTQ file is expected to start with '@', "
-                        "but found {1!r}".format(i+1, line[:10]))
-                name = line.strip()[1:]
-            elif i % 4 == 1:
-                sequence = line.strip()
-            elif i % 4 == 2:
-                line = line.strip()
-                if not line.startswith('+'):
-                    raise FormatError("Line {0} in FASTQ file is expected to start with '+', "
-                        "but found {1!r}".format(i+1, line[:10]))
-                if len(line) > 1:
-                    if line[1:] != name:
-                        raise FormatError(
-                            "At line {0}: Sequence descriptions in the FASTQ file do not match "
-                            "({1!r} != {2!r}).\n"
-                            "The second sequence description must be either empty "
-                            "or equal to the first description.".format(
-                                i+1, name, line[1:].rstrip()))
-                    second_header = True
-                else:
-                    second_header = False
-            elif i % 4 == 3:
-                qualities = line.rstrip('\n\r')
-                yield self.sequence_class(name, sequence, qualities, second_header=second_header)
-        if i % 4 != 3:
-            raise FormatError("FASTQ file ended prematurely")
-
-
-try:
-    from ._seqio import FastqReader
-except ImportError:
-    pass
-
-
 class ColorspaceFastqReader(FastqReader):
     def __init__(self, file):
         super(ColorspaceFastqReader, self).__init__(file, sequence_class=ColorspaceSequence)
@@ -308,7 +146,7 @@ class SRAColorspaceFastqReader(FastqReader):
         super(SRAColorspaceFastqReader, self).__init__(file, sequence_class=sra_colorspace_sequence)
 
 
-class FastaQualReader(object):
+class FastaQualReader:
     """
     Reader for reads that are stored in .(CS)FASTA and .QUAL files.
     """
@@ -378,7 +216,7 @@ def sequence_names_match(r1, r2):
     return name1 == name2
 
 
-class PairedSequenceReader(object):
+class PairedSequenceReader:
     """
     Read paired-end reads from two files.
 
@@ -431,7 +269,7 @@ class PairedSequenceReader(object):
         self.close()
 
 
-class InterleavedSequenceReader(object):
+class InterleavedSequenceReader:
     """
     Read paired-end reads from an interleaved FASTQ file.
     """
@@ -465,7 +303,7 @@ class InterleavedSequenceReader(object):
         self.close()
 
 
-class FileWriter(object):
+class FileWriter:
     def __init__(self, file):
         if isinstance(file, str):
             self._file = xopen(file, 'w')
@@ -487,7 +325,7 @@ class FileWriter(object):
         self.close()
 
 
-class SingleRecordWriter(object):
+class SingleRecordWriter:
     """Public interface to single-record files"""
     def write(self, record):
         raise NotImplementedError()
@@ -576,7 +414,7 @@ class ColorspaceFastqWriter(FastqWriter):
         super(ColorspaceFastqWriter, self).writeseq(name, sequence, qualities)
 
 
-class PairRecordWriter(object):
+class PairRecordWriter:
     """Public interface to paired-record files"""
     def write(self, read1, read2):
         raise NotImplementedError()
@@ -748,7 +586,7 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
     name = None
     if file == "-":
         file = sys.stdin if mode == 'r' else sys.stdout
-    elif isinstance(file, basestring):
+    elif isinstance(file, str):
         name = file
     elif hasattr(file, "name"):  # seems to be an open file-like object
         name = file.name
@@ -909,6 +747,3 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
 
     if start1 > 0 or start2 > 0:
         yield (memoryview(buf1)[0:start1], memoryview(buf2)[0:start2])
-
-
-from ._seqio import head, fastq_head, two_fastq_heads  # re-exported

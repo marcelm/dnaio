@@ -1,4 +1,4 @@
-from setuptools import setup, Extension, find_packages
+from setuptools import setup, Extension
 
 setup(
     name='dnaio',
@@ -15,6 +15,7 @@ setup(
     extras_require={
         'dev': ['Cython', 'pytest'],
     },
+    install_requires=['xopen'],
     classifiers=[
             "Development Status :: 1 - Planning",
             "Intended Audience :: Science/Research",

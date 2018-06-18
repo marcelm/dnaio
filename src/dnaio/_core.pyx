@@ -1,8 +1,8 @@
 # kate: syntax Python;
 # cython: profile=False, emit_code_comments=False
 from __future__ import print_function, division, absolute_import
-from xopen import xopen
-from .seqio import _shorten, FormatError, SequenceReader
+# TODO remove the __future__ imports and set language_level=3
+from .util import _shorten, FormatError, SequenceReader
 
 cimport cython
 
