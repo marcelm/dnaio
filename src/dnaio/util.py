@@ -16,7 +16,7 @@ def _shorten(s, n=100):
     return s
 
 
-class SequenceReader:
+class BinaryFileReader:
     """Read possibly compressed files containing sequences"""
     _close_on_exit = False
     paired = False
@@ -27,7 +27,7 @@ class SequenceReader:
         be compressed (.gz, .bz2, .xz).
         """
         if isinstance(file, str):
-            file = xopen(file)
+            file = xopen(file, 'rb')
             self._close_on_exit = True
         self._file = file
 
@@ -38,7 +38,7 @@ class SequenceReader:
 
     def __enter__(self):
         if self._file is None:
-            raise ValueError("I/O operation on closed SequenceReader")
+            raise ValueError("I/O operation on closed BinaryFileReader")
         return self
 
     def __exit__(self, *args):

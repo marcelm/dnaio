@@ -37,11 +37,12 @@ class TestSequence:
 
 
 class TestFastaReader:
-    def test(self):
+    def test_file(self):
         with FastaReader("tests/data/simple.fasta") as f:
             reads = list(f)
         assert reads == simple_fasta
 
+    def test_stringio(self):
         fasta = StringIO(">first_sequence\nSEQUENCE1\n>second_sequence\nSEQUENCE2\n")
         reads = list(FastaReader(fasta))
         assert reads == simple_fasta

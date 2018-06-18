@@ -2,7 +2,7 @@
 # cython: profile=False, emit_code_comments=False
 from __future__ import print_function, division, absolute_import
 # TODO remove the __future__ imports and set language_level=3
-from .util import _shorten, FormatError, SequenceReader
+from .util import _shorten, FormatError, BinaryFileReader
 
 from libc.string cimport strncmp
 cimport cython
@@ -166,7 +166,7 @@ cdef class Sequence(object):
 		    self.match))
 
 
-class FastqReader(SequenceReader):
+class FastqReader(BinaryFileReader):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
@@ -298,7 +298,7 @@ class FastqReader(SequenceReader):
 				buf[0:bufstart] = buf[record_start:bufend]
 
 
-class FastqReaderOld(SequenceReader):
+class FastqReaderOld(BinaryFileReader):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""

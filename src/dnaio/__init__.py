@@ -2,10 +2,11 @@
 Sequence I/O: Read and write FASTA and FASTQ files efficiently
 """
 import sys
+import io
 from os.path import splitext
 from xopen import xopen
 
-from .util import FormatError, _shorten, SequenceReader
+from .util import FormatError, _shorten, BinaryFileReader
 from ._core import Sequence, FastqReader, head, fastq_head, two_fastq_heads
 
 
@@ -86,7 +87,7 @@ class FileWithPrependedLine:
         self._file.close()
 
 
-class FastaReader(SequenceReader):
+class FastaReader(BinaryFileReader):
     """
     Reader for FASTA files.
     """
@@ -220,7 +221,7 @@ class PairedSequenceReader:
     """
     Read paired-end reads from two files.
 
-    Wraps two SequenceReader instances, making sure that reads are properly
+    Wraps two BinaryFileReader instances, making sure that reads are properly
     paired.
     """
     paired = True
