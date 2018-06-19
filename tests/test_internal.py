@@ -1,10 +1,10 @@
 import os
 import shutil
-from io import BytesIO, StringIO
+from io import BytesIO
 from tempfile import mkdtemp
 from textwrap import dedent
 
-from pytest import raises
+from pytest import raises, mark
 
 import dnaio
 from dnaio import (
@@ -43,12 +43,12 @@ class TestFastaReader:
         assert reads == simple_fasta
 
     def test_stringio(self):
-        fasta = StringIO(">first_sequence\nSEQUENCE1\n>second_sequence\nSEQUENCE2\n")
+        fasta = BytesIO(b">first_sequence\nSEQUENCE1\n>second_sequence\nSEQUENCE2\n")
         reads = list(FastaReader(fasta))
         assert reads == simple_fasta
 
     def test_with_comments(self):
-        fasta = StringIO(dedent(
+        fasta = BytesIO(dedent(
             """
             # a comment
             # another one
@@ -56,12 +56,12 @@ class TestFastaReader:
             SEQUENCE1
             >second_sequence
             SEQUENCE2
-            """))
+            """).encode())
         reads = list(FastaReader(fasta))
         assert reads == simple_fasta
 
     def test_wrong_format(self):
-        fasta = StringIO(dedent(
+        fasta = BytesIO(dedent(
             """
             # a comment
             # another one
@@ -70,7 +70,7 @@ class TestFastaReader:
             SEQUENCE1
             >second_sequence
             SEQUENCE2
-            """))
+            """).encode())
         with raises(FormatError):
             reads = list(FastaReader(fasta))
 
@@ -82,7 +82,7 @@ class TestFastaReader:
 
     def test_context_manager(self):
         filename = "tests/data/simple.fasta"
-        with open(filename) as f:
+        with open(filename, 'rb') as f:
             assert not f.closed
             reads = list(dnaio.open(f))
             assert not f.closed
@@ -119,8 +119,10 @@ class TestFastqReader:
             with raises(FormatError):
                 reads = list(f)
 
-    def test_fastq_incomplete(self):
-        fastq = StringIO("@name\nACGT+\n")
+    @mark.parametrize("length", range(1, len(b'@name\nACGT+\nHHHH\n')))
+    def test_fastq_incomplete(self, length):
+        full_fastq = b'@name\nACGT+\nHHHH\n'
+        fastq = BytesIO(full_fastq[:length])
         with FastqReader(fastq) as fq:
             with raises(FormatError):
                 list(fq)
@@ -143,14 +145,14 @@ class TestFastqReader:
 
 class TestFastaQualReader:
     def test_mismatching_read_names(self):
-        fasta = StringIO(">name\nACG")
-        qual = StringIO(">nome\n3 5 7")
+        fasta = BytesIO(b">name\nACG")
+        qual = BytesIO(b">nome\n3 5 7")
         with raises(FormatError):
             list(FastaQualReader(fasta, qual))
 
     def test_invalid_quality_value(self):
-        fasta = StringIO(">name\nACG")
-        qual = StringIO(">name\n3 xx 7")
+        fasta = BytesIO(b">name\nACG")
+        qual = BytesIO(b">name\n3 xx 7")
         with raises(FormatError):
             list(FastaQualReader(fasta, qual))
 
@@ -177,11 +179,11 @@ class TestOpen:
         assert reads == simple_fastq
 
         # make the name attribute unavailable
-        f = StringIO(open("tests/data/simple.fastq").read())
+        f = BytesIO(open("tests/data/simple.fastq", 'rb').read())
         reads = list(dnaio.open(f))
         assert reads == simple_fastq
 
-        f = StringIO(open("tests/data/simple.fasta").read())
+        f = BytesIO(open("tests/data/simple.fasta", 'rb').read())
         reads = list(dnaio.open(f))
         assert reads == simple_fasta
 

@@ -39,7 +39,7 @@ def head(bytes_or_bytearray buf, Py_ssize_t lines):
 def fastq_head(bytes_or_bytearray buf, Py_ssize_t end=-1):
 	"""
 	Return an integer length such that buf[:length] contains the highest
-	possible number of complete four-line records.
+	possible number of complete four-line FASTQ records.
 
 	If end is -1, the full buffer is searched. Otherwise only buf[:end].
 	"""
@@ -114,17 +114,12 @@ cdef class Sequence(object):
 		public str name
 		public str sequence
 		public str qualities
-		public bint second_header
-		public object match
 
-	def __init__(self, str name, str sequence, str qualities=None, bint second_header=False,
-	        match=None):
+	def __init__(self, str name, str sequence, str qualities=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
-		self.second_header = second_header
-		self.match = match
 		if qualities is not None and len(qualities) != len(sequence):
 			rname = _shorten(name)
 			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length "
@@ -136,9 +131,7 @@ cdef class Sequence(object):
 		return self.__class__(
 			self.name,
 			self.sequence[key],
-			self.qualities[key] if self.qualities is not None else None,
-			self.second_header,
-			self.match)
+			self.qualities[key] if self.qualities is not None else None)
 
 	def __repr__(self):
 		qstr = ''
@@ -162,8 +155,7 @@ cdef class Sequence(object):
 			raise NotImplementedError()
 
 	def __reduce__(self):
-		return (Sequence, (self.name, self.sequence, self.qualities, self.second_header,
-		    self.match))
+		return (Sequence, (self.name, self.sequence, self.qualities))
 
 
 class FastqReader(BinaryFileReader):
@@ -181,40 +173,49 @@ class FastqReader(BinaryFileReader):
 
 	def __iter__(self):
 		"""
-		Yield Sequence objects
-		"""
-		cdef bytearray buf = bytearray(1048576)
-		cdef char[:] buf_view = buf
-		cdef char* c
-		cdef int endskip
-		cdef bytes name_encoded
-		cdef Py_ssize_t bufstart, bufend, pos, record_start, sequence_start
-		cdef Py_ssize_t second_header_start, sequence_length, qualities_start
-		cdef Py_ssize_t second_header_length, name_length
-		cdef Py_ssize_t line
-		readinto = self._file.readinto
+		Parse the FASTQ file and yield Sequence objects
 
+
+		"""
+		cdef:
+			bytearray buf = bytearray(1048576)
+			char[:] buf_view = buf
+			char* c
+			int endskip
+			bytes name_encoded
+			Py_ssize_t bufstart, bufend, pos, record_start, sequence_start
+			Py_ssize_t second_header_start, sequence_length, qualities_start
+			Py_ssize_t second_header_length, name_length
+			Py_ssize_t line
+
+		# buf is byte buffer that is re-used in each iteration. Its layout is:
+		#
+		# |-- complete records --|
+		# +---+------------------+---------+-------+
+		# |   |                  |         |       |
+		# +---+------------------+---------+-------+
+		# ^   ^                  ^         ^       ^
+		# 0   bufstart           end       bufend  len(buf)
+		#
+		# buf[0:start] is the 'leftover' data that could not be processed
+		# in the previous iteration because it contained an incomplete
+		# FASTQ record.
+
+		readinto = self._file.readinto
 		bufstart = 0
 		line = 1
-		# Read the input file in blocks
+		# The input file is processed in chunks that each fit into buf
 		while True:
 			bufend = readinto(buf_view[bufstart:]) + bufstart
 			if bufstart == bufend:
 				# End of file
 				break
 
-			# Process this block. Parse one FASTQ record per iteration
+			# Parse all complete FASTQ records in this chunk
 			c = buf
 			pos = 0
-
-			# TODO
-			# - an incomplete FASTQ is not seen as an error
-
 			record_start = 0
 			while True:
-				if pos == bufend:
-					break
-
 				# Parse the name
 				if c[pos] != '@':
 					raise FormatError("Line {} in FASTQ file is expected to "
@@ -292,6 +293,8 @@ class FastqReader(BinaryFileReader):
 
 				yield Sequence(name_encoded.decode('ascii'), sequence, qualities)
 				record_start = pos
+				if pos == bufend:
+					break
 
 			if pos == bufend:
 				bufstart = bufend - record_start

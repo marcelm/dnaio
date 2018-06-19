@@ -11,7 +11,7 @@ from ._core import Sequence, FastqReader, head, fastq_head, two_fastq_heads
 
 
 class ColorspaceSequence(Sequence):
-    def __init__(self, name, sequence, qualities, primer=None, second_header=False, match=None):
+    def __init__(self, name, sequence, qualities, primer=None):
         # In colorspace, the first character is the last nucleotide of the primer base
         # and the second character encodes the transition from the primer base to the
         # first real base of the read.
@@ -25,8 +25,8 @@ class ColorspaceSequence(Sequence):
             raise FormatError("In read named {0!r}: length of colorspace quality "
                 "sequence ({1}) and length of read ({2}) do not match (primer "
                 "is: {3!r})".format(rname, len(qualities), len(sequence), self.primer))
-        super(ColorspaceSequence, self).__init__(name, sequence, qualities, second_header, match)
-        if not self.primer in ('A', 'C', 'G', 'T'):
+        super(ColorspaceSequence, self).__init__(name, sequence, qualities)
+        if self.primer not in ('A', 'C', 'G', 'T'):
             raise FormatError("Primer base is {0!r} in read {1!r}, but it "
                 "should be one of A, C, G, T.".format(
                     self.primer, _shorten(name)))
@@ -43,9 +43,7 @@ class ColorspaceSequence(Sequence):
             self.name,
             self.sequence[key],
             self.qualities[key] if self.qualities is not None else None,
-            self.primer,
-            self.second_header,
-            self.match)
+            self.primer)
 
     def __reduce__(self):
         return (ColorspaceSequence, (self.name, self.sequence, self.qualities, self.primer,
@@ -54,7 +52,7 @@ class ColorspaceSequence(Sequence):
 
 def sra_colorspace_sequence(name, sequence, qualities, second_header):
     """Factory for an SRA colorspace sequence (which has one quality value too many)"""
-    return ColorspaceSequence(name, sequence, qualities[1:], second_header=second_header)
+    return ColorspaceSequence(name, sequence, qualities[1:])
 
 
 class FileWithPrependedLine:
@@ -110,7 +108,8 @@ class FastaReader(BinaryFileReader):
         """
         name = None
         seq = []
-        for i, line in enumerate(self._file):
+        f = io.TextIOWrapper(self._file)
+        for i, line in enumerate(f):
             # strip() also removes DOS line breaks
             line = line.strip()
             if not line:
@@ -130,6 +129,8 @@ class FastaReader(BinaryFileReader):
 
         if name is not None:
             yield self.sequence_class(name, self._delimiter.join(seq), None)
+        # Prevent TextIOWrapper from closing the underlying file
+        f.detach()
 
 
 class ColorspaceFastaReader(FastaReader):
@@ -397,9 +398,8 @@ class FastqWriter(FileWriter, SingleRecordWriter):
 
         The record must have attributes .name, .sequence and .qualities.
         """
-        name2 = record.name if record.second_header else ''
         s = ('@' + record.name + '\n' + record.sequence + '\n+' +
-                name2 + '\n' + record.qualities + '\n')
+            '\n' + record.qualities + '\n')
         self._file.write(s)
 
     def writeseq(self, name, sequence, qualities):
@@ -600,7 +600,10 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
 
     if mode == 'r' and format is None:
         # No format detected so far. Try to read from the file.
-        if hasattr(file, 'peek'):
+        if file.seekable():
+            first_char = file.read(1)
+            file.seek(1, -1)
+        elif hasattr(file, 'peek'):
             first_char = file.peek(1)
             new_file = file
         else:

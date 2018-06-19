@@ -20,6 +20,7 @@ class BinaryFileReader:
     """Read possibly compressed files containing sequences"""
     _close_on_exit = False
     paired = False
+    mode = 'rb'
 
     def __init__(self, file):
         """
@@ -27,7 +28,7 @@ class BinaryFileReader:
         be compressed (.gz, .bz2, .xz).
         """
         if isinstance(file, str):
-            file = xopen(file, 'rb')
+            file = xopen(file, self.mode)
             self._close_on_exit = True
         self._file = file
 
