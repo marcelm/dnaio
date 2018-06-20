@@ -2,7 +2,7 @@
 # cython: profile=False, emit_code_comments=False
 from __future__ import print_function, division, absolute_import
 # TODO remove the __future__ imports and set language_level=3
-from .util import _shorten, FormatError, BinaryFileReader
+from . import _shorten, FormatError, BinaryFileReader
 
 from libc.string cimport strncmp
 cimport cython

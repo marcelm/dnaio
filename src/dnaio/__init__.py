@@ -6,7 +6,59 @@ import io
 from os.path import splitext
 from xopen import xopen
 
-from .util import FormatError, _shorten, BinaryFileReader
+# There are more imports below, see comment there
+
+
+class FormatError(Exception):
+    """
+    Raised when an input file is malformatted.
+    """
+
+
+def _shorten(s, n=100):
+    """Shorten string s to at most n characters, appending "..." if necessary."""
+    if s is None:
+        return None
+    if len(s) > n:
+        s = s[:n-3] + '...'
+    return s
+
+
+class BinaryFileReader:
+    """Read possibly compressed files containing sequences"""
+    _close_on_exit = False
+    paired = False
+    mode = 'rb'
+
+    def __init__(self, file):
+        """
+        The file is a path or a file-like object. In both cases, the file may
+        be compressed (.gz, .bz2, .xz).
+        """
+        if isinstance(file, str):
+            file = xopen(file, self.mode)
+            self._close_on_exit = True
+        self._file = file
+
+    def close(self):
+        if self._close_on_exit and self._file is not None:
+            self._file.close()
+            self._file = None
+
+    def __enter__(self):
+        if self._file is None:
+            raise ValueError("I/O operation on closed BinaryFileReader")
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+
+# Because _core needs the above definitions when it is itself imported,
+# this import is placed here. This is a circular import, but it allows
+# us to have a flatter package layout. Otherwise, the FormatError (for
+# example) would need to go into either _core or a separate errors/utils
+# module.
 from ._core import Sequence, FastqReader, head, fastq_head, two_fastq_heads
 
 
