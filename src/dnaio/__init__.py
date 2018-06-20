@@ -305,10 +305,11 @@ class InterleavedSequenceReader:
         self.close()
 
 
-class FileWriter:
+class BinaryFileWriter:
+
     def __init__(self, file):
         if isinstance(file, str):
-            self._file = xopen(file, 'w')
+            self._file = xopen(file, 'wb')
             self._close_on_exit = True
         else:
             self._file = file
@@ -333,23 +334,23 @@ class SingleRecordWriter:
         raise NotImplementedError()
 
 
-class FastaWriter(FileWriter, SingleRecordWriter):
+class FastaWriter(BinaryFileWriter, SingleRecordWriter):
     """
     Write FASTA-formatted sequences to a file.
     """
-
     def __init__(self, file, line_length=None):
         """
         If line_length is not None, the lines will
         be wrapped after line_length characters.
         """
-        FileWriter.__init__(self, file)
+        BinaryFileWriter.__init__(self, file)
+        self._text_file = io.TextIOWrapper(self._file)
         self.line_length = line_length if line_length != 0 else None
     
-    def write(self, name_or_seq, sequence=None):
+    def write(self, name_or_record, sequence=None):
         """Write an entry to the the FASTA file.
 
-        If only one parameter (name_or_seq) is given, it must have
+        If only one parameter (name_or_record) is given, it must have
         attributes .name and .sequence, which are then used.
         Otherwise, the first parameter must be the name and the second
         the sequence.
@@ -360,19 +361,19 @@ class FastaWriter(FileWriter, SingleRecordWriter):
         writer.write(Sequence("name", "ACCAT"))
         """
         if sequence is None:
-            name = name_or_seq.name
-            sequence = name_or_seq.sequence
+            name = name_or_record.name
+            sequence = name_or_record.sequence
         else:
-            name = name_or_seq
+            name = name_or_record
         
         if self.line_length is not None:
-            print('>{0}'.format(name), file=self._file)
+            print('>{0}'.format(name), file=self._text_file)
             for i in range(0, len(sequence), self.line_length):
-                print(sequence[i:i+self.line_length], file=self._file)
+                print(sequence[i:i+self.line_length], file=self._text_file)
             if len(sequence) == 0:
-                print(file=self._file)
+                print(file=self._text_file)
         else:
-            print('>{0}'.format(name), sequence, file=self._file, sep='\n')
+            print('>{0}'.format(name), sequence, file=self._text_file, sep='\n')
 
 
 class ColorspaceFastaWriter(FastaWriter):
@@ -382,7 +383,7 @@ class ColorspaceFastaWriter(FastaWriter):
         super(ColorspaceFastaWriter, self).write(name, sequence)
 
 
-class FastqWriter(FileWriter, SingleRecordWriter):
+class FastqWriter(BinaryFileWriter, SingleRecordWriter):
     """
     Write sequences with qualities in FASTQ format.
 
@@ -392,15 +393,19 @@ class FastqWriter(FileWriter, SingleRecordWriter):
     +
     QUALITIS
     """
+    def __init__(self, file):
+        BinaryFileWriter.__init__(self, file)
+        self._text_file = io.TextIOWrapper(self._file)
+
     def write(self, record):
         """
         Write a Sequence record to the the FASTQ file.
 
         The record must have attributes .name, .sequence and .qualities.
         """
-        s = ('@' + record.name + '\n' + record.sequence + '\n+' +
-            '\n' + record.qualities + '\n')
-        self._file.write(s)
+        s = ('@' + record.name + '\n' + record.sequence + '\n+'
+            + '\n' + record.qualities + '\n')
+        self._text_file.write(s)
 
     def writeseq(self, name, sequence, qualities):
         print("@{0:s}\n{1:s}\n+\n{2:s}".format(
@@ -591,6 +596,9 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
         name = file
     elif hasattr(file, "name"):  # seems to be an open file-like object
         name = file.name
+        if not hasattr(file, 'readinto'):
+            raise ValueError(
+                'When passing in an open file-like object, it must have been opened in binary mode')
 
     format = _detect_format_from_name(name) if name else None
 
@@ -602,7 +610,8 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
         # No format detected so far. Try to read from the file.
         if file.seekable():
             first_char = file.read(1)
-            file.seek(1, -1)
+            file.seek(-1, 1)
+            new_file = file
         elif hasattr(file, 'peek'):
             first_char = file.peek(1)
             new_file = file
@@ -610,14 +619,14 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
             first_line = file.readline()
             first_char = first_line[0:1]
             new_file = FileWithPrependedLine(file, first_line)
-        if first_char == '#':
+        if first_char == b'#':
             # A comment char - only valid for some FASTA variants (csfasta)
             format = 'fasta'
-        elif first_char == '>':
+        elif first_char == b'>':
             format = 'fasta'
-        elif first_char == '@':
+        elif first_char == b'@':
             format = 'fastq'
-        elif first_char == '':
+        elif first_char == b'':
             # Empty input. Pretend this is FASTQ
             format = 'fastq'
         else:

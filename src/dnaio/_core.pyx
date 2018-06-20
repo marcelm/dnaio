@@ -174,8 +174,6 @@ class FastqReader(BinaryFileReader):
 	def __iter__(self):
 		"""
 		Parse the FASTQ file and yield Sequence objects
-
-
 		"""
 		cdef:
 			bytearray buf = bytearray(1048576)
@@ -249,7 +247,7 @@ class FastqReader(BinaryFileReader):
 					break
 				if c[pos] != '+':
 					raise FormatError("Line {} in FASTQ file is expected to "
-						"start with '+', but found '{!r}'".format(line, chr(c[pos])))
+						"start with '+', but found {!r}".format(line, chr(c[pos])))
 				pos += 1
 				while pos < bufend and c[pos] != '\n':
 					pos += 1
@@ -291,14 +289,17 @@ class FastqReader(BinaryFileReader):
 				pos += 1
 				line += 1
 
-				yield Sequence(name_encoded.decode('ascii'), sequence, qualities)
+				yield self.sequence_class(name_encoded.decode('ascii'), sequence, qualities)
 				record_start = pos
 				if pos == bufend:
 					break
-
 			if pos == bufend:
 				bufstart = bufend - record_start
 				buf[0:bufstart] = buf[record_start:bufend]
+		if pos > record_start:
+			raise FormatError('FASTQ file ended prematurely at line {}. '
+				'The incomplete final record was: '
+				'{!r}'.format(line, _shorten(buf[record_start:pos].decode(), 500)))
 
 
 class FastqReaderOld(BinaryFileReader):

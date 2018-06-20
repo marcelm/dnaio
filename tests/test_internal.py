@@ -17,9 +17,11 @@ from dnaio import (
 simple_fastq = [
     Sequence("first_sequence", "SEQUENCE1", ":6;;8<=:<"),
     Sequence("second_sequence", "SEQUENCE2", "83<??:(61")
-    ]
+]
 
 simple_fasta = [Sequence(x.name, x.sequence, None) for x in simple_fastq]
+
+tiny_fastq = b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n#\n'
 
 
 class TestSequence:
@@ -42,7 +44,7 @@ class TestFastaReader:
             reads = list(f)
         assert reads == simple_fasta
 
-    def test_stringio(self):
+    def test_bytesio(self):
         fasta = BytesIO(b">first_sequence\nSEQUENCE1\n>second_sequence\nSEQUENCE2\n")
         reads = list(FastaReader(fasta))
         assert reads == simple_fasta
@@ -119,17 +121,52 @@ class TestFastqReader:
             with raises(FormatError):
                 reads = list(f)
 
-    @mark.parametrize("length", range(1, len(b'@name\nACGT+\nHHHH\n')))
-    def test_fastq_incomplete(self, length):
-        full_fastq = b'@name\nACGT+\nHHHH\n'
-        fastq = BytesIO(full_fastq[:length])
+    def test_empty_fastq(self):
+        with FastqReader(BytesIO(b'')) as fq:
+            assert list(fq) == []
+
+    @mark.parametrize('s', [
+        b'@',
+        b'@r',
+        b'@r1',
+        b'@r1\n',
+        b'@r1\nA',
+        b'@r1\nAC',
+        b'@r1\nACG',
+        b'@r1\nACG\n',
+        b'@r1\nACG\n+',
+        b'@r1\nACG\n+\n',
+        b'@r1\nACG\n+\nH',
+        b'@r1\nACG\n+\nHH',
+        b'@r1\nACG\n+\nHHH\n@',
+        b'@r1\nACG\n+\nHHH\n@r',
+        b'@r1\nACG\n+\nHHH\n@r2',
+        b'@r1\nACG\n+\nHHH\n@r2\n',
+        b'@r1\nACG\n+\nHHH\n@r2\nT',
+        b'@r1\nACG\n+\nHHH\n@r2\nT\n',
+        b'@r1\nACG\n+\nHHH\n@r2\nT\n+',
+        b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n',
+    ])
+    def test_fastq_incomplete(self, s):
+        fastq = BytesIO(s)
         with FastqReader(fastq) as fq:
             with raises(FormatError):
                 list(fq)
 
+    def test_missing_final_newline(self):
+        fastq = BytesIO(b'@r1\nA\n+\nH')
+        with FastqReader(fastq) as fq:
+            assert len(list(fq)) == 1
+
+    def test_not_opened_as_binary(self):
+        filename = 'tests/data/simple.fastq'
+        with open(filename, 'rt') as f:
+            with raises(ValueError):
+                list(dnaio.open(f))
+
     def test_context_manager(self):
         filename = "tests/data/simple.fastq"
-        with open(filename) as f:
+        with open(filename, 'rb') as f:
             assert not f.closed
             reads = list(dnaio.open(f))
             assert not f.closed
@@ -174,7 +211,7 @@ class TestOpen:
             reads = list(f)
         assert reads == simple_fasta
 
-        with open("tests/data/simple.fastq") as f:
+        with open("tests/data/simple.fastq", 'rb') as f:
             reads = list(dnaio.open(f))
         assert reads == simple_fastq
 
@@ -220,10 +257,14 @@ class TestOpen:
 class TestInterleavedReader:
     def test(self):
         expected = [
-            (Sequence('read1/1 some text', 'TTATTTGTCTCCAGC', '##HHHHHHHHHHHHH'),
-            Sequence('read1/2 other text', 'GCTGGAGACAAATAA', 'HHHHHHHHHHHHHHH')),
-            (Sequence('read3/1', 'CCAACTTGATATTAATAACA', 'HHHHHHHHHHHHHHHHHHHH'),
-            Sequence('read3/2', 'TGTTATTAATATCAAGTTGG', '#HHHHHHHHHHHHHHHHHHH'))
+            (
+                Sequence('read1/1 some text', 'TTATTTGTCTCCAGC', '##HHHHHHHHHHHHH'),
+                Sequence('read1/2 other text', 'GCTGGAGACAAATAA', 'HHHHHHHHHHHHHHH')
+            ),
+            (
+                Sequence('read3/1', 'CCAACTTGATATTAATAACA', 'HHHHHHHHHHHHHHHHHHHH'),
+                Sequence('read3/2', 'TGTTATTAATATCAAGTTGG', '#HHHHHHHHHHHHHHHHHHH')
+            ),
         ]
         reads = list(InterleavedSequenceReader("tests/data/interleaved.fastq"))
         for (r1, r2), (e1, e2) in zip(reads, expected):
@@ -235,12 +276,12 @@ class TestInterleavedReader:
         assert reads == expected
 
     def test_missing_partner(self):
-        s = StringIO('@r1\nACG\n+\nHHH')
+        s = BytesIO(b'@r1\nACG\n+\nHHH')
         with raises(FormatError):
             list(InterleavedSequenceReader(s))
 
     def test_incorrectly_paired(self):
-        s = StringIO('@r1/1\nACG\n+\nHHH\n@wrong_name\nTTT\n+\nHHH')
+        s = BytesIO(b'@r1/1\nACG\n+\nHHH\n@wrong_name\nTTT\n+\nHHH')
         with raises(FormatError):
             list(InterleavedSequenceReader(s))
 
@@ -280,18 +321,18 @@ class TestFastaWriter:
             assert t.read() == '>name\nCCATA\n>name2\nHELLO\n'
 
     def test_write_to_file_like_object(self):
-        sio = StringIO()
-        with FastaWriter(sio) as fw:
+        bio = BytesIO()
+        with FastaWriter(bio) as fw:
             fw.write(Sequence("name", "CCATA"))
             fw.write(Sequence("name2", "HELLO"))
-            assert sio.getvalue() == '>name\nCCATA\n>name2\nHELLO\n'
+            assert bio.getvalue() == b'>name\nCCATA\n>name2\nHELLO\n'
         assert not fw._file.closed
 
     def test_write_zero_length_sequence(self):
-        sio = StringIO()
-        with FastaWriter(sio) as fw:
+        bio = BytesIO()
+        with FastaWriter(bio) as fw:
             fw.write(Sequence("name", ""))
-            assert sio.getvalue() == '>name\n\n', '{0!r}'.format(sio.getvalue())
+            assert bio.getvalue() == b'>name\n\n', '{0!r}'.format(bio.getvalue())
 
 
 class TestFastqWriter:
@@ -319,26 +360,30 @@ class TestFastqWriter:
             assert t.read() == '@name\nCCATA\n+name\n!#!#!\n@name2\nHELLO\n+name2\n&&&!&\n'
 
     def test_write_to_file_like_object(self):
-        sio = StringIO()
-        with FastqWriter(sio) as fq:
+        bio = BytesIO()
+        with FastqWriter(bio) as fq:
             fq.writeseq("name", "CCATA", "!#!#!")
             fq.writeseq("name2", "HELLO", "&&&!&&")
-        assert sio.getvalue() == '@name\nCCATA\n+\n!#!#!\n@name2\nHELLO\n+\n&&&!&&\n'
+        assert bio.getvalue() == b'@name\nCCATA\n+\n!#!#!\n@name2\nHELLO\n+\n&&&!&&\n'
 
 
 class TestInterleavedWriter:
     def test(self):
         reads = [
-            (Sequence('A/1 comment', 'TTA', '##H'),
-            Sequence('A/2 comment', 'GCT', 'HH#')),
-            (Sequence('B/1', 'CC', 'HH'),
-            Sequence('B/2', 'TG', '#H'))
+            (
+                Sequence('A/1 comment', 'TTA', '##H'),
+                Sequence('A/2 comment', 'GCT', 'HH#')
+            ),
+            (
+                Sequence('B/1', 'CC', 'HH'),
+                Sequence('B/2', 'TG', '#H')
+            ),
         ]
-        sio = StringIO()
-        with InterleavedSequenceWriter(sio) as writer:
+        bio = BytesIO()
+        with InterleavedSequenceWriter(bio) as writer:
             for read1, read2 in reads:
                 writer.write(read1, read2)
-        assert sio.getvalue() == '@A/1 comment\nTTA\n+\n##H\n@A/2 comment\nGCT\n+\nHH#\n@B/1\nCC\n+\nHH\n@B/2\nTG\n+\n#H\n'
+        assert bio.getvalue() == b'@A/1 comment\nTTA\n+\n##H\n@A/2 comment\nGCT\n+\nHH#\n@B/1\nCC\n+\nHH\n@B/2\nTG\n+\n#H\n'
 
 
 class TestPairedSequenceReader:

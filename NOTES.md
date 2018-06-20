@@ -52,7 +52,7 @@ Documentation
 - Line endings
 - second header
 - multi-line FASTQ
-
+- accept FASTQ files that are missing the final linebreak
 
 FASTQ chunks
 
