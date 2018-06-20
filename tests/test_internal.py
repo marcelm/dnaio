@@ -325,14 +325,15 @@ class TestFastaWriter:
         with FastaWriter(bio) as fw:
             fw.write(Sequence("name", "CCATA"))
             fw.write(Sequence("name2", "HELLO"))
-            assert bio.getvalue() == b'>name\nCCATA\n>name2\nHELLO\n'
+        assert bio.getvalue() == b'>name\nCCATA\n>name2\nHELLO\n'
+        assert not bio.closed
         assert not fw._file.closed
 
     def test_write_zero_length_sequence(self):
         bio = BytesIO()
         with FastaWriter(bio) as fw:
             fw.write(Sequence("name", ""))
-            assert bio.getvalue() == b'>name\n\n', '{0!r}'.format(bio.getvalue())
+        assert bio.getvalue() == b'>name\n\n', '{0!r}'.format(bio.getvalue())
 
 
 class TestFastqWriter:
@@ -352,9 +353,9 @@ class TestFastqWriter:
             assert t.read() == '@name\nCCATA\n+\n!#!#!\n@name2\nHELLO\n+\n&&&!&&\n'
 
     def test_twoheaders(self):
-        with FastqWriter(self.path) as fq:
-            fq.write(Sequence("name", "CCATA", "!#!#!", second_header=True))
-            fq.write(Sequence("name2", "HELLO", "&&&!&", second_header=True))
+        with FastqWriter(self.path, two_headers=True) as fq:
+            fq.write(Sequence("name", "CCATA", "!#!#!"))
+            fq.write(Sequence("name2", "HELLO", "&&&!&"))
         assert fq._file.closed
         with open(self.path) as t:
             assert t.read() == '@name\nCCATA\n+name\n!#!#!\n@name2\nHELLO\n+name2\n&&&!&\n'

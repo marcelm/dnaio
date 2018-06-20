@@ -45,7 +45,7 @@ TODO
 
 - Sequence.name should be Sequence.description or so (reserve .name for the part
   before the first space)
-
+- optimize writing
 - FormatErrors should have a line_number attribute
 Documentation
 
