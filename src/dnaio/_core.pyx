@@ -179,9 +179,10 @@ class FastqReader(BinaryFileReader):
 		cdef:
 			bytearray buf = bytearray(1048576)
 			char[:] buf_view = buf
-			char* c
+			char* c_buf
 			int endskip
-			bytes name_encoded
+			str name
+			char* name_encoded
 			Py_ssize_t bufstart, bufend, pos, record_start, sequence_start
 			Py_ssize_t second_header_start, sequence_length, qualities_start
 			Py_ssize_t second_header_length, name_length
@@ -204,6 +205,8 @@ class FastqReader(BinaryFileReader):
 		readinto = self._file.readinto
 		bufstart = 0
 		line = 1
+		c_buf = buf
+
 		# The input file is processed in chunks that each fit into buf
 		while True:
 			bufend = readinto(buf_view[bufstart:]) + bufstart
@@ -212,33 +215,34 @@ class FastqReader(BinaryFileReader):
 				break
 
 			# Parse all complete FASTQ records in this chunk
-			c = buf
 			pos = 0
 			record_start = 0
 			while True:
 				# Parse the name
-				if c[pos] != '@':
+				if c_buf[pos] != '@':
 					raise FormatError("Line {} in FASTQ file is expected to "
-						"start with '@', but found {!r}".format(line, chr(c[pos])))
+						"start with '@', but found {!r}".format(line, chr(c_buf[pos])))
 				pos += 1
-				while pos < bufend and c[pos] != '\n':
+				while pos < bufend and c_buf[pos] != '\n':
 					pos += 1
 				if pos == bufend:
 					break
-				endskip = 1 if c[pos-1] == '\r' else 0
+				endskip = 1 if c_buf[pos-1] == '\r' else 0
 				name_length = pos - endskip - record_start - 1
-				name_encoded = (<char*>buf)[record_start+1:pos-endskip]
+				name_encoded = c_buf + record_start + 1
+				name = c_buf[record_start+1:pos-endskip].decode('ascii')
+
 				pos += 1
 				line += 1
 
 				# Parse the sequence
 				sequence_start = pos
-				while pos < bufend and c[pos] != '\n':
+				while pos < bufend and c_buf[pos] != '\n':
 					pos += 1
 				if pos == bufend:
 					break
-				endskip = 1 if c[pos-1] == '\r' else 0
-				sequence = (<char*>buf)[sequence_start:pos-endskip].decode('ascii')
+				endskip = 1 if c_buf[pos-1] == '\r' else 0
+				sequence = c_buf[sequence_start:pos-endskip].decode('ascii')
 				sequence_length = pos - endskip - sequence_start
 				pos += 1
 				line += 1
@@ -247,53 +251,52 @@ class FastqReader(BinaryFileReader):
 				second_header_start = pos
 				if pos == bufend:
 					break
-				if c[pos] != '+':
+				if c_buf[pos] != '+':
 					raise FormatError("Line {} in FASTQ file is expected to "
-						"start with '+', but found {!r}".format(line, chr(c[pos])))
+						"start with '+', but found {!r}".format(line, chr(c_buf[pos])))
 				pos += 1
-				while pos < bufend and c[pos] != '\n':
+				while pos < bufend and c_buf[pos] != '\n':
 					pos += 1
 				if pos == bufend:
 					break
 				line += 1
-				endskip = 1 if c[pos-1] == '\r' else 0
+				endskip = 1 if c_buf[pos-1] == '\r' else 0
 				second_header_length = pos - endskip - second_header_start - 1
 				if second_header_length == 0:
 					second_header = False
 				else:
 					if (name_length != second_header_length or
-							strncmp(<char*>buf+second_header_start+1,
-								<char*>name_encoded, second_header_length) != 0):
+							strncmp(c_buf+second_header_start+1,
+								name_encoded, second_header_length) != 0):
 						raise FormatError(
 							"At line {}: Sequence descriptions in the "
 							"FASTQ file don't match ('{}' != '{}').\n"
 							"The second sequence description must be either "
 							"empty or equal to the first description.".format(
 								line, name_encoded.decode('ascii'),
-								bytes(
-									buf[second_header_start+1:pos-endskip]
-								).decode('ascii')))
+								c_buf[second_header_start+1:pos-endskip]
+								.decode('ascii')))
 					second_header = True
 				pos += 1
 				line += 1
 
 				# Parse qualities
 				qualities_start = pos
-				while pos < bufend and c[pos] != '\n':
+				while pos < bufend and c_buf[pos] != '\n':
 					pos += 1
 				if pos == bufend:
 					break
-				endskip = 1 if c[pos-1] == '\r' else 0
-				qualities = (<char*>buf)[qualities_start:pos-endskip].decode('ascii')
+				endskip = 1 if c_buf[pos-1] == '\r' else 0
+				qualities = c_buf[qualities_start:pos-endskip].decode('ascii')
 				if pos - endskip - qualities_start != sequence_length:
 					raise FormatError("At line {}: Length of sequence and "
 						"qualities differ.".format(line))
 				pos += 1
 				line += 1
 				if custom_class:
-					yield self.sequence_class(name_encoded.decode('ascii'), sequence, qualities)
+					yield self.sequence_class(name, sequence, qualities)
 				else:
-					yield Sequence.__new__(Sequence, name_encoded.decode('ascii'), sequence, qualities)
+					yield Sequence.__new__(Sequence, name, sequence, qualities)
 				record_start = pos
 				if pos == bufend:
 					break
