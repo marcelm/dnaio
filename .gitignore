@@ -8,3 +8,4 @@ __pycache__
 /src/*/_*.c
 /src/*/*.so
 /src/*.egg-info/
+/.tox/
