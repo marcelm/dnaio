@@ -115,11 +115,12 @@ cdef class Sequence(object):
 		public str sequence
 		public str qualities
 
-	def __init__(self, str name, str sequence, str qualities=None):
+	def __cinit__(self, str name, str sequence, str qualities=None):
 		"""Set qualities to None if there are no quality values"""
 		self.name = name
 		self.sequence = sequence
 		self.qualities = qualities
+
 		if qualities is not None and len(qualities) != len(sequence):
 			rname = _shorten(name)
 			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length "
@@ -185,8 +186,9 @@ class FastqReader(BinaryFileReader):
 			Py_ssize_t second_header_start, sequence_length, qualities_start
 			Py_ssize_t second_header_length, name_length
 			Py_ssize_t line
+			bint custom_class = self.sequence_class is not Sequence
 
-		# buf is byte buffer that is re-used in each iteration. Its layout is:
+		# buf is a byte buffer that is re-used in each iteration. Its layout is:
 		#
 		# |-- complete records --|
 		# +---+------------------+---------+-------+
@@ -288,8 +290,10 @@ class FastqReader(BinaryFileReader):
 						"qualities differ.".format(line))
 				pos += 1
 				line += 1
-
-				yield self.sequence_class(name_encoded.decode('ascii'), sequence, qualities)
+				if custom_class:
+					yield self.sequence_class(name_encoded.decode('ascii'), sequence, qualities)
+				else:
+					yield Sequence.__new__(Sequence, name_encoded.decode('ascii'), sequence, qualities)
 				record_start = pos
 				if pos == bufend:
 					break
