@@ -659,7 +659,7 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
     # Detect file format
     name = None
     if file == "-":
-        file = sys.stdin if mode == 'r' else sys.stdout
+        file = sys.stdin.buffer if mode == 'r' else sys.stdout.buffer
     elif isinstance(file, str):
         name = file
     elif hasattr(file, "name"):  # seems to be an open file-like object
@@ -681,7 +681,7 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
             file.seek(-1, 1)
             new_file = file
         elif hasattr(file, 'peek'):
-            first_char = file.peek(1)
+            first_char = file.peek(1)[0:1]
             new_file = file
         else:
             first_line = file.readline()

@@ -1,17 +1,18 @@
 import os
 import shutil
+import subprocess
+import sys
 from io import BytesIO
 from tempfile import mkdtemp
 from textwrap import dedent
 
-from pytest import raises, mark
-
 import dnaio
 from dnaio import (
     sequence_names_match, head, fastq_head, two_fastq_heads, find_fastq_record_end,
-    read_paired_chunks, read_chunks_from_file, Sequence, ColorspaceSequence, FormatError, FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
+    read_paired_chunks, read_chunks_from_file, Sequence, ColorspaceSequence, FormatError,
+    FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
     FastaWriter, FastqWriter, InterleavedSequenceWriter)
-
+from pytest import raises, mark
 
 # files tests/data/simple.fast{q,a}
 simple_fastq = [
@@ -473,3 +474,24 @@ def test_read_chunks_from_file():
         # Buffer too small
         with raises(OverflowError):
             list(read_chunks_from_file(BytesIO(data), buffer_size=4))
+
+
+@mark.parametrize('path', [
+    'tests/data/simple.fastq',
+    'tests/data/dos.fastq',
+    'tests/data/simple.fasta',
+    'tests/data/with_comment.fasta',
+])
+def test_read_stdin(path):
+    # Get number of records in the input file
+    with dnaio.open(path) as f:
+        expected = len(list(f))
+
+    # Use 'cat' to simulate that no file name is available for stdin of the subprocess
+    cat = subprocess.Popen(['cat', path], stdout=subprocess.PIPE)
+    py = subprocess.Popen([sys.executable, 'tests/read_from_stdin.py'], stdin=cat.stdout,
+        stdout=subprocess.PIPE)
+    cat.stdout.close()
+
+    # Check that the read_from_stdin.py script prints the correct number of records
+    assert str(expected) == py.communicate()[0].decode().strip()
