@@ -107,36 +107,6 @@ def sra_colorspace_sequence(name, sequence, qualities, second_header):
     return ColorspaceSequence(name, sequence, qualities[1:])
 
 
-class FileWithPrependedLine:
-    """
-    A file-like object that allows to "prepend" a single
-    line to an already opened file. That is, further
-    reads on the file will return the provided line and
-    only then the actual content. This is needed to solve
-    the problem of autodetecting input from a stream:
-    As soon as the first line has been read, we know
-    the file type, but also that line is "gone" and
-    unavailable for further processing.
-    """
-    def __init__(self, file, line):
-        """
-        file is an already opened file-like object.
-        line is a single string (newline will be appended if not included)
-        """
-        if not line.endswith('\n'):
-            line += '\n'
-        self.first_line = line
-        self._file = file
-
-    def __iter__(self):
-        yield self.first_line
-        for line in self._file:
-            yield line
-
-    def close(self):
-        self._file.close()
-
-
 class FastaReader(BinaryFileReader):
     """
     Reader for FASTA files.
@@ -680,14 +650,8 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
         if file.seekable():
             first_char = file.read(1)
             file.seek(-1, 1)
-            new_file = file
-        elif hasattr(file, 'peek'):
-            first_char = file.peek(1)[0:1]
-            new_file = file
         else:
-            first_line = file.readline()
-            first_char = first_line[0:1]
-            new_file = FileWithPrependedLine(file, first_line)
+            first_char = file.peek(1)[0:1]
         if first_char == b'#':
             # A comment char - only valid for some FASTA variants (csfasta)
             format = 'fasta'
@@ -703,7 +667,6 @@ def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None)
                 'Could not determine whether file {!r} is FASTA or FASTQ. The file extension was '
                 'not available or not recognized and the first character in the file ({!r}) is '
                 'unexpected.'.format(file, first_char))
-        file = new_file
 
     if format is None:
         assert mode == 'w'
