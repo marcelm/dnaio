@@ -1,7 +1,5 @@
 # kate: syntax Python;
-# cython: profile=False, emit_code_comments=False
-from __future__ import print_function, division, absolute_import
-# TODO remove the __future__ imports and set language_level=3
+# cython: profile=False, language_level=3, emit_code_comments=False
 from . import _shorten, FormatError, BinaryFileReader
 
 from libc.string cimport strncmp
@@ -30,7 +28,7 @@ def head(bytes_or_bytearray buf, Py_ssize_t lines):
 		unsigned char* data = buf
 
 	while linebreaks_seen < lines and pos < length:
-		if data[pos] == '\n':
+		if data[pos] == b'\n':
 			linebreaks_seen += 1
 		pos += 1
 	return pos
@@ -53,7 +51,7 @@ def fastq_head(bytes_or_bytearray buf, Py_ssize_t end=-1):
 	if end != -1:
 		length = min(length, end)
 	while True:
-		while pos < length and data[pos] != '\n':
+		while pos < length and data[pos] != b'\n':
 			pos += 1
 		if pos == length:
 			break
@@ -84,12 +82,12 @@ def two_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssize_t
 		Py_ssize_t record_start2 = 0
 
 	while True:
-		while pos1 < end1 and data1[pos1] != '\n':
+		while pos1 < end1 and data1[pos1] != b'\n':
 			pos1 += 1
 		if pos1 == end1:
 			break
 		pos1 += 1
-		while pos2 < end2 and data2[pos2] != '\n':
+		while pos2 < end2 and data2[pos2] != b'\n':
 			pos2 += 1
 		if pos2 == end2:
 			break
@@ -219,15 +217,15 @@ class FastqReader(BinaryFileReader):
 			record_start = 0
 			while True:
 				# Parse the name
-				if c_buf[pos] != '@':
+				if c_buf[pos] != b'@':
 					raise FormatError("Line {} in FASTQ file is expected to "
 						"start with '@', but found {!r}".format(line, chr(c_buf[pos])))
 				pos += 1
-				while pos < bufend and c_buf[pos] != '\n':
+				while pos < bufend and c_buf[pos] != b'\n':
 					pos += 1
 				if pos == bufend:
 					break
-				endskip = 1 if c_buf[pos-1] == '\r' else 0
+				endskip = 1 if c_buf[pos-1] == b'\r' else 0
 				name_length = pos - endskip - record_start - 1
 				name_encoded = c_buf + record_start + 1
 				name = c_buf[record_start+1:pos-endskip].decode('ascii')
@@ -237,11 +235,11 @@ class FastqReader(BinaryFileReader):
 
 				# Parse the sequence
 				sequence_start = pos
-				while pos < bufend and c_buf[pos] != '\n':
+				while pos < bufend and c_buf[pos] != b'\n':
 					pos += 1
 				if pos == bufend:
 					break
-				endskip = 1 if c_buf[pos-1] == '\r' else 0
+				endskip = 1 if c_buf[pos-1] == b'\r' else 0
 				sequence = c_buf[sequence_start:pos-endskip].decode('ascii')
 				sequence_length = pos - endskip - sequence_start
 				pos += 1
@@ -251,16 +249,16 @@ class FastqReader(BinaryFileReader):
 				second_header_start = pos
 				if pos == bufend:
 					break
-				if c_buf[pos] != '+':
+				if c_buf[pos] != b'+':
 					raise FormatError("Line {} in FASTQ file is expected to "
 						"start with '+', but found {!r}".format(line, chr(c_buf[pos])))
 				pos += 1
-				while pos < bufend and c_buf[pos] != '\n':
+				while pos < bufend and c_buf[pos] != b'\n':
 					pos += 1
 				if pos == bufend:
 					break
 				line += 1
-				endskip = 1 if c_buf[pos-1] == '\r' else 0
+				endskip = 1 if c_buf[pos-1] == b'\r' else 0
 				second_header_length = pos - endskip - second_header_start - 1
 				if second_header_length == 0:
 					second_header = False
@@ -282,11 +280,11 @@ class FastqReader(BinaryFileReader):
 
 				# Parse qualities
 				qualities_start = pos
-				while pos < bufend and c_buf[pos] != '\n':
+				while pos < bufend and c_buf[pos] != b'\n':
 					pos += 1
 				if pos == bufend:
 					break
-				endskip = 1 if c_buf[pos-1] == '\r' else 0
+				endskip = 1 if c_buf[pos-1] == b'\r' else 0
 				qualities = c_buf[qualities_start:pos-endskip].decode('ascii')
 				if pos - endskip - qualities_start != sequence_length:
 					raise FormatError("At line {}: Length of sequence and "
