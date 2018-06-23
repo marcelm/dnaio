@@ -577,7 +577,7 @@ def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 
     # All the multi-file things have been dealt with, delegate rest to the
     # single-file function.
-    return _seqopen1(file1, colorspace=colorspace, fileformat=fileformat,
+    return _open_single(file1, colorspace=colorspace, fileformat=fileformat,
         mode=mode, qualities=qualities)
 
 
@@ -600,7 +600,7 @@ def _detect_format_from_name(name):
     return None
 
 
-def _seqopen1(file, colorspace=False, fileformat=None, mode='r', qualities=None):
+def _open_single(file, colorspace=False, fileformat=None, mode='r', qualities=None):
     """
     Open a single sequence file. See description above.
     """
