@@ -77,7 +77,7 @@ class ColorspaceSequence(Sequence):
             raise FormatError("In read named {0!r}: length of colorspace quality "
                 "sequence ({1}) and length of read ({2}) do not match (primer "
                 "is: {3!r})".format(rname, len(qualities), len(sequence), self.primer))
-        super(ColorspaceSequence, self).__init__(name, sequence, qualities)
+        super().__init__(name, sequence, qualities)
         if self.primer not in ('A', 'C', 'G', 'T'):
             raise FormatError("Primer base is {0!r} in read {1!r}, but it "
                 "should be one of A, C, G, T.".format(
@@ -149,7 +149,7 @@ class FastaReader(BinaryFileReader):
 
         keep_linebreaks -- whether to keep newline characters in the sequence
         """
-        super(FastaReader, self).__init__(file)
+        super().__init__(file)
         self.sequence_class = sequence_class
         self.delivers_qualities = False
         self._delimiter = '\n' if keep_linebreaks else ''
@@ -187,17 +187,17 @@ class FastaReader(BinaryFileReader):
 
 class ColorspaceFastaReader(FastaReader):
     def __init__(self, file, keep_linebreaks=False):
-        super(ColorspaceFastaReader, self).__init__(file, keep_linebreaks, sequence_class=ColorspaceSequence)
+        super().__init__(file, keep_linebreaks, sequence_class=ColorspaceSequence)
 
 
 class ColorspaceFastqReader(FastqReader):
     def __init__(self, file):
-        super(ColorspaceFastqReader, self).__init__(file, sequence_class=ColorspaceSequence)
+        super().__init__(file, sequence_class=ColorspaceSequence)
 
 
 class SRAColorspaceFastqReader(FastqReader):
     def __init__(self, file):
-        super(SRAColorspaceFastqReader, self).__init__(file, sequence_class=sra_colorspace_sequence)
+        super().__init__(file, sequence_class=sra_colorspace_sequence)
 
 
 class FastaQualReader:
@@ -252,7 +252,7 @@ class FastaQualReader:
 
 class ColorspaceFastaQualReader(FastaQualReader):
     def __init__(self, fastafile, qualfile):
-        super(ColorspaceFastaQualReader, self).__init__(fastafile, qualfile, sequence_class=ColorspaceSequence)
+        super().__init__(fastafile, qualfile, sequence_class=ColorspaceSequence)
 
 
 def sequence_names_match(r1, r2):
@@ -486,11 +486,12 @@ class ColorspaceFastqWriter(FastqWriter):
         name = record.name
         sequence = record.primer + record.sequence
         qualities = record.qualities
-        super(ColorspaceFastqWriter, self).writeseq(name, sequence, qualities)
+        super().writeseq(name, sequence, qualities)
 
 
 class PairRecordWriter:
     """Public interface to paired-record files"""
+
     def write(self, read1, read2):
         raise NotImplementedError()
 
