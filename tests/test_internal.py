@@ -9,7 +9,7 @@ from textwrap import dedent
 import dnaio
 from dnaio import (
     sequence_names_match, head, fastq_head, two_fastq_heads, find_fastq_record_end,
-    read_paired_chunks, read_chunks_from_file, Sequence, ColorspaceSequence, FormatError,
+    read_paired_chunks, read_chunks_from_file, Sequence, ColorspaceSequence, FileFormatError,
     FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
     FastaWriter, FastqWriter, InterleavedSequenceWriter)
 from pytest import raises, mark
@@ -27,15 +27,15 @@ tiny_fastq = b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n#\n'
 
 class TestSequence:
     def test_too_many_qualities(self):
-        with raises(FormatError):
+        with raises(FileFormatError):
             Sequence(name="name", sequence="ACGT", qualities="#####")
 
     def test_too_many_qualities_colorspace(self):
-        with raises(FormatError):
+        with raises(FileFormatError):
             ColorspaceSequence(name="name", sequence="T0123", qualities="#####")
 
     def test_invalid_primer(self):
-        with raises(FormatError):
+        with raises(FileFormatError):
             ColorspaceSequence(name="name", sequence="K0123", qualities="####")
 
 
@@ -74,7 +74,7 @@ class TestFastaReader:
             >second_sequence
             SEQUENCE2
             """).encode())
-        with raises(FormatError):
+        with raises(FileFormatError):
             reads = list(FastaReader(fasta))
 
     def test_fastareader_keeplinebreaks(self):
@@ -119,7 +119,7 @@ class TestFastqReader:
 
     def test_fastq_wrongformat(self):
         with FastqReader("tests/data/withplus.fastq") as f:
-            with raises(FormatError):
+            with raises(FileFormatError):
                 reads = list(f)
 
     def test_empty_fastq(self):
@@ -151,7 +151,7 @@ class TestFastqReader:
     def test_fastq_incomplete(self, s):
         fastq = BytesIO(s)
         with FastqReader(fastq) as fq:
-            with raises(FormatError):
+            with raises(FileFormatError):
                 list(fq)
 
     def test_missing_final_newline(self):
@@ -185,13 +185,13 @@ class TestFastaQualReader:
     def test_mismatching_read_names(self):
         fasta = BytesIO(b">name\nACG")
         qual = BytesIO(b">nome\n3 5 7")
-        with raises(FormatError):
+        with raises(FileFormatError):
             list(FastaQualReader(fasta, qual))
 
     def test_invalid_quality_value(self):
         fasta = BytesIO(b">name\nACG")
         qual = BytesIO(b">name\n3 xx 7")
-        with raises(FormatError):
+        with raises(FileFormatError):
             list(FastaQualReader(fasta, qual))
 
 
@@ -278,12 +278,12 @@ class TestInterleavedReader:
 
     def test_missing_partner(self):
         s = BytesIO(b'@r1\nACG\n+\nHHH')
-        with raises(FormatError):
+        with raises(FileFormatError):
             list(InterleavedSequenceReader(s))
 
     def test_incorrectly_paired(self):
         s = BytesIO(b'@r1/1\nACG\n+\nHHH\n@wrong_name\nTTT\n+\nHHH')
-        with raises(FormatError):
+        with raises(FileFormatError):
             list(InterleavedSequenceReader(s))
 
 

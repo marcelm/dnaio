@@ -6,13 +6,9 @@ import io
 from os.path import splitext
 from xopen import xopen
 
+from .exceptions import UnknownFileType, FileFormatError
+
 # There are more imports below, see comment there
-
-
-class FormatError(Exception):
-    """
-    Raised when an input file is malformatted.
-    """
 
 
 def _shorten(s, n=100):
@@ -56,7 +52,7 @@ class BinaryFileReader:
 
 # Because _core needs the above definitions when it is itself imported,
 # this import is placed here. This is a circular import, but it allows
-# us to have a flatter package layout. Otherwise, the FormatError (for
+# us to have a flatter package layout. Otherwise, the FileFormatError (for
 # example) would need to go into either _core or a separate errors/utils
 # module.
 from ._core import Sequence, FastqReader, head, fastq_head, two_fastq_heads
@@ -74,12 +70,12 @@ class ColorspaceSequence(Sequence):
             self.primer = primer
         if qualities is not None and len(sequence) != len(qualities):
             rname = _shorten(name)
-            raise FormatError("In read named {0!r}: length of colorspace quality "
+            raise FileFormatError("In read named {0!r}: length of colorspace quality "
                 "sequence ({1}) and length of read ({2}) do not match (primer "
                 "is: {3!r})".format(rname, len(qualities), len(sequence), self.primer))
         super().__init__(name, sequence, qualities)
         if self.primer not in ('A', 'C', 'G', 'T'):
-            raise FormatError("Primer base is {0!r} in read {1!r}, but it "
+            raise FileFormatError("Primer base is {0!r} in read {1!r}, but it "
                 "should be one of A, C, G, T.".format(
                     self.primer, _shorten(name)))
 
@@ -146,7 +142,7 @@ class FastaReader(BinaryFileReader):
             elif name is not None:
                 seq.append(line)
             else:
-                raise FormatError("At line {0}: Expected '>' at beginning of "
+                raise FileFormatError("At line {0}: Expected '>' at beginning of "
                     "FASTA record, but got {1!r}.".format(i+1, _shorten(line)))
 
         if name is not None:
@@ -199,12 +195,12 @@ class FastaQualReader:
             conv[str(i)] = chr(i + 33)
         for fastaread, qualread in zip(self.fastareader, self.qualreader):
             if fastaread.name != qualread.name:
-                raise FormatError("The read names in the FASTA and QUAL file "
+                raise FileFormatError("The read names in the FASTA and QUAL file "
                     "do not match ({0!r} != {1!r})".format(fastaread.name, qualread.name))
             try:
                 qualities = ''.join([conv[value] for value in qualread.sequence.split()])
             except KeyError as e:
-                raise FormatError("Within read named {0!r}: Found invalid quality "
+                raise FileFormatError("Within read named {0!r}: Found invalid quality "
                     "value {1}".format(fastaread.name, e))
             assert fastaread.name == qualread.name
             yield self.sequence_class(fastaread.name, fastaread.sequence, qualities)
@@ -227,7 +223,7 @@ class ColorspaceFastaQualReader(FastaQualReader):
 
 def sequence_names_match(r1, r2):
     """
-    Check whether the sequences r1 and r2 have identical names, ignoring a
+    Check whether the sequence records r1 and r2 have identical names, ignoring a
     suffix of '1' or '2'. Some old paired-end reads have names that end in '/1'
     and '/2'. Also, the fastq-dump tool (used for converting SRA files to FASTQ)
     appends a .1 and .2 to paired-end reads if option -I is used.
@@ -267,7 +263,7 @@ class PairedSequenceReader:
                 # End of file 1. Make sure that file 2 is also at end.
                 try:
                     next(it2)
-                    raise FormatError("Reads are improperly paired. There are more reads in "
+                    raise FileFormatError("Reads are improperly paired. There are more reads in "
                         "file 2 than in file 1.")
                 except StopIteration:
                     pass
@@ -275,10 +271,10 @@ class PairedSequenceReader:
             try:
                 r2 = next(it2)
             except StopIteration:
-                raise FormatError("Reads are improperly paired. There are more reads in "
+                raise FileFormatError("Reads are improperly paired. There are more reads in "
                     "file 1 than in file 2.")
             if not sequence_names_match(r1, r2):
-                raise FormatError("Reads are improperly paired. Read name '{0}' "
+                raise FileFormatError("Reads are improperly paired. Read name '{0}' "
                     "in file 1 does not match '{1}' in file 2.".format(r1.name, r2.name))
             yield (r1, r2)
 
@@ -310,10 +306,10 @@ class InterleavedSequenceReader:
             try:
                 r2 = next(it)
             except StopIteration:
-                raise FormatError("Interleaved input file incomplete: Last record "
+                raise FileFormatError("Interleaved input file incomplete: Last record "
                     "{!r} has no partner.".format(r1.name))
             if not sequence_names_match(r1, r2):
-                raise FormatError("Reads are improperly paired. Name {0!r} "
+                raise FileFormatError("Reads are improperly paired. Name {0!r} "
                     "(first) does not match {1!r} (second).".format(r1.name, r2.name))
             yield (r1, r2)
 
@@ -508,12 +504,6 @@ class InterleavedSequenceWriter(PairRecordWriter):
         self._writer.close()
 
 
-class UnknownFileType(Exception):
-    """
-    Raised when open could not autodetect the file type.
-    """
-
-
 def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
         interleaved=False, mode='r', qualities=None):
     """
@@ -688,7 +678,7 @@ def find_fasta_record_end(buf, end):
         return pos + 1
     if buf[0:1] == b'>':
         return 0
-    raise FormatError('FASTA does not start with ">"')
+    raise FileFormatError('FASTA does not start with ">"')
 
 
 def find_fastq_record_end(buf, end=None):
@@ -769,7 +759,7 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
     start1 = f.readinto(memoryview(buf1)[0:1])
     start2 = f2.readinto(memoryview(buf2)[0:1])
     if (start1 == 1 and buf1[0:1] != b'@') or (start2 == 1 and buf2[0:1] != b'@'):
-        raise FormatError('Paired-end data must be in FASTQ format when using multiple cores')
+        raise FileFormatError('Paired-end data must be in FASTQ format when using multiple cores')
 
     while True:
         bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1

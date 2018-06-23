@@ -1,11 +1,12 @@
 # kate: syntax Python;
 # cython: profile=False, language_level=3, emit_code_comments=False
-from . import _shorten, FormatError, BinaryFileReader
+from .exceptions import FileFormatError
+from . import _shorten, BinaryFileReader
 
 from libc.string cimport strncmp
 cimport cython
 
-# It would be nice to be able to have the first parameter be a
+# It would be nice to be able to have the first parameter be an
 # unsigned char[:] (memory view), but this fails with a BufferError
 # when a bytes object is passed in.
 # See <https://stackoverflow.com/questions/28203670/>
@@ -121,7 +122,7 @@ cdef class Sequence(object):
 
 		if qualities is not None and len(qualities) != len(sequence):
 			rname = _shorten(name)
-			raise FormatError("In read named {0!r}: length of quality sequence ({1}) and length "
+			raise FileFormatError("In read named {0!r}: length of quality sequence ({1}) and length "
 				"of read ({2}) do not match".format(
 					rname, len(qualities), len(sequence)))
 	
@@ -219,7 +220,7 @@ class FastqReader(BinaryFileReader):
 			while True:
 				# Parse the name
 				if c_buf[pos] != b'@':
-					raise FormatError("Line {} in FASTQ file is expected to "
+					raise FileFormatError("Line {} in FASTQ file is expected to "
 						"start with '@', but found {!r}".format(line, chr(c_buf[pos])))
 				pos += 1
 				while pos < bufend and c_buf[pos] != b'\n':
@@ -251,7 +252,7 @@ class FastqReader(BinaryFileReader):
 				if pos == bufend:
 					break
 				if c_buf[pos] != b'+':
-					raise FormatError("Line {} in FASTQ file is expected to "
+					raise FileFormatError("Line {} in FASTQ file is expected to "
 						"start with '+', but found {!r}".format(line, chr(c_buf[pos])))
 				pos += 1
 				while pos < bufend and c_buf[pos] != b'\n':
@@ -267,7 +268,7 @@ class FastqReader(BinaryFileReader):
 					if (name_length != second_header_length or
 							strncmp(c_buf+second_header_start+1,
 								name_encoded, second_header_length) != 0):
-						raise FormatError(
+						raise FileFormatError(
 							"At line {}: Sequence descriptions in the "
 							"FASTQ file don't match ('{}' != '{}').\n"
 							"The second sequence description must be either "
@@ -288,7 +289,7 @@ class FastqReader(BinaryFileReader):
 				endskip = 1 if c_buf[pos-1] == b'\r' else 0
 				qualities = c_buf[qualities_start:pos-endskip].decode('ascii')
 				if pos - endskip - qualities_start != sequence_length:
-					raise FormatError("At line {}: Length of sequence and "
+					raise FileFormatError("At line {}: Length of sequence and "
 						"qualities differ.".format(line))
 				pos += 1
 				line += 1
@@ -314,7 +315,7 @@ class FastqReader(BinaryFileReader):
 					bufstart = bufend - record_start
 					buf[0:bufstart] = buf[record_start:bufend]
 		if pos > record_start:
-			raise FormatError('FASTQ file ended prematurely at line {}. '
+			raise FileFormatError('FASTQ file ended prematurely at line {}. '
 				'The incomplete final record was: '
 				'{!r}'.format(line, _shorten(buf[record_start:pos].decode(), 500)))
 
@@ -344,7 +345,7 @@ class FastqReaderOld(BinaryFileReader):
 		it = iter(self._file)
 		line = next(it)
 		if not (line and line[0] == '@'):
-			raise FormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
+			raise FileFormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
 		strip = -2 if line.endswith('\r\n') else -1
 		name = line[1:strip]
 
@@ -352,7 +353,7 @@ class FastqReaderOld(BinaryFileReader):
 		for line in it:
 			if i == 0:
 				if not (line and line[0] == '@'):
-					raise FormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
+					raise FileFormatError("Line {0} in FASTQ file is expected to start with '@', but found {1!r}".format(i+1, line[:10]))
 				name = line[1:strip]
 			elif i == 1:
 				sequence = line[:strip]
@@ -362,10 +363,10 @@ class FastqReaderOld(BinaryFileReader):
 				else:
 					line = line[:strip]
 					if not (line and line[0] == '+'):
-						raise FormatError("Line {0} in FASTQ file is expected to start with '+', but found {1!r}".format(i+1, line[:10]))
+						raise FileFormatError("Line {0} in FASTQ file is expected to start with '+', but found {1!r}".format(i+1, line[:10]))
 					if len(line) > 1:
 						if not line[1:] == name:
-							raise FormatError(
+							raise FileFormatError(
 								"At line {0}: Sequence descriptions in the FASTQ file don't match "
 								"({1!r} != {2!r}).\n"
 								"The second sequence description must be either empty "
@@ -382,4 +383,4 @@ class FastqReaderOld(BinaryFileReader):
 				yield sequence_class(name, sequence, qualities, second_header=second_header)
 			i = (i + 1) % 4
 		if i != 0:
-			raise FormatError("FASTQ file ended prematurely")
+			raise FileFormatError("FASTQ file ended prematurely")
