@@ -161,7 +161,8 @@ class FastqReader(BinaryFileReader):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
 	"""
-	def __init__(self, file, sequence_class=Sequence):
+
+	def __init__(self, file, sequence_class=Sequence, buffer_size=1048576):
 		"""
 		file is a filename or a file-like object.
 		If file is a filename, then .gz files are supported.
@@ -169,15 +170,16 @@ class FastqReader(BinaryFileReader):
 		super(FastqReader, self).__init__(file)
 		self.sequence_class = sequence_class
 		self.delivers_qualities = True
+		self.buffer_size = buffer_size
 
 	def __iter__(self):
 		"""
 		Parse the FASTQ file and yield Sequence objects
 		"""
 		cdef:
-			bytearray buf = bytearray(1048576)
+			bytearray buf = bytearray(self.buffer_size)
 			char[:] buf_view = buf
-			char* c_buf
+			char* c_buf = buf
 			int endskip
 			str name
 			char* name_encoded
@@ -203,7 +205,6 @@ class FastqReader(BinaryFileReader):
 		readinto = self._file.readinto
 		bufstart = 0
 		line = 1
-		c_buf = buf
 
 		# The input file is processed in chunks that each fit into buf
 		while True:
@@ -299,8 +300,19 @@ class FastqReader(BinaryFileReader):
 				if pos == bufend:
 					break
 			if pos == bufend:
-				bufstart = bufend - record_start
-				buf[0:bufstart] = buf[record_start:bufend]
+				if record_start == 0 and bufend == len(buf):
+					# buffer too small, double it
+					self.buffer_size *= 2
+					prev_buf = buf
+					buf = bytearray(self.buffer_size)
+					buf[0:bufend] = prev_buf
+					del prev_buf
+					bufstart = bufend
+					buf_view = buf
+					c_buf = buf
+				else:
+					bufstart = bufend - record_start
+					buf[0:bufstart] = buf[record_start:bufend]
 		if pos > record_start:
 			raise FormatError('FASTQ file ended prematurely at line {}. '
 				'The incomplete final record was: '
