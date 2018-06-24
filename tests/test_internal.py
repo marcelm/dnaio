@@ -8,7 +8,7 @@ from textwrap import dedent
 
 import dnaio
 from dnaio import (
-    sequence_names_match, head, fastq_head, two_fastq_heads, find_fastq_record_end,
+    _sequence_names_match, two_fastq_heads, _fastq_head,
     read_paired_chunks, read_chunks_from_file, Sequence, ColorspaceSequence, FileFormatError,
     FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
     FastaWriter, FastqWriter, InterleavedSequenceWriter)
@@ -393,26 +393,13 @@ class TestPairedSequenceReader:
         def match(name1, name2):
             seq1 = Sequence(name1, 'ACGT')
             seq2 = Sequence(name2, 'AACC')
-            return sequence_names_match(seq1, seq2)
+            return _sequence_names_match(seq1, seq2)
 
         assert match('abc', 'abc')
         assert match('abc/1', 'abc/2')
         assert match('abc.1', 'abc.2')
         assert match('abc1', 'abc2')
         assert not match('abc', 'xyz')
-
-
-def test_head():
-    # no line break at end on purpose
-    buf = b'first\nsecond\nthird\nfourth\nfifth'
-    assert head(buf, 0) == 0
-    assert head(buf, 1) == len('first\n')
-    assert head(buf, 2) == len('first\n') + len('second\n')
-    assert head(buf, 3) == len('first\n') + len('second\n') + len('third\n')
-    assert head(buf, 4) == len('first\n') + len('second\n') + len('third\n') + len('fourth\n')
-    assert head(buf, 5) == len(buf)
-    assert head(buf, 6) == len(buf)
-    assert head(buf, 100) == len(buf)
 
 
 def test_two_fastq_heads():
@@ -428,36 +415,24 @@ def test_two_fastq_heads():
 
 
 def test_fastq_head():
-    assert fastq_head(b'') == 0
-    assert fastq_head(b'A\n') == 0
-    assert fastq_head(b'A\nB') == 0
-    assert fastq_head(b'A\nB\n') == 0
-    assert fastq_head(b'A\nB\nC') == 0
-    assert fastq_head(b'A\nB\nC\n') == 0
-    assert fastq_head(b'A\nB\nC\nD') == 0
-    assert fastq_head(b'A\nB\nC\nD\n') == 8
-    assert fastq_head(b'A\nB\nC\nD\nE') == 8
-
-
-def test_fastq_record_end():
-    assert find_fastq_record_end(b'') == 0
-    assert find_fastq_record_end(b'A\n') == 0
-    assert find_fastq_record_end(b'A\nB') == 0
-    assert find_fastq_record_end(b'A\nB\n') == 0
-    assert find_fastq_record_end(b'A\nB\nC') == 0
-    assert find_fastq_record_end(b'A\nB\nC\n') == 0
-    assert find_fastq_record_end(b'A\nB\nC\nD') == 0
-    assert find_fastq_record_end(b'A\nB\nC\nD\n') == 0
-    assert find_fastq_record_end(b'A\nB\nC\nD\nE') == 0
-    assert find_fastq_record_end(b'A\nB\nC\nD\nE\n') == 0
-    assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF') == 0
-    assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\n') == 0
-    assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG') == 0
-    assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\n') == 0
-    assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH') == 0
-    assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH\n') == 16
-    assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH\nI') == 16
-    assert find_fastq_record_end(b'A\nB\nC\nD\nE\nF\nG\nH\nI\n') == 16
+    assert _fastq_head(b'') == 0
+    assert _fastq_head(b'A\n') == 0
+    assert _fastq_head(b'A\nB') == 0
+    assert _fastq_head(b'A\nB\n') == 0
+    assert _fastq_head(b'A\nB\nC') == 0
+    assert _fastq_head(b'A\nB\nC\n') == 0
+    assert _fastq_head(b'A\nB\nC\nD') == 0
+    assert _fastq_head(b'A\nB\nC\nD\n') == 0
+    assert _fastq_head(b'A\nB\nC\nD\nE') == 0
+    assert _fastq_head(b'A\nB\nC\nD\nE\n') == 0
+    assert _fastq_head(b'A\nB\nC\nD\nE\nF') == 0
+    assert _fastq_head(b'A\nB\nC\nD\nE\nF\n') == 0
+    assert _fastq_head(b'A\nB\nC\nD\nE\nF\nG') == 0
+    assert _fastq_head(b'A\nB\nC\nD\nE\nF\nG\n') == 0
+    assert _fastq_head(b'A\nB\nC\nD\nE\nF\nG\nH') == 0
+    assert _fastq_head(b'A\nB\nC\nD\nE\nF\nG\nH\n') == 16
+    assert _fastq_head(b'A\nB\nC\nD\nE\nF\nG\nH\nI') == 16
+    assert _fastq_head(b'A\nB\nC\nD\nE\nF\nG\nH\nI\n') == 16
 
 
 def test_read_paired_chunks():

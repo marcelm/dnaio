@@ -55,7 +55,7 @@ class BinaryFileReader:
 # us to have a flatter package layout. Otherwise, the FileFormatError (for
 # example) would need to go into either _core or a separate errors/utils
 # module.
-from ._core import Sequence, FastqReader, head, fastq_head, two_fastq_heads
+from ._core import Sequence, FastqReader, two_fastq_heads
 
 
 class ColorspaceSequence(Sequence):
@@ -221,7 +221,7 @@ class ColorspaceFastaQualReader(FastaQualReader):
         super().__init__(fastafile, qualfile, sequence_class=ColorspaceSequence)
 
 
-def sequence_names_match(r1, r2):
+def _sequence_names_match(r1, r2):
     """
     Check whether the sequence records r1 and r2 have identical names, ignoring a
     suffix of '1' or '2'. Some old paired-end reads have names that end in '/1'
@@ -273,7 +273,7 @@ class PairedSequenceReader:
             except StopIteration:
                 raise FileFormatError("Reads are improperly paired. There are more reads in "
                     "file 1 than in file 2.")
-            if not sequence_names_match(r1, r2):
+            if not _sequence_names_match(r1, r2):
                 raise FileFormatError("Reads are improperly paired. Read name '{0}' "
                     "in file 1 does not match '{1}' in file 2.".format(r1.name, r2.name))
             yield (r1, r2)
@@ -308,7 +308,7 @@ class InterleavedSequenceReader:
             except StopIteration:
                 raise FileFormatError("Interleaved input file incomplete: Last record "
                     "{!r} has no partner.".format(r1.name))
-            if not sequence_names_match(r1, r2):
+            if not _sequence_names_match(r1, r2):
                 raise FileFormatError("Reads are improperly paired. Name {0!r} "
                     "(first) does not match {1!r} (second).".format(r1.name, r2.name))
             yield (r1, r2)
@@ -669,9 +669,12 @@ def _open_single(file, colorspace=False, fileformat=None, mode='r', qualities=No
     return fastq_handler(file) if format == 'fastq' else fasta_handler(file)
 
 
-def find_fasta_record_end(buf, end):
+def _fasta_head(buf, end):
     """
     Search for the end of the last complete FASTA record within buf[:end]
+
+    Return an integer length such that buf[:length] contains the highest
+    possible number of complete FASTA records.
     """
     pos = buf.rfind(b'\n>', 0, end)
     if pos != -1:
@@ -681,7 +684,7 @@ def find_fasta_record_end(buf, end):
     raise FileFormatError('FASTA does not start with ">"')
 
 
-def find_fastq_record_end(buf, end=None):
+def _fastq_head(buf, end=None):
     """
     Search for the end of the last complete *two* FASTQ records in buf[:end].
 
@@ -713,9 +716,9 @@ def read_chunks_from_file(f, buffer_size=4*1024**2):
     # If there is a comment char, we assume FASTA!
     start = f.readinto(memoryview(buf)[0:1])
     if start == 1 and buf[0:1] == b'@':
-        find_record_end = find_fastq_record_end
+        head = _fastq_head
     elif start == 1 and buf[0:1] == b'#' or buf[0:1] == b'>':
-        find_record_end = find_fasta_record_end
+        head = _fasta_head
     elif start > 0:
         raise UnknownFileType('Input file format unknown')
 
@@ -739,7 +742,7 @@ def read_chunks_from_file(f, buffer_size=4*1024**2):
         if start == bufend:
             # End of file
             break
-        end = find_record_end(buf, bufend)
+        end = head(buf, bufend)
         assert end <= bufend
         if end > 0:
             yield memoryview(buf)[0:end]
