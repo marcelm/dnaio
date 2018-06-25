@@ -8,10 +8,12 @@ from textwrap import dedent
 
 import dnaio
 from dnaio import (
-    _sequence_names_match, two_fastq_heads, _fastq_head,
-    read_paired_chunks, read_chunks_from_file, Sequence, ColorspaceSequence, FileFormatError,
+    two_fastq_heads, _fastq_head,
+    read_paired_chunks, read_chunks_from_file, Sequence, FileFormatError,
     FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
     FastaWriter, FastqWriter, InterleavedSequenceWriter)
+
+from dnaio.readers import _sequence_names_match
 from pytest import raises, mark
 
 # files tests/data/simple.fast{q,a}
@@ -29,14 +31,6 @@ class TestSequence:
     def test_too_many_qualities(self):
         with raises(FileFormatError):
             Sequence(name="name", sequence="ACGT", qualities="#####")
-
-    def test_too_many_qualities_colorspace(self):
-        with raises(FileFormatError):
-            ColorspaceSequence(name="name", sequence="T0123", qualities="#####")
-
-    def test_invalid_primer(self):
-        with raises(FileFormatError):
-            ColorspaceSequence(name="name", sequence="K0123", qualities="####")
 
 
 class TestFastaReader:

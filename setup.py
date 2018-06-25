@@ -48,7 +48,10 @@ class sdist(_sdist):
         _sdist.run(self)
 
 
-extensions = [Extension('dnaio._core', sources=['src/dnaio/_core.pyx'])]
+extensions = [
+    Extension('dnaio._core', sources=['src/dnaio/_core.pyx']),
+    Extension('dnaio._sequence', sources=['src/dnaio/_sequence.pyx']),
+]
 
 setup(
     name='dnaio',
