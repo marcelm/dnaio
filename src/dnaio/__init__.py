@@ -1,6 +1,8 @@
 """
 Sequence I/O: Read and write FASTA and FASTQ files efficiently
 """
+__version__ = '0.1'
+
 import sys
 from os.path import splitext
 

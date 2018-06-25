@@ -53,14 +53,19 @@ extensions = [
     Extension('dnaio._sequence', sources=['src/dnaio/_sequence.pyx']),
 ]
 
+with open('README.md', encoding='utf-8') as f:
+    long_description = f.read()
+
+
 setup(
     name='dnaio',
     version='0.1',
-    author='',
-    author_email='',
-    url='',
-    description='',
-    long_description='',
+    author='Marcel Martin',
+    author_email='marcel.martin@scilifelab.se',
+    url='https://github.com/marcelm/dnaio/',
+    description='Read FASTA and FASTQ files efficiently',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     license='MIT',
     packages=['dnaio'],
     package_dir={'': 'src'},
@@ -71,7 +76,7 @@ setup(
     cmdclass={'sdist': sdist, 'build_ext': build_ext},
     install_requires=['xopen'],
     classifiers=[
-            "Development Status :: 1 - Planning",
+            "Development Status :: 3 - Alpha",
             "Intended Audience :: Science/Research",
             "License :: OSI Approved :: MIT License",
             "Natural Language :: English",
