@@ -1,8 +1,8 @@
 import sys
 import os.path
 from setuptools import setup, Extension
-from distutils.command.sdist import sdist as _sdist
-from distutils.command.build_ext import build_ext as _build_ext
+from setuptools.command.sdist import sdist as _sdist
+from setuptools.command.build_ext import build_ext as _build_ext
 
 if sys.version_info[:2] < (3, 4):
     sys.stdout.write('Python 3.4 or later is required\n')
