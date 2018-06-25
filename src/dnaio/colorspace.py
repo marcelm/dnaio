@@ -1,8 +1,7 @@
 from .exceptions import FileFormatError
 from ._util import shorten
-from ._sequence import Sequence
-from ._core import FastqReader
-from .readers import FastaReader
+from ._core import Sequence
+from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 
 

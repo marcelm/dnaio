@@ -50,7 +50,6 @@ class sdist(_sdist):
 
 extensions = [
     Extension('dnaio._core', sources=['src/dnaio/_core.pyx']),
-    Extension('dnaio._sequence', sources=['src/dnaio/_sequence.pyx']),
 ]
 
 with open('README.md', encoding='utf-8') as f:

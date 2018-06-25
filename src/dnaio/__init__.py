@@ -6,14 +6,12 @@ __version__ = '0.1'
 import sys
 from os.path import splitext
 
+from .readers import FastaReader, FastqReader
+from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileType, FileFormatError
-from .readers import FastaReader, PairedSequenceReader, InterleavedSequenceReader
-from .writers import FastaWriter, FastqWriter, PairedSequenceWriter, InterleavedSequenceWriter
-from .colorspace import (ColorspaceFastaReader, ColorspaceFastaQualReader, FastaQualReader, ColorspaceFastaQualReader,
-    SRAColorspaceFastqReader, ColorspaceFastqReader, ColorspaceFastqWriter, ColorspaceFastaWriter)
-
-from ._sequence import Sequence
-from ._core import FastqReader, two_fastq_heads
+from .colorspace import (ColorspaceFastaReader, ColorspaceFastaQualReader, FastaQualReader,
+    ColorspaceFastaQualReader, SRAColorspaceFastqReader, ColorspaceFastqReader,
+    ColorspaceFastqWriter, ColorspaceFastaWriter)
 
 
 def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
@@ -79,8 +77,8 @@ def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
 
     # All the multi-file things have been dealt with, delegate rest to the
     # single-file function.
-    return _open_single(file1, colorspace=colorspace, fileformat=fileformat,
-        mode=mode, qualities=qualities)
+    return _open_single(
+        file1, colorspace=colorspace, fileformat=fileformat, mode=mode, qualities=qualities)
 
 
 def _detect_format_from_name(name):
@@ -126,7 +124,8 @@ def _open_single(file, colorspace=False, fileformat=None, mode='r', qualities=No
                 raise NotImplementedError('Writing to sra-fastq not supported')
             return SRAColorspaceFastqReader(file)
         else:
-            raise UnknownFileType("File format {0!r} is unknown (expected "
+            raise UnknownFileType(
+                "File format {0!r} is unknown (expected "
                 "'sra-fastq' (only for colorspace), 'fasta' or 'fastq').".format(fileformat))
 
     # Detect file format
@@ -181,119 +180,153 @@ def _open_single(file, colorspace=False, fileformat=None, mode='r', qualities=No
     return fastq_handler(file) if format == 'fastq' else fasta_handler(file)
 
 
-def _fasta_head(buf, end):
+def _sequence_names_match(r1, r2):
     """
-    Search for the end of the last complete FASTA record within buf[:end]
-
-    Return an integer length such that buf[:length] contains the highest
-    possible number of complete FASTA records.
+    Check whether the sequence records r1 and r2 have identical names, ignoring a
+    suffix of '1' or '2'. Some old paired-end reads have names that end in '/1'
+    and '/2'. Also, the fastq-dump tool (used for converting SRA files to FASTQ)
+    appends a .1 and .2 to paired-end reads if option -I is used.
     """
-    pos = buf.rfind(b'\n>', 0, end)
-    if pos != -1:
-        return pos + 1
-    if buf[0:1] == b'>':
-        return 0
-    raise FileFormatError('FASTA does not start with ">"')
+    name1 = r1.name.split(None, 1)[0]
+    name2 = r2.name.split(None, 1)[0]
+    if name1[-1:] in '12' and name2[-1:] in '12':
+        name1 = name1[:-1]
+        name2 = name2[:-1]
+    return name1 == name2
 
 
-def _fastq_head(buf, end=None):
+class PairedSequenceReader:
     """
-    Search for the end of the last complete *two* FASTQ records in buf[:end].
+    Read paired-end reads from two files.
 
-    Two FASTQ records are required to ensure that read pairs in interleaved
-    paired-end data are not split.
+    Wraps two BinaryFileReader instances, making sure that reads are properly
+    paired.
     """
-    linebreaks = buf.count(b'\n', 0, end)
-    right = end
-    for _ in range(linebreaks % 8 + 1):
-        right = buf.rfind(b'\n', 0, right)
-    # Note that this works even if linebreaks == 0:
-    # rfind() returns -1 and adding 1 gives index 0,
-    # which is correct.
-    return right + 1
+    paired = True
+
+    def __init__(self, file1, file2, colorspace=False, fileformat=None):
+        self.reader1 = open(file1, colorspace=colorspace, fileformat=fileformat)
+        self.reader2 = open(file2, colorspace=colorspace, fileformat=fileformat)
+        self.delivers_qualities = self.reader1.delivers_qualities
+
+    def __iter__(self):
+        """
+        Iterate over the paired reads. Each item is a pair of Sequence objects.
+        """
+        # Avoid usage of zip() below since it will consume one item too many.
+        it1, it2 = iter(self.reader1), iter(self.reader2)
+        while True:
+            try:
+                r1 = next(it1)
+            except StopIteration:
+                # End of file 1. Make sure that file 2 is also at end.
+                try:
+                    next(it2)
+                    raise FileFormatError("Reads are improperly paired. There are more reads in "
+                        "file 2 than in file 1.")
+                except StopIteration:
+                    pass
+                break
+            try:
+                r2 = next(it2)
+            except StopIteration:
+                raise FileFormatError("Reads are improperly paired. There are more reads in "
+                    "file 1 than in file 2.")
+            if not _sequence_names_match(r1, r2):
+                raise FileFormatError("Reads are improperly paired. Read name '{0}' "
+                    "in file 1 does not match '{1}' in file 2.".format(r1.name, r2.name))
+            yield (r1, r2)
+
+    def close(self):
+        self.reader1.close()
+        self.reader2.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
-def read_chunks_from_file(f, buffer_size=4*1024**2):
+class InterleavedSequenceReader:
     """
-    Read a chunk of complete FASTA or FASTQ records from a file.
-    The size of a chunk is at most buffer_size.
-    f needs to be a file opened in binary mode.
-
-    The yielded memoryview objects become invalid on the next iteration.
+    Read paired-end reads from an interleaved FASTQ file.
     """
-    # This buffer is re-used in each iteration.
-    buf = bytearray(buffer_size)
+    paired = True
 
-    # Read one byte to determine file format.
-    # If there is a comment char, we assume FASTA!
-    start = f.readinto(memoryview(buf)[0:1])
-    if start == 1 and buf[0:1] == b'@':
-        head = _fastq_head
-    elif start == 1 and buf[0:1] == b'#' or buf[0:1] == b'>':
-        head = _fasta_head
-    elif start > 0:
-        raise UnknownFileType('Input file format unknown')
+    def __init__(self, file, colorspace=False, fileformat=None):
+        self.reader = open(file, colorspace=colorspace, fileformat=fileformat)
+        self.delivers_qualities = self.reader.delivers_qualities
 
-    # Layout of buf
-    #
-    # |-- complete records --|
-    # +---+------------------+---------+-------+
-    # |   |                  |         |       |
-    # +---+------------------+---------+-------+
-    # ^   ^                   ^         ^       ^
-    # 0   start               end       bufend  len(buf)
-    #
-    # buf[0:start] is the 'leftover' data that could not be processed
-    # in the previous iteration because it contained an incomplete
-    # FASTA or FASTQ record.
+    def __iter__(self):
+        # Avoid usage of zip() below since it will consume one item too many.
+        it = iter(self.reader)
+        for r1 in it:
+            try:
+                r2 = next(it)
+            except StopIteration:
+                raise FileFormatError("Interleaved input file incomplete: Last record "
+                    "{!r} has no partner.".format(r1.name))
+            if not _sequence_names_match(r1, r2):
+                raise FileFormatError("Reads are improperly paired. Name {0!r} "
+                    "(first) does not match {1!r} (second).".format(r1.name, r2.name))
+            yield (r1, r2)
 
-    while True:
-        if start == len(buf):
-            raise OverflowError('FASTA/FASTQ record does not fit into buffer')
-        bufend = f.readinto(memoryview(buf)[start:]) + start
-        if start == bufend:
-            # End of file
-            break
-        end = head(buf, bufend)
-        assert end <= bufend
-        if end > 0:
-            yield memoryview(buf)[0:end]
-        start = bufend - end
-        assert start >= 0
-        buf[0:start] = buf[end:bufend]
+    def close(self):
+        self.reader.close()
 
-    if start > 0:
-        yield memoryview(buf)[0:start]
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
-def read_paired_chunks(f, f2, buffer_size=4*1024**2):
-    buf1 = bytearray(buffer_size)
-    buf2 = bytearray(buffer_size)
+class PairedSequenceWriter:
+    def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None):
 
-    # Read one byte to make sure we are processing FASTQ
-    start1 = f.readinto(memoryview(buf1)[0:1])
-    start2 = f2.readinto(memoryview(buf2)[0:1])
-    if (start1 == 1 and buf1[0:1] != b'@') or (start2 == 1 and buf2[0:1] != b'@'):
-        raise FileFormatError('Paired-end data must be in FASTQ format when using multiple cores')
+        self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w',
+             qualities=qualities)
+        self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w',
+             qualities=qualities)
 
-    while True:
-        bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1
-        bufend2 = f2.readinto(memoryview(buf2)[start2:]) + start2
-        if start1 == bufend1 and start2 == bufend2:
-            break
+    def write(self, read1, read2):
+        self._writer1.write(read1)
+        self._writer2.write(read2)
 
-        end1, end2 = two_fastq_heads(buf1, buf2, bufend1, bufend2)
-        assert end1 <= bufend1
-        assert end2 <= bufend2
+    def close(self):
+        self._writer1.close()
+        self._writer2.close()
 
-        if end1 > 0 or end2 > 0:
-            yield (memoryview(buf1)[0:end1], memoryview(buf2)[0:end2])
-        start1 = bufend1 - end1
-        assert start1 >= 0
-        buf1[0:start1] = buf1[end1:bufend1]
-        start2 = bufend2 - end2
-        assert start2 >= 0
-        buf2[0:start2] = buf2[end2:bufend2]
+    def __enter__(self):
+        # TODO do not allow this twice
+        return self
 
-    if start1 > 0 or start2 > 0:
-        yield (memoryview(buf1)[0:start1], memoryview(buf2)[0:start2])
+    def __exit__(self, *args):
+        self.close()
+
+
+class InterleavedSequenceWriter:
+    """
+    Write paired-end reads to an interleaved FASTA or FASTQ file
+    """
+
+    def __init__(self, file, colorspace=False, fileformat='fastq', qualities=None):
+        from . import open as dnaio_open  # import locally to avoid circular import
+
+        self._writer = dnaio_open(
+            file, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
+
+    def write(self, read1, read2):
+        self._writer.write(read1)
+        self._writer.write(read2)
+
+    def close(self):
+        self._writer.close()
+
+    def __enter__(self):
+        # TODO do not allow this twice
+        return self
+
+    def __exit__(self, *args):
+        self.close()
