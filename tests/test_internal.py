@@ -8,7 +8,7 @@ from textwrap import dedent
 
 import dnaio
 from dnaio import (
-    FileFormatError, FastaReader, FastqReader, FastaQualReader, InterleavedSequenceReader,
+    FileFormatError, FastaReader, FastqReader, InterleavedSequenceReader,
     FastaWriter, FastqWriter, InterleavedSequenceWriter)
 from dnaio import _sequence_names_match
 from dnaio._core import Sequence
@@ -173,20 +173,6 @@ class TestFastqReader:
             reads = list(sr)
             assert not sr._file.closed
         assert tmp_sr._file is None
-
-
-class TestFastaQualReader:
-    def test_mismatching_read_names(self):
-        fasta = BytesIO(b">name\nACG")
-        qual = BytesIO(b">nome\n3 5 7")
-        with raises(FileFormatError):
-            list(FastaQualReader(fasta, qual))
-
-    def test_invalid_quality_value(self):
-        fasta = BytesIO(b">name\nACG")
-        qual = BytesIO(b">name\n3 xx 7")
-        with raises(FileFormatError):
-            list(FastaQualReader(fasta, qual))
 
 
 class TestOpen:

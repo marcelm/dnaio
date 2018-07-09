@@ -9,35 +9,25 @@ from os.path import splitext
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileType, FileFormatError
-from .colorspace import (ColorspaceFastaReader, ColorspaceFastaQualReader, FastaQualReader,
-    ColorspaceFastaQualReader, SRAColorspaceFastqReader, ColorspaceFastqReader,
-    ColorspaceFastqWriter, ColorspaceFastaWriter)
 
 
-def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
-        interleaved=False, mode='r', qualities=None):
+def open(file1, file2=None, fileformat=None, interleaved=False, mode='r', qualities=None):
     """
     Open sequence files in FASTA or FASTQ format for reading or writing. This is
     a factory that returns an instance of one of the ...Reader or ...Writer
     classes also defined in this module.
 
-    file1, file2, qualfile -- Paths to regular or compressed files or file-like
+    file1, file2 -- Paths to regular or compressed files or file-like
         objects. Use file1 if data is single-end. If also file2 is provided,
-        sequences are paired. If qualfile is given, then file1 must be a FASTA
-        file and sequences are single-end. One of file2 and qualfile must always
-        be None (no paired-end data is supported when reading qualfiles).
+        sequences are paired.
 
     mode -- Either 'r' for reading or 'w' for writing.
 
     interleaved -- If True, then file1 contains interleaved paired-end data.
-        file2 and qualfile must be None in this case.
-
-    colorspace -- If True, instances of the Colorspace... classes
-        are returned.
+        file2 must be None in this case.
 
     fileformat -- If set to None, file format is autodetected from the file name
-        extension. Set to 'fasta', 'fastq', or 'sra-fastq' to not auto-detect.
-        Colorspace is not auto-detected and must always be requested explicitly.
+        extension. Set to 'fasta' or 'fastq' to not auto-detect.
 
     qualities -- When mode is 'w' and fileformat is None, this can be set to
         True or False to specify whether the written sequences will have quality
@@ -50,35 +40,24 @@ def open(file1, file2=None, qualfile=None, colorspace=False, fileformat=None,
     """
     if mode not in ('r', 'w'):
         raise ValueError("Mode must be 'r' or 'w'")
-    if interleaved and (file2 is not None or qualfile is not None):
-        raise ValueError("When interleaved is set, file2 and qualfile must be None")
-    if file2 is not None and qualfile is not None:
-        raise ValueError("Setting both file2 and qualfile is not supported")
+    if interleaved and file2 is not None:
+        raise ValueError("When interleaved is set, file2 must be None")
     if file2 is not None:
         if mode == 'r':
-            return PairedSequenceReader(file1, file2, colorspace, fileformat)
+            return PairedSequenceReader(file1, file2, fileformat)
         else:
-            return PairedSequenceWriter(file1, file2, colorspace, fileformat, qualities)
+            return PairedSequenceWriter(file1, file2, fileformat, qualities)
 
     if interleaved:
         if mode == 'r':
-            return InterleavedSequenceReader(file1, colorspace, fileformat)
+            return InterleavedSequenceReader(file1, fileformat)
         else:
-            return InterleavedSequenceWriter(file1, colorspace, fileformat, qualities)
+            return InterleavedSequenceWriter(file1, fileformat, qualities)
 
-    if qualfile is not None:
-        if mode == 'w':
-            raise NotImplementedError('Writing to csfasta/qual not supported')
-        if colorspace:
-            # read from .(CS)FASTA/.QUAL
-            return ColorspaceFastaQualReader(file1, qualfile)
-        else:
-            return FastaQualReader(file1, qualfile)
-
-    # All the multi-file things have been dealt with, delegate rest to the
+    # All the multi-file options have been dealt with, delegate rest to the
     # single-file function.
     return _open_single(
-        file1, colorspace=colorspace, fileformat=fileformat, mode=mode, qualities=qualities)
+        file1, fileformat=fileformat, mode=mode, qualities=qualities)
 
 
 def _detect_format_from_name(name):
@@ -100,16 +79,16 @@ def _detect_format_from_name(name):
     return None
 
 
-def _open_single(file, colorspace=False, fileformat=None, mode='r', qualities=None):
+def _open_single(file, fileformat=None, mode='r', qualities=None):
     """
-    Open a single sequence file. See description above.
+    Open a single sequence file. See description of open() above.
     """
     if mode == 'r':
-        fastq_handler = ColorspaceFastqReader if colorspace else FastqReader
-        fasta_handler = ColorspaceFastaReader if colorspace else FastaReader
+        fastq_handler = FastqReader
+        fasta_handler = FastaReader
     elif mode == 'w':
-        fastq_handler = ColorspaceFastqWriter if colorspace else FastqWriter
-        fasta_handler = ColorspaceFastaWriter if colorspace else FastaWriter
+        fastq_handler = FastqWriter
+        fasta_handler = FastaWriter
     else:
         raise ValueError("Mode must be 'r' or 'w'")
 
@@ -119,14 +98,9 @@ def _open_single(file, colorspace=False, fileformat=None, mode='r', qualities=No
             return fasta_handler(file)
         elif fileformat == 'fastq':
             return fastq_handler(file)
-        elif fileformat == 'sra-fastq' and colorspace:
-            if mode == 'w':
-                raise NotImplementedError('Writing to sra-fastq not supported')
-            return SRAColorspaceFastqReader(file)
         else:
             raise UnknownFileType(
-                "File format {0!r} is unknown (expected "
-                "'sra-fastq' (only for colorspace), 'fasta' or 'fastq').".format(fileformat))
+                "File format {!r} is unknown (expected 'fasta' or 'fastq').".format(fileformat))
 
     # Detect file format
     name = None
@@ -147,6 +121,7 @@ def _open_single(file, colorspace=False, fileformat=None, mode='r', qualities=No
         format = 'fastq' if qualities else 'fasta'
 
     if mode == 'r' and format is None:
+        # TODO factor out
         # No format detected so far. Try to read from the file.
         if file.seekable():
             first_char = file.read(1)
@@ -204,9 +179,9 @@ class PairedSequenceReader:
     """
     paired = True
 
-    def __init__(self, file1, file2, colorspace=False, fileformat=None):
-        self.reader1 = open(file1, colorspace=colorspace, fileformat=fileformat)
-        self.reader2 = open(file2, colorspace=colorspace, fileformat=fileformat)
+    def __init__(self, file1, file2, fileformat=None):
+        self.reader1 = open(file1, fileformat=fileformat)
+        self.reader2 = open(file2, fileformat=fileformat)
         self.delivers_qualities = self.reader1.delivers_qualities
 
     def __iter__(self):
@@ -254,8 +229,8 @@ class InterleavedSequenceReader:
     """
     paired = True
 
-    def __init__(self, file, colorspace=False, fileformat=None):
-        self.reader = open(file, colorspace=colorspace, fileformat=fileformat)
+    def __init__(self, file, fileformat=None):
+        self.reader = open(file, fileformat=fileformat)
         self.delivers_qualities = self.reader.delivers_qualities
 
     def __iter__(self):
@@ -283,11 +258,11 @@ class InterleavedSequenceReader:
 
 
 class PairedSequenceWriter:
-    def __init__(self, file1, file2, colorspace=False, fileformat='fastq', qualities=None):
+    def __init__(self, file1, file2, fileformat='fastq', qualities=None):
 
-        self._writer1 = open(file1, colorspace=colorspace, fileformat=fileformat, mode='w',
+        self._writer1 = open(file1, fileformat=fileformat, mode='w',
              qualities=qualities)
-        self._writer2 = open(file2, colorspace=colorspace, fileformat=fileformat, mode='w',
+        self._writer2 = open(file2, fileformat=fileformat, mode='w',
              qualities=qualities)
 
     def write(self, read1, read2):
@@ -311,11 +286,11 @@ class InterleavedSequenceWriter:
     Write paired-end reads to an interleaved FASTA or FASTQ file
     """
 
-    def __init__(self, file, colorspace=False, fileformat='fastq', qualities=None):
+    def __init__(self, file, fileformat='fastq', qualities=None):
         from . import open as dnaio_open  # import locally to avoid circular import
 
         self._writer = dnaio_open(
-            file, colorspace=colorspace, fileformat=fileformat, mode='w', qualities=qualities)
+            file, fileformat=fileformat, mode='w', qualities=qualities)
 
     def write(self, read1, read2):
         self._writer.write(read1)
