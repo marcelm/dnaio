@@ -83,7 +83,7 @@ class FastaWriter(FileWriter):
             print('>{0}'.format(name), file=self._file)
             for i in range(0, len(sequence), self.line_length):
                 print(sequence[i:i + self.line_length], file=self._file)
-            if len(sequence) == 0:
+            if not sequence:
                 print(file=self._file)
         else:
             print('>{0}'.format(name), sequence, file=self._file, sep='\n')
