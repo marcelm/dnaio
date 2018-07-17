@@ -1,3 +1,6 @@
+[![Travis](https://travis-ci.org/marcelm/dnaio.svg?branch=master)](https://travis-ci.org/marcelm/dnaio)
+[![PyPI](https://img.shields.io/pypi/v/dnaio.svg?branch=master)](https://pypi.python.org/pypi/dnaio)
+
 # dnaio parses FASTQ and FASTA
 
 `dnaio` is a Python 3 library for fast parsing of FASTQ and also FASTA files. The code was previously part of the
