@@ -5,7 +5,7 @@ from xopen import xopen
 class FileWriter:
     file_mode = 'wt'
 
-    def __init__(self, file):
+    def __init__(self, file, _close_file=None):
         assert self.file_mode in ('wt', 'wb')
         if isinstance(file, str):
             self._file = xopen(file, self.file_mode)
@@ -15,7 +15,7 @@ class FileWriter:
                 self._file = self._force_binary_stream(file)
             else:
                 self._file = self._force_text_stream(file)
-            self._close_on_exit = False
+            self._close_on_exit = bool(_close_file)
 
     @staticmethod
     def _force_binary_stream(file):
@@ -52,12 +52,12 @@ class FastaWriter(FileWriter):
     Write FASTA-formatted sequences to a file.
     """
 
-    def __init__(self, file, line_length=None):
+    def __init__(self, file, line_length=None, _close_file=None):
         """
         If line_length is not None, the lines will
         be wrapped after line_length characters.
         """
-        super().__init__(file)
+        super().__init__(file, _close_file=_close_file)
         self.line_length = line_length if line_length != 0 else None
 
     def write(self, name_or_record, sequence=None):
@@ -100,8 +100,8 @@ class FastqWriter(FileWriter):
     QUALITIS
     """
 
-    def __init__(self, file, two_headers=False):
-        super().__init__(file)
+    def __init__(self, file, two_headers=False, _close_file=None):
+        super().__init__(file, _close_file=_close_file)
         self._two_headers = two_headers
 
     def write(self, record):

@@ -3,9 +3,11 @@ Sequence I/O: Read and write FASTA and FASTQ files efficiently
 """
 __version__ = '0.1'
 
-import sys
 from os.path import splitext
 from contextlib import ExitStack
+import functools
+
+from xopen import xopen
 
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
@@ -84,14 +86,24 @@ def _open_single(file, fileformat=None, mode='r', qualities=None):
     """
     Open a single sequence file. See description of open() above.
     """
+    if mode not in ('r', 'w'):
+        raise ValueError("Mode must be 'r' or 'w'")
+    if isinstance(file, str):
+        file = xopen(file, mode + 'b')
+        close_file = True
+    else:
+        if not hasattr(file, 'readinto'):
+            raise ValueError(
+                'When passing in an open file-like object, it must have been opened in binary mode')
+        close_file = False
     if mode == 'r':
         fastq_handler = FastqReader
         fasta_handler = FastaReader
-    elif mode == 'w':
+    else:
         fastq_handler = FastqWriter
         fasta_handler = FastaWriter
-    else:
-        raise ValueError("Mode must be 'r' or 'w'")
+    fastq_handler = functools.partial(fastq_handler, _close_file=close_file)
+    fasta_handler = functools.partial(fasta_handler, _close_file=close_file)
 
     if fileformat:  # Explict file format given
         fileformat = fileformat.lower()
@@ -103,26 +115,15 @@ def _open_single(file, fileformat=None, mode='r', qualities=None):
             raise UnknownFileFormat(
                 "File format {!r} is unknown (expected 'fasta' or 'fastq').".format(fileformat))
 
-    # Detect file format
-    name = None
-    if file == "-":
-        file = sys.stdin.buffer if mode == 'r' else sys.stdout.buffer
-    elif isinstance(file, str):
-        name = file
-    elif hasattr(file, "name"):  # seems to be an open file-like object
-        name = file.name
-        if not hasattr(file, 'readinto'):
-            raise ValueError(
-                'When passing in an open file-like object, it must have been opened in binary mode')
-
-    format = _detect_format_from_name(name) if name else None
-
+    # First, try to detect the file format from the file name only
+    format = None
+    if hasattr(file, "name"):
+        format = _detect_format_from_name(file.name)
     if format is None and mode == 'w' and qualities is not None:
         # Format not recognized, but we know whether to use a format with or without qualities
         format = 'fastq' if qualities else 'fasta'
 
     if mode == 'r' and format is None:
-        # TODO factor out
         # No format detected so far. Try to read from the file.
         if file.seekable():
             first_char = file.read(1)
