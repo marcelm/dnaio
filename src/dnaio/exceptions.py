@@ -4,7 +4,7 @@ class FileFormatError(Exception):
     """
 
 
-class UnknownFileType(Exception):
+class UnknownFileFormat(Exception):
     """
     The file format could not be automatically detected
     """

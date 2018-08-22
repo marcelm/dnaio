@@ -8,7 +8,7 @@ from os.path import splitext
 
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
-from .exceptions import UnknownFileType, FileFormatError
+from .exceptions import UnknownFileFormat, FileFormatError
 
 
 def open(file1, file2=None, fileformat=None, interleaved=False, mode='r', qualities=None):
@@ -99,7 +99,7 @@ def _open_single(file, fileformat=None, mode='r', qualities=None):
         elif fileformat == 'fastq':
             return fastq_handler(file)
         else:
-            raise UnknownFileType(
+            raise UnknownFileFormat(
                 "File format {!r} is unknown (expected 'fasta' or 'fastq').".format(fileformat))
 
     # Detect file format
@@ -139,14 +139,14 @@ def _open_single(file, fileformat=None, mode='r', qualities=None):
             # Empty input. Pretend this is FASTQ
             format = 'fastq'
         else:
-            raise UnknownFileType(
+            raise UnknownFileFormat(
                 'Could not determine whether file {!r} is FASTA or FASTQ. The file extension was '
                 'not available or not recognized and the first character in the file ({!r}) is '
                 'unexpected.'.format(file, first_char))
 
     if format is None:
         assert mode == 'w'
-        raise UnknownFileType('Cannot determine whether to write in FASTA or FASTQ format')
+        raise UnknownFileFormat('Cannot determine whether to write in FASTA or FASTQ format')
 
     if format == 'fastq' and mode == 'w' and qualities is False:
         raise ValueError(

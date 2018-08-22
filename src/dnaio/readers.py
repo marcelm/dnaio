@@ -5,7 +5,7 @@ import io
 from xopen import xopen
 from ._core import fastq_iter as _fastq_iter, Sequence, paired_fastq_heads as _paired_fastq_heads
 from ._util import shorten as _shorten
-from .exceptions import FileFormatError, UnknownFileType
+from .exceptions import FileFormatError, UnknownFileFormat
 
 
 class BinaryFileReader:
@@ -158,7 +158,7 @@ def read_chunks_from_file(f, buffer_size=4*1024**2):
     elif start == 1 and (buf[0:1] == b'#' or buf[0:1] == b'>'):
         head = _fasta_head
     else:
-        raise UnknownFileType('Input file format unknown')
+        raise UnknownFileFormat('Input file format unknown')
 
     # Layout of buf
     #
