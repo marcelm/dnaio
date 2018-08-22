@@ -180,8 +180,8 @@ class PairedSequenceReader:
     paired = True
 
     def __init__(self, file1, file2, fileformat=None):
-        self.reader1 = open(file1, fileformat=fileformat)
-        self.reader2 = open(file2, fileformat=fileformat)
+        self.reader1 = _open_single(file1, fileformat=fileformat)
+        self.reader2 = _open_single(file2, fileformat=fileformat)
         self.delivers_qualities = self.reader1.delivers_qualities
 
     def __iter__(self):
@@ -230,7 +230,7 @@ class InterleavedSequenceReader:
     paired = True
 
     def __init__(self, file, fileformat=None):
-        self.reader = open(file, fileformat=fileformat)
+        self.reader = _open_single(file, fileformat=fileformat)
         self.delivers_qualities = self.reader.delivers_qualities
 
     def __iter__(self):
@@ -260,9 +260,9 @@ class InterleavedSequenceReader:
 class PairedSequenceWriter:
     def __init__(self, file1, file2, fileformat='fastq', qualities=None):
 
-        self._writer1 = open(file1, fileformat=fileformat, mode='w',
+        self._writer1 = _open_single(file1, fileformat=fileformat, mode='w',
              qualities=qualities)
-        self._writer2 = open(file2, fileformat=fileformat, mode='w',
+        self._writer2 = _open_single(file2, fileformat=fileformat, mode='w',
              qualities=qualities)
 
     def write(self, read1, read2):
@@ -287,9 +287,8 @@ class InterleavedSequenceWriter:
     """
 
     def __init__(self, file, fileformat='fastq', qualities=None):
-        from . import open as dnaio_open  # import locally to avoid circular import
 
-        self._writer = dnaio_open(
+        self._writer = _open_single(
             file, fileformat=fileformat, mode='w', qualities=qualities)
 
     def write(self, read1, read2):
