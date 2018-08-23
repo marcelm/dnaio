@@ -9,7 +9,7 @@
 
 ## Example usage
 
-The main interface is the `dnaio.open` function ::
+The main interface is the `dnaio.open` function:
 
     import dnaio
 
@@ -24,7 +24,7 @@ The main interface is the `dnaio.open` function ::
 
 - FASTQ input and output
 - FASTA input and output
-- Compressed input and output (`.gz`, `.bz2` and `.xz`)
+- Compressed input and output (`.gz`, `.bz2` and `.xz`, detected automatically)
 - Paired-end data in two files
 - Interleaved paired-end data in a single file
 - Files with DOS/Windows linebreaks can be read
