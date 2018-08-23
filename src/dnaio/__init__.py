@@ -5,6 +5,7 @@ __version__ = '0.1'
 
 import sys
 from os.path import splitext
+from contextlib import ExitStack
 
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
@@ -180,8 +181,10 @@ class PairedSequenceReader:
     paired = True
 
     def __init__(self, file1, file2, fileformat=None):
-        self.reader1 = _open_single(file1, fileformat=fileformat)
-        self.reader2 = _open_single(file2, fileformat=fileformat)
+        with ExitStack() as stack:
+            self.reader1 = stack.enter_context(_open_single(file1, fileformat=fileformat))
+            self.reader2 = stack.enter_context(_open_single(file2, fileformat=fileformat))
+            self._close = stack.pop_all().close
         self.delivers_qualities = self.reader1.delivers_qualities
 
     def __iter__(self):
@@ -213,13 +216,12 @@ class PairedSequenceReader:
             yield (r1, r2)
 
     def close(self):
-        self.reader1.close()
-        self.reader2.close()
+        self._close()
 
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *exc):
         self.close()
 
 
@@ -259,19 +261,19 @@ class InterleavedSequenceReader:
 
 class PairedSequenceWriter:
     def __init__(self, file1, file2, fileformat='fastq', qualities=None):
-
-        self._writer1 = _open_single(file1, fileformat=fileformat, mode='w',
-             qualities=qualities)
-        self._writer2 = _open_single(file2, fileformat=fileformat, mode='w',
-             qualities=qualities)
+        with ExitStack() as stack:
+            self._writer1 = stack.enter_context(_open_single(file1, fileformat=fileformat, mode='w',
+                qualities=qualities))
+            self._writer2 = stack.enter_context(_open_single(file2, fileformat=fileformat, mode='w',
+                qualities=qualities))
+            self._close = stack.pop_all().close
 
     def write(self, read1, read2):
         self._writer1.write(read1)
         self._writer2.write(read2)
 
     def close(self):
-        self._writer1.close()
-        self._writer2.close()
+        self._close()
 
     def __enter__(self):
         # TODO do not allow this twice
