@@ -139,7 +139,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 	# ^   ^                  ^         ^       ^
 	# 0   bufstart           end       bufend  len(buf)
 	#
-	# buf[0:start] is the 'leftover' data that could not be processed
+	# buf[0:bufstart] is the 'leftover' data that could not be processed
 	# in the previous iteration because it contained an incomplete
 	# FASTQ record.
 
