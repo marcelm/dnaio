@@ -177,7 +177,8 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 			endskip = 1 if c_buf[pos-1] == b'\r' else 0
 			name_length = pos - endskip - record_start - 1
 			name_encoded = c_buf + record_start + 1
-			name = c_buf[record_start+1:pos-endskip].decode('ascii')
+			# .decode('latin-1') is 50% faster than .decode('ascii')
+			name = c_buf[record_start+1:pos-endskip].decode('latin-1')
 
 			pos += 1
 			line += 1
@@ -189,7 +190,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 			if pos == bufend:
 				break
 			endskip = 1 if c_buf[pos-1] == b'\r' else 0
-			sequence = c_buf[sequence_start:pos-endskip].decode('ascii')
+			sequence = c_buf[sequence_start:pos-endskip].decode('latin-1')
 			sequence_length = pos - endskip - sequence_start
 			pos += 1
 			line += 1
@@ -219,9 +220,9 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 						"Sequence descriptions don't match ('{}' != '{}').\n"
 						"The second sequence description must be either "
 						"empty or equal to the first description.".format(
-							name_encoded[:name_length].decode('ascii'),
+							name_encoded[:name_length].decode('latin-1'),
 							c_buf[second_header_start+1:pos-endskip]
-							.decode('ascii')), line=line)
+							.decode('latin-1')), line=line)
 				second_header = True
 			pos += 1
 			line += 1
@@ -233,7 +234,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 			if pos == bufend:
 				break
 			endskip = 1 if c_buf[pos-1] == b'\r' else 0
-			qualities = c_buf[qualities_start:pos-endskip].decode('ascii')
+			qualities = c_buf[qualities_start:pos-endskip].decode('latin-1')
 			if pos - endskip - qualities_start != sequence_length:
 				raise FastqFormatError("Length of sequence and "
 					"qualities differ", line=line)
@@ -266,7 +267,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 	if pos > record_start:
 		raise FastqFormatError(
 			'Premature end of file encountered. The incomplete final record was: '
-			'{!r}'.format(shorten(buf[record_start:pos].decode(), 500)),
+			'{!r}'.format(shorten(buf[record_start:pos].decode('latin-1'), 500)),
 			line=line)
 
 
