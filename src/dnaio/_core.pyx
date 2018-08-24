@@ -115,6 +115,11 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 	"""
 	Parse the FASTQ file and yield Sequence objects
 
+	However, the very first value that the generator yields indicates whether
+	the first record in the FASTQ has a repeated header (in the third row
+	after the ``+``). This is a kludge, but we need to get this information
+	out of here somehow.
+
 	file -- open binary file
 	"""
 	cdef:
@@ -129,6 +134,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 		Py_ssize_t second_header_length, name_length
 		Py_ssize_t line
 		bint custom_class = sequence_class is not Sequence
+		Py_ssize_t n_records = 0
 
 	# buf is a byte buffer that is re-used in each iteration. Its layout is:
 	#
@@ -233,10 +239,13 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 					"qualities differ", line=line)
 			pos += 1
 			line += 1
+			if n_records == 0:
+				yield second_header  # first yielded value is special
 			if custom_class:
 				yield sequence_class(name, sequence, qualities)
 			else:
 				yield Sequence.__new__(Sequence, name, sequence, qualities)
+			n_records += 1
 			record_start = pos
 			if pos == bufend:
 				break

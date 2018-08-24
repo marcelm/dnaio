@@ -104,9 +104,19 @@ class FastqReader(BinaryFileReader):
         self.sequence_class = sequence_class
         self.delivers_qualities = True
         self.buffer_size = buffer_size
+        # The first value yielded by _fastq_iter indicates
+        # whether the file has repeated headers
+        self._iter = _fastq_iter(self._file, self.sequence_class, self.buffer_size)
+        try:
+            self.two_headers = next(self._iter)
+            assert self.two_headers in (True, False)
+        except StopIteration:
+            # Empty file
+            self.two_headers = False
+            self._iter = iter(())
 
     def __iter__(self):
-        return _fastq_iter(self._file, self.sequence_class, self.buffer_size)
+        return self._iter
 
 
 def _fasta_head(buf, end):

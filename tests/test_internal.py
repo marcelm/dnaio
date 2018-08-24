@@ -192,6 +192,17 @@ class TestFastqReader:
             assert not sr._file.closed
         assert tmp_sr._file is None
 
+    def test_two_headers_(self):
+        fastq = BytesIO(b'@r1\nACG\n+r1\nHHH\n@r2\nT\n+r2\n#\n')
+        with FastqReader(fastq) as fq:
+            assert fq.two_headers
+            list(fq)
+
+        fastq = BytesIO(b'@r1\nACG\n+\nHHH\n@r2\nT\n+r2\n#\n')
+        with FastqReader(fastq) as fq:
+            assert not fq.two_headers
+            list(fq)
+
 
 class TestOpen:
     def setup(self):
