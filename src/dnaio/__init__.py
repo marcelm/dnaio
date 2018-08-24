@@ -9,6 +9,7 @@ import functools
 
 from xopen import xopen
 
+from ._core import Sequence
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError

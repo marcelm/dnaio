@@ -106,9 +106,9 @@ class FastqWriter(FileWriter):
 
     def write(self, record):
         """
-        Write a Sequence record to the the FASTQ file.
+        Write a Sequence record to the FASTQ file.
 
-        The record must have attributes .name, .sequence and .qualities.
+        The record object must have attributes .name, .sequence and .qualities.
         """
         name2 = record.name if self._two_headers else ''
         s = ('@' + record.name + '\n' + record.sequence + '\n+'
