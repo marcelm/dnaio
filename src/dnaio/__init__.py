@@ -11,7 +11,7 @@ from xopen import xopen
 
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
-from .exceptions import UnknownFileFormat, FileFormatError
+from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError
 
 
 def open(file1, file2=None, fileformat=None, interleaved=False, mode='r', qualities=None):

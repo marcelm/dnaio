@@ -8,7 +8,8 @@ from textwrap import dedent
 
 import dnaio
 from dnaio import (
-    FileFormatError, FastaReader, FastqReader, InterleavedSequenceReader,
+    FileFormatError, FastaFormatError, FastqFormatError,
+    FastaReader, FastqReader, InterleavedSequenceReader,
     FastaWriter, FastqWriter, InterleavedSequenceWriter)
 from dnaio import _sequence_names_match
 from dnaio._core import Sequence
@@ -28,7 +29,7 @@ tiny_fastq = b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n#\n'
 
 class TestSequence:
     def test_too_many_qualities(self):
-        with raises(FileFormatError):
+        with raises(ValueError):
             Sequence(name="name", sequence="ACGT", qualities="#####")
 
 
@@ -58,8 +59,7 @@ class TestFastaReader:
 
     def test_wrong_format(self):
         fasta = BytesIO(dedent(
-            """
-            # a comment
+            """# a comment
             # another one
             unexpected
             >first_sequence
@@ -67,8 +67,9 @@ class TestFastaReader:
             >second_sequence
             SEQUENCE2
             """).encode())
-        with raises(FileFormatError):
-            reads = list(FastaReader(fasta))
+        with raises(FastaFormatError) as info:
+            list(FastaReader(fasta))
+        assert info.value.line == 3
 
     def test_fastareader_keeplinebreaks(self):
         with FastaReader("tests/data/simple.fasta", keep_linebreaks=True) as f:
@@ -111,47 +112,64 @@ class TestFastqReader:
         assert dos_reads == unix_reads
 
     def test_fastq_wrongformat(self):
-        with FastqReader("tests/data/withplus.fastq") as f:
-            with raises(FileFormatError):
-                reads = list(f)
+        with raises(FastqFormatError) as info:
+            with FastqReader("tests/data/withplus.fastq") as f:
+                list(f)
+        assert info.value.line == 3
 
     def test_empty_fastq(self):
         with FastqReader(BytesIO(b'')) as fq:
             assert list(fq) == []
 
-    @mark.parametrize('s', [
-        b'@',
-        b'@r',
-        b'@r1',
-        b'@r1\n',
-        b'@r1\nA',
-        b'@r1\nAC',
-        b'@r1\nACG',
-        b'@r1\nACG\n',
-        b'@r1\nACG\n+',
-        b'@r1\nACG\n+\n',
-        b'@r1\nACG\n+\nH',
-        b'@r1\nACG\n+\nHH',
-        b'@r1\nACG\n+\nHHH\n@',
-        b'@r1\nACG\n+\nHHH\n@r',
-        b'@r1\nACG\n+\nHHH\n@r2',
-        b'@r1\nACG\n+\nHHH\n@r2\n',
-        b'@r1\nACG\n+\nHHH\n@r2\nT',
-        b'@r1\nACG\n+\nHHH\n@r2\nT\n',
-        b'@r1\nACG\n+\nHHH\n@r2\nT\n+',
-        b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n',
+    @mark.parametrize('s,line', [
+        (b'@', 1),
+        (b'@r', 1),
+        (b'@r1', 1),
+        (b'@r1\n', 2),
+        (b'@r1\nA', 2),
+        (b'@r1\nAC', 2),
+        (b'@r1\nACG', 2),
+        (b'@r1\nACG\n', 3),
+        (b'@r1\nACG\n+', 3),
+        (b'@r1\nACG\n+\n', 4),
+        (b'@r1\nACG\n+\nH', 4),
+        (b'@r1\nACG\n+\nHH', 4),
+        (b'@r1\nACG\n+\nHHH\n@', 5),
+        (b'@r1\nACG\n+\nHHH\n@r', 5),
+        (b'@r1\nACG\n+\nHHH\n@r2', 5),
+        (b'@r1\nACG\n+\nHHH\n@r2\n', 6),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT', 6),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT\n', 7),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+', 7),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n', 8),
     ])
-    def test_fastq_incomplete(self, s):
+    def test_fastq_incomplete(self, s, line):
         fastq = BytesIO(s)
-        with FastqReader(fastq) as fq:
-            with raises(FileFormatError):
+        with raises(FastqFormatError) as info:
+            with FastqReader(fastq) as fq:
                 list(fq)
+        assert info.value.line == line
 
-    @mark.skip
+    @mark.parametrize('s,line', [
+        (b'@r1\nACG\n+\nH#HH\n@r2\nT\n+\nH\n', 4),
+        (b'@r1\nACG\n+\n#H\n@r2\nT\n+\nH\n', 4),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+\nHH\n', 8),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n\n', 8),
+    ])
+    def test_differing_lengths(self, s, line):
+        fastq = BytesIO(s)
+        with raises(FastqFormatError) as info:
+            with FastqReader(fastq) as fq:
+                list(fq)
+        assert info.value.line == line
+
     def test_missing_final_newline(self):
+        # TODO we may want to accept files with a missing newline
         fastq = BytesIO(b'@r1\nA\n+\nH')
-        with FastqReader(fastq) as fq:
-            assert len(list(fq)) == 1
+        with raises(FastqFormatError) as info:
+            with FastqReader(fastq) as fq:
+                assert len(list(fq)) == 1
+        assert info.value.line == 4
 
     def test_not_opened_as_binary(self):
         filename = 'tests/data/simple.fastq'

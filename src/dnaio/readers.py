@@ -5,7 +5,7 @@ import io
 from xopen import xopen
 from ._core import fastq_iter as _fastq_iter, Sequence, paired_fastq_heads as _paired_fastq_heads
 from ._util import shorten as _shorten
-from .exceptions import FileFormatError, UnknownFileFormat
+from .exceptions import FastaFormatError, UnknownFileFormat, FileFormatError
 
 
 class BinaryFileReader:
@@ -81,8 +81,8 @@ class FastaReader(BinaryFileReader):
             elif name is not None:
                 seq.append(line)
             else:
-                raise FileFormatError("At line {0}: Expected '>' at beginning of "
-                    "FASTA record, but got {1!r}.".format(i + 1, _shorten(line)))
+                raise FastaFormatError("Expected '>' at beginning of "
+                    "record, but got {!r}.".format(_shorten(line)), line=i+1)
 
         if name is not None:
             yield self.sequence_class(name, self._delimiter.join(seq), None)
@@ -121,7 +121,7 @@ def _fasta_head(buf, end):
         return pos + 1
     if buf[0:1] == b'>':
         return 0
-    raise FileFormatError('FASTA does not start with ">"')
+    raise FastaFormatError('File does not start with ">"', line=None)  # TODO: line
 
 
 def _fastq_head(buf, end=None):
@@ -202,7 +202,7 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
     start1 = f.readinto(memoryview(buf1)[0:1])
     start2 = f2.readinto(memoryview(buf2)[0:1])
     if (start1 == 1 and buf1[0:1] != b'@') or (start2 == 1 and buf2[0:1] != b'@'):
-        raise FileFormatError('Paired-end data must be in FASTQ format when using multiple cores')
+        raise FileFormatError('Paired-end data must be in FASTQ format when using multiple cores', line=None)
 
     while True:
         bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1
