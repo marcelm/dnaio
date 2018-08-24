@@ -69,7 +69,7 @@ class TestFastaReader:
             """).encode())
         with raises(FastaFormatError) as info:
             list(FastaReader(fasta))
-        assert info.value.line == 3
+        assert info.value.line == 2
 
     def test_fastareader_keeplinebreaks(self):
         with FastaReader("tests/data/simple.fasta", keep_linebreaks=True) as f:
@@ -115,33 +115,33 @@ class TestFastqReader:
         with raises(FastqFormatError) as info:
             with FastqReader("tests/data/withplus.fastq") as f:
                 list(f)
-        assert info.value.line == 3
+        assert info.value.line == 2
 
     def test_empty_fastq(self):
         with FastqReader(BytesIO(b'')) as fq:
             assert list(fq) == []
 
     @mark.parametrize('s,line', [
-        (b'@', 1),
-        (b'@r', 1),
-        (b'@r1', 1),
-        (b'@r1\n', 2),
-        (b'@r1\nA', 2),
-        (b'@r1\nAC', 2),
-        (b'@r1\nACG', 2),
-        (b'@r1\nACG\n', 3),
-        (b'@r1\nACG\n+', 3),
-        (b'@r1\nACG\n+\n', 4),
-        (b'@r1\nACG\n+\nH', 4),
-        (b'@r1\nACG\n+\nHH', 4),
-        (b'@r1\nACG\n+\nHHH\n@', 5),
-        (b'@r1\nACG\n+\nHHH\n@r', 5),
-        (b'@r1\nACG\n+\nHHH\n@r2', 5),
-        (b'@r1\nACG\n+\nHHH\n@r2\n', 6),
-        (b'@r1\nACG\n+\nHHH\n@r2\nT', 6),
-        (b'@r1\nACG\n+\nHHH\n@r2\nT\n', 7),
-        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+', 7),
-        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n', 8),
+        (b'@', 0),
+        (b'@r', 0),
+        (b'@r1', 0),
+        (b'@r1\n', 1),
+        (b'@r1\nA', 1),
+        (b'@r1\nAC', 1),
+        (b'@r1\nACG', 1),
+        (b'@r1\nACG\n', 2),
+        (b'@r1\nACG\n+', 2),
+        (b'@r1\nACG\n+\n', 3),
+        (b'@r1\nACG\n+\nH', 3),
+        (b'@r1\nACG\n+\nHH', 3),
+        (b'@r1\nACG\n+\nHHH\n@', 4),
+        (b'@r1\nACG\n+\nHHH\n@r', 4),
+        (b'@r1\nACG\n+\nHHH\n@r2', 4),
+        (b'@r1\nACG\n+\nHHH\n@r2\n', 5),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT', 5),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT\n', 6),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+', 6),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n', 7),
     ])
     def test_fastq_incomplete(self, s, line):
         fastq = BytesIO(s)
@@ -151,10 +151,10 @@ class TestFastqReader:
         assert info.value.line == line
 
     @mark.parametrize('s,line', [
-        (b'@r1\nACG\n+\nH#HH\n@r2\nT\n+\nH\n', 4),
-        (b'@r1\nACG\n+\n#H\n@r2\nT\n+\nH\n', 4),
-        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+\nHH\n', 8),
-        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n\n', 8),
+        (b'@r1\nACG\n+\nH#HH\n@r2\nT\n+\nH\n', 3),
+        (b'@r1\nACG\n+\n#H\n@r2\nT\n+\nH\n', 3),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+\nHH\n', 7),
+        (b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n\n', 7),
     ])
     def test_differing_lengths(self, s, line):
         fastq = BytesIO(s)
@@ -169,7 +169,7 @@ class TestFastqReader:
         with raises(FastqFormatError) as info:
             with FastqReader(fastq) as fq:
                 assert len(list(fq)) == 1
-        assert info.value.line == 4
+        assert info.value.line == 3
 
     def test_not_opened_as_binary(self):
         filename = 'tests/data/simple.fastq'

@@ -151,7 +151,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 
 	readinto = file.readinto
 	bufstart = 0
-	line = 1
+	line = 0
 
 	# The input file is processed in chunks that each fit into buf
 	while True:
@@ -164,7 +164,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 		pos = 0
 		record_start = 0
 		while True:
-			# Parse the name (line 1)
+			# Parse the name (line 0)
 			if c_buf[pos] != b'@':
 				raise FastqFormatError("Line is expected to "
 					"start with '@', but found {!r}".format(chr(c_buf[pos])),
@@ -182,7 +182,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 			pos += 1
 			line += 1
 
-			# Parse the sequence (line 2)
+			# Parse the sequence (line 1)
 			sequence_start = pos
 			while pos < bufend and c_buf[pos] != b'\n':
 				pos += 1
@@ -194,7 +194,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 			pos += 1
 			line += 1
 
-			# Parse second header (line 3)
+			# Parse second header (line 2)
 			second_header_start = pos
 			if pos == bufend:
 				break
@@ -226,7 +226,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 			pos += 1
 			line += 1
 
-			# Parse qualities (line 4)
+			# Parse qualities (line 3)
 			qualities_start = pos
 			while pos < bufend and c_buf[pos] != b'\n':
 				pos += 1
@@ -273,6 +273,8 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 class FastqReaderOld:  #(BinaryFileReader):
 	"""
 	Reader for FASTQ files. Does not support multi-line FASTQ files.
+
+	FIXME Line numbers reported in FastFormatErrors are wrong.
 	"""
 	def __init__(self, file, sequence_class=Sequence):
 		"""
@@ -296,7 +298,7 @@ class FastqReaderOld:  #(BinaryFileReader):
 		line = next(it)
 		if not (line and line[0] == '@'):
 			raise FastqFormatError(
-				"Line was expected to start with '@', but found {!r}".format(line[:10]), line=i+1)
+				"Line was expected to start with '@', but found {!r}".format(line[:10]), line=i)
 		strip = -2 if line.endswith('\r\n') else -1
 		name = line[1:strip]
 
@@ -305,7 +307,7 @@ class FastqReaderOld:  #(BinaryFileReader):
 			if i == 0:
 				if not (line and line[0] == '@'):
 					raise FastqFormatError(
-						"Line was expected to start with '@', but found {!r}".format(line[:10]), line=i+1)
+						"Line was expected to start with '@', but found {!r}".format(line[:10]), line=i)
 				name = line[1:strip]
 			elif i == 1:
 				sequence = line[:strip]
@@ -316,7 +318,7 @@ class FastqReaderOld:  #(BinaryFileReader):
 					line = line[:strip]
 					if not (line and line[0] == '+'):
 						raise FastqFormatError(
-							"Line was expected to start with '+', but found {!r}".format(line[:10]), line=i+1)
+							"Line was expected to start with '+', but found {!r}".format(line[:10]), line=i)
 					if len(line) > 1:
 						if not line[1:] == name:
 							raise FastqFormatError(
@@ -324,7 +326,7 @@ class FastqReaderOld:  #(BinaryFileReader):
 								"({!r} != {!r}).\n"
 								"The second sequence description must be either empty "
 								"or equal to the first description.".format(name, line[1:]),
-								line=i+1)
+								line=i)
 						second_header = True
 					else:
 						second_header = False
@@ -336,4 +338,4 @@ class FastqReaderOld:  #(BinaryFileReader):
 				yield sequence_class(name, sequence, qualities, second_header=second_header)
 			i = (i + 1) % 4
 		if i != 0:
-			raise FastqFormatError("File ended prematurely", line=i+1)
+			raise FastqFormatError("File ended prematurely", line=i)
