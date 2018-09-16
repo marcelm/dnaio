@@ -1,4 +1,3 @@
-# kate: syntax Python;
 # cython: profile=False, language_level=3, emit_code_comments=False
 
 from libc.string cimport strncmp
@@ -8,7 +7,7 @@ from .exceptions import FastqFormatError
 from ._util import shorten
 
 
-cdef class Sequence(object):
+cdef class Sequence:
 	"""
 	A record in a FASTA or FASTQ file. For FASTA, the qualities attribute
 	is None. For FASTQ, qualities is a string and it contains the qualities
