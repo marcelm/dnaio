@@ -3,19 +3,45 @@ language: python
 cache:
   directories:
     - $HOME/.cache/pip
+
 python:
   - "3.4"
   - "3.5"
   - "3.6"
-
-matrix:
-  include:
-    - python: '3.7'
-      sudo: true
-      dist: xenial
+  - "nightly"
 
 install:
   - pip install .[dev]
 
 script:
   - pytest
+
+env:
+  global:
+    - TWINE_REPOSITORY_URL=https://test.pypi.org/legacy/
+    - TWINE_USERNAME=marcelm
+    # TWINE_PASSWORD is set in Travis settings
+
+jobs:
+  include:
+    - stage: test
+      python: "3.7"
+      sudo: true  # This may possibly be removed in the future
+      dist: xenial
+
+    - stage: deploy
+      sudo: required
+      services:
+        - docker
+      python: "3.6"
+      install: python3 -m pip install Cython twine
+      if: tag IS present
+      script:
+        - |
+          python3 setup.py sdist
+          ./buildwheels.sh
+          ls -l dist/
+          python3 -m twine upload dist/*
+
+  allow_failures:
+    - python: "nightly"
