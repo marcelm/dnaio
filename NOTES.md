@@ -1,11 +1,9 @@
-
 - compressed
 - paired-end
 - interleaved
 - chunked
 - FASTA, FASTQ
 - BAM?
--
 
 
 import dnaio
@@ -17,7 +15,6 @@ with dnaio.open('input.fastq.gz') as f:
 with dnaio.open('input.1.fastq.gz', 'input.2.fastq.gz') as f:
     for record in f:
         print(record....)
-
 
 
 Use cases
@@ -37,7 +34,6 @@ Use cases
 Issues
 
 - Binary vs text
-- FASTQ second header (after +)
 - Should SequenceRecord be immutable?
 
 
@@ -46,14 +42,10 @@ TODO
 - Sequence.name should be Sequence.description or so (reserve .name for the part
   before the first space)
 - optimize writing
-- FileFormatErrors should have a line_number attribute
-Documentation
+- Documentation
 
-- test FASTQ reader with smaller buffer sizes
 - Line endings
 - second header
-- multi-line FASTQ
-- accept FASTQ files that are missing the final linebreak
 
 FASTQ chunks
 
@@ -95,16 +87,3 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
 head
 fastq_head
 two_fastq_heads
-
-
-## Colorspace
-
-class ColorspaceSequence(Sequence):
-def sra_colorspace_sequence(name, sequence, qualities, second_header):
-class ColorspaceFastaReader(FastaReader):
-class ColorspaceFastqReader(FastqReader):
-class SRAColorspaceFastqReader(FastqReader):
-class ColorspaceFastaQualReader(FastaQualReader):
-class ColorspaceFastaWriter(FastaWriter):
-- FastaQualReader
-class ColorspaceFastqWriter
