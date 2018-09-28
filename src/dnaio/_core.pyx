@@ -111,7 +111,7 @@ def paired_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssiz
 
 
 
-def fastq_iter(file, sequence_class, buffer_size: int):
+def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 	"""
 	Parse the FASTQ file and yield Sequence objects
 
