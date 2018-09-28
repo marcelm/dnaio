@@ -1,4 +1,4 @@
-# cython: profile=False, language_level=3, emit_code_comments=False
+# cython: language_level=3, emit_code_comments=False
 
 from libc.string cimport strncmp
 cimport cython
