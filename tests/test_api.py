@@ -22,4 +22,4 @@ def test_detect_compressed_fastq_from_content():
 
 
 def test_version():
-	dnaio.__version__
+    _ = dnaio.__version__
