@@ -286,14 +286,16 @@ class TestInterleavedReader:
         assert reads == expected
 
     def test_missing_partner(self):
-        s = BytesIO(b'@r1\nACG\n+\nHHH')
-        with raises(FileFormatError):
+        s = BytesIO(b'@r1\nACG\n+\nHHH\n')
+        with raises(FileFormatError) as info:
             list(InterleavedSequenceReader(s))
+        assert "Interleaved input file incomplete" in info.value.message
 
     def test_incorrectly_paired(self):
-        s = BytesIO(b'@r1/1\nACG\n+\nHHH\n@wrong_name\nTTT\n+\nHHH')
-        with raises(FileFormatError):
+        s = BytesIO(b'@r1/1\nACG\n+\nHHH\n@wrong_name\nTTT\n+\nHHH\n')
+        with raises(FileFormatError) as info:
             list(InterleavedSequenceReader(s))
+        assert "Reads are improperly paired" in info.value.message
 
 
 class TestFastaWriter:

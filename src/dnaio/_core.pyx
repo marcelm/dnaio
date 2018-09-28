@@ -165,7 +165,7 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 		while True:
 			# Parse the name (line 0)
 			if c_buf[pos] != b'@':
-				raise FastqFormatError("Line is expected to "
+				raise FastqFormatError("Line expected to "
 					"start with '@', but found {!r}".format(chr(c_buf[pos])),
 					line=line)
 			pos += 1
