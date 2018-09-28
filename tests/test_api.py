@@ -19,3 +19,7 @@ def test_detect_compressed_fastq_from_content():
     with dnaio.open('tests/data/missingextension.gz') as f:
         record = next(iter(f))
         assert record.name == 'prefix:1_13_573/1'
+
+
+def test_version():
+	dnaio.__version__

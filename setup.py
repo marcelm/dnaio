@@ -3,6 +3,7 @@ import os.path
 from setuptools import setup, Extension
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_ext import build_ext as _build_ext
+import versioneer
 
 if sys.version_info[:2] < (3, 4):
     sys.stdout.write('Python 3.4 or later is required\n')
@@ -25,7 +26,16 @@ def no_cythonize(extensions, **_ignore):
         extension.sources[:] = sources
 
 
-class build_ext(_build_ext):
+extensions = [
+    Extension('dnaio._core', sources=['src/dnaio/_core.pyx']),
+]
+
+cmdclass = versioneer.get_cmdclass()
+versioneer_build_ext = cmdclass.get('build_ext', _build_ext)
+versioneer_sdist = cmdclass.get('sdist', _sdist)
+
+
+class build_ext(versioneer_build_ext):
     def run(self):
         # If we encounter a PKG-INFO file, then this is likely a .tar.gz/.zip
         # file retrieved from PyPI that already includes the pre-cythonized
@@ -37,28 +47,26 @@ class build_ext(_build_ext):
             # only sensible thing is to require Cython to be installed.
             from Cython.Build import cythonize
             self.extensions = cythonize(self.extensions)
-        _build_ext.run(self)
+        versioneer_build_ext.run(self)
 
 
-class sdist(_sdist):
+class sdist(versioneer_sdist):
     def run(self):
         # Make sure the compiled Cython files in the distribution are up-to-date
         from Cython.Build import cythonize
         cythonize(extensions)
-        _sdist.run(self)
+        versioneer_sdist.run(self)
 
 
-extensions = [
-    Extension('dnaio._core', sources=['src/dnaio/_core.pyx']),
-]
+cmdclass['build_ext'] = build_ext
+cmdclass['sdist'] = sdist
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
-
 setup(
     name='dnaio',
-    version='0.1',
+    version=versioneer.get_version(),
     author='Marcel Martin',
     author_email='marcel.martin@scilifelab.se',
     url='https://github.com/marcelm/dnaio/',
@@ -72,7 +80,7 @@ setup(
         'dev': ['Cython', 'pytest'],
     },
     ext_modules=extensions,
-    cmdclass={'sdist': sdist, 'build_ext': build_ext},
+    cmdclass=cmdclass,
     install_requires=['xopen'],
     classifiers=[
             "Development Status :: 3 - Alpha",

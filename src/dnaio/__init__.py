@@ -1,8 +1,6 @@
 """
 Sequence I/O: Read and write FASTA and FASTQ files efficiently
 """
-__version__ = '0.1'
-
 from os.path import splitext
 from contextlib import ExitStack
 import functools
@@ -13,6 +11,11 @@ from ._core import Sequence
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError
+
+from ._version import get_versions
+
+__version__ = get_versions()['version']
+del get_versions
 
 
 def open(file1, file2=None, fileformat=None, interleaved=False, mode='r', qualities=None):
@@ -308,3 +311,7 @@ class InterleavedSequenceWriter:
 
     def __exit__(self, *args):
         self.close()
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
