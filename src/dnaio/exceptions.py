@@ -6,7 +6,7 @@ class FileFormatError(Exception):
 
     def __init__(self, msg, line):
         self.message = msg
-        self.line = line  # starts ot 0!
+        self.line = line  # starts at 0!
 
     def __str__(self):
         line = 'unknown line' if self.line is None else 'line {}'.format(self.line + 1)

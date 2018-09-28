@@ -102,6 +102,12 @@ class TestFastqReader:
             reads = list(f)
         assert reads == simple_fastq
 
+    @mark.parametrize("buffer_size", [1, 2, 3, 5, 7, 10, 20])
+    def test_fastqreader_buffersize(self, buffer_size):
+        with FastqReader("tests/data/simple.fastq", buffer_size=buffer_size) as f:
+            reads = list(f)
+        assert reads == simple_fastq
+
     def test_fastqreader_buffersize_too_small(self):
         with raises(ValueError):
             with FastqReader("tests/data/simple.fastq", buffer_size=0) as f:
@@ -155,6 +161,18 @@ class TestFastqReader:
                 list(fq)
         assert info.value.line == line
 
+    def test_half_record_line_numbers(self):
+        fastq = BytesIO(b'@r\nACG\n+\nHH\n')
+        # Choose the buffer size such that only parts of the record fit
+        # We want to ensure that the line number is reset properly
+        # after the record has been half-parsed
+        buffer_size = len('@r\nACG\n+\n')
+        with raises(FastqFormatError) as info:
+            with FastqReader(fastq, buffer_size=buffer_size) as fq:
+                list(fq)
+        assert 'Length of sequence and qualities differ' in info.value.message
+        assert info.value.line == 3
+
     @mark.parametrize('s,line', [
         (b'@r1\nACG\n+\nH#HH\n@r2\nT\n+\nH\n', 3),
         (b'@r1\nACG\n+\n#H\n@r2\nT\n+\nH\n', 3),
@@ -169,12 +187,11 @@ class TestFastqReader:
         assert info.value.line == line
 
     def test_missing_final_newline(self):
-        # TODO we may want to accept files with a missing newline
+        # Files with a missing final newline are currently allowed
         fastq = BytesIO(b'@r1\nA\n+\nH')
-        with raises(FastqFormatError) as info:
-            with FastqReader(fastq) as fq:
-                assert len(list(fq)) == 1
-        assert info.value.line == 3
+        with dnaio.open(fastq) as f:
+            records = list(f)
+        assert records == [Sequence('r1', 'A', 'H')]
 
     def test_not_opened_as_binary(self):
         filename = 'tests/data/simple.fastq'
