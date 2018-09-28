@@ -135,6 +135,9 @@ def fastq_iter(file, sequence_class, buffer_size: int):
 		bint custom_class = sequence_class is not Sequence
 		Py_ssize_t n_records = 0
 
+	if buffer_size < 1:
+		raise ValueError("Buffer size too small")
+
 	# buf is a byte buffer that is re-used in each iteration. Its layout is:
 	#
 	# |-- complete records --|

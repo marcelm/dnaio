@@ -102,6 +102,11 @@ class TestFastqReader:
             reads = list(f)
         assert reads == simple_fastq
 
+    def test_fastqreader_buffersize_too_small(self):
+        with raises(ValueError):
+            with FastqReader("tests/data/simple.fastq", buffer_size=0) as f:
+                reads = list(f)
+
     def test_fastqreader_dos(self):
         with open('tests/data/dos.fastq', 'rb') as f:
             assert b'\r\n' in f.read()
