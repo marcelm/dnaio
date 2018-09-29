@@ -110,7 +110,6 @@ def paired_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssiz
 	return record_start1, record_start2
 
 
-
 def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 	"""
 	Parse the FASTQ file and yield Sequence objects
@@ -120,7 +119,10 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 	after the ``+``). This is a kludge, but we need to get this information
 	out of here somehow.
 
-	file -- open binary file
+	buffer_size -- size of the initial buffer. This is automatically grown
+	    if a FASTQ record is encountered that does not fit.
+
+	file -- an open binary file
 	"""
 	cdef:
 		bytearray buf = bytearray(buffer_size)
@@ -137,7 +139,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 		bint extra_newline = False
 
 	if buffer_size < 1:
-		raise ValueError("Buffer size too small")
+		raise ValueError("Starting buffer size too small")
 
 	# buf is a byte buffer that is re-used in each iteration. Its layout is:
 	#
