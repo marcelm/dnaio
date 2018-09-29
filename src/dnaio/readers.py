@@ -205,6 +205,9 @@ def read_chunks_from_file(f, buffer_size=4*1024**2):
 
 
 def read_paired_chunks(f, f2, buffer_size=4*1024**2):
+    if buffer_size < 1:
+        raise ValueError("Buffer size too small")
+
     buf1 = bytearray(buffer_size)
     buf2 = bytearray(buffer_size)
 
@@ -215,6 +218,8 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
         raise FileFormatError('Paired-end data must be in FASTQ format when using multiple cores', line=None)
 
     while True:
+        if start1 == len(buf1) or start2 == len(buf2):
+            raise ValueError("FASTQ record does not fit into buffer")
         bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1
         bufend2 = f2.readinto(memoryview(buf2)[start2:]) + start2
         if start1 == bufend1 and start2 == bufend2:
