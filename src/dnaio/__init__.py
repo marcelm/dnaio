@@ -1,7 +1,7 @@
 """
 Sequence I/O: Read and write FASTA and FASTQ files efficiently
 """
-from os.path import splitext
+import os
 from contextlib import ExitStack
 import functools
 
@@ -78,7 +78,7 @@ def _detect_format_from_name(name):
         if name.endswith(ext):
             name = name[:-len(ext)]
             break
-    name, ext = splitext(name)
+    name, ext = os.path.splitext(name)
     if ext in ['.fasta', '.fa', '.fna', '.csfasta', '.csfa']:
         return 'fasta'
     elif ext in ['.fastq', '.fq'] or (ext == '.txt' and name.endswith('_sequence')):

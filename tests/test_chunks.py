@@ -2,7 +2,7 @@ from pytest import raises
 from io import BytesIO
 
 from dnaio._core import paired_fastq_heads
-from dnaio.readers import _fastq_head, read_chunks_from_file, read_paired_chunks
+from dnaio.chunks import _fastq_head, read_chunks, read_paired_chunks
 
 
 def test_paired_fastq_heads():
@@ -45,10 +45,10 @@ def test_read_paired_chunks():
                 print(c1, c2)
 
 
-def test_read_chunks_from_file():
+def test_read_chunks():
     for data in [b'@r1\nACG\n+\nHHH\n', b'>r1\nACGACGACG\n']:
-        assert [m.tobytes() for m in read_chunks_from_file(BytesIO(data))] == [data]
+        assert [m.tobytes() for m in read_chunks(BytesIO(data))] == [data]
 
         # Buffer too small
         with raises(OverflowError):
-            list(read_chunks_from_file(BytesIO(data), buffer_size=4))
+            list(read_chunks(BytesIO(data), buffer_size=4))
