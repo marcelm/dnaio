@@ -5,6 +5,7 @@ class FileFormatError(Exception):
     format = 'sequence'  # Something generic that works for both FASTA and FASTQ
 
     def __init__(self, msg, line):
+        super().__init__(msg, line)
         self.message = msg
         self.line = line  # starts at 0!
 
