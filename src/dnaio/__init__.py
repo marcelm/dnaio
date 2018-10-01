@@ -13,6 +13,9 @@ __all__ = [
     'FileFormatError',
     'FastaFormatError',
     'FastqFormatError',
+    'InterleavedSequenceReader',
+    'InterleavedSequenceWriter',
+    'PairedSequenceReader',
 ]
 
 import os
