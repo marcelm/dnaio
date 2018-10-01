@@ -10,7 +10,8 @@ import dnaio
 from dnaio import (
     FileFormatError, FastaFormatError, FastqFormatError,
     FastaReader, FastqReader, InterleavedSequenceReader,
-    FastaWriter, FastqWriter, InterleavedSequenceWriter)
+    FastaWriter, FastqWriter, InterleavedSequenceWriter,
+    PairedSequenceReader)
 from dnaio import _sequence_names_match
 from dnaio._core import Sequence
 
@@ -298,7 +299,8 @@ class TestInterleavedReader:
                 Sequence('read3/2', 'TGTTATTAATATCAAGTTGG', '#HHHHHHHHHHHHHHHHHHH')
             ),
         ]
-        reads = list(InterleavedSequenceReader("tests/data/interleaved.fastq"))
+        with InterleavedSequenceReader("tests/data/interleaved.fastq") as isr:
+            reads = list(isr)
         for (r1, r2), (e1, e2) in zip(reads, expected):
             print(r1, r2, e1, e2)
 
@@ -310,13 +312,15 @@ class TestInterleavedReader:
     def test_missing_partner(self):
         s = BytesIO(b'@r1\nACG\n+\nHHH\n')
         with raises(FileFormatError) as info:
-            list(InterleavedSequenceReader(s))
+            with InterleavedSequenceReader(s) as isr:
+                list(isr)
         assert "Interleaved input file incomplete" in info.value.message
 
     def test_incorrectly_paired(self):
         s = BytesIO(b'@r1/1\nACG\n+\nHHH\n@wrong_name\nTTT\n+\nHHH\n')
         with raises(FileFormatError) as info:
-            list(InterleavedSequenceReader(s))
+            with InterleavedSequenceReader(s) as isr:
+                list(isr)
         assert "Reads are improperly paired" in info.value.message
 
 
@@ -433,6 +437,32 @@ class TestPairedSequenceReader:
         assert match('abc.1', 'abc.2')
         assert match('abc1', 'abc2')
         assert not match('abc', 'xyz')
+
+    def test_missing_partner1(self):
+        s1 = BytesIO(b'')
+        s2 = BytesIO(b'@r1\nACG\n+\nHHH\n')
+
+        with raises(FileFormatError) as info:
+            with PairedSequenceReader(s1, s2) as psr:
+                list(psr)
+        assert "There are more reads in file 2 than in file 1" in info.value.message
+
+    def test_missing_partner2(self):
+        s1 = BytesIO(b'@r1\nACG\n+\nHHH\n')
+        s2 = BytesIO(b'')
+
+        with raises(FileFormatError) as info:
+            with PairedSequenceReader(s1, s2) as psr:
+                list(psr)
+        assert "There are more reads in file 1 than in file 2" in info.value.message
+
+    def test_incorrectly_paired(self):
+        s1 = BytesIO(b'@r1/1\nACG\n+\nHHH\n')
+        s2 = BytesIO(b'@wrong_name\nTTT\n+\nHHH\n')
+        with raises(FileFormatError) as info:
+            with PairedSequenceReader(s1, s2) as psr:
+                list(psr)
+        assert "Reads are improperly paired" in info.value.message
 
 
 @mark.parametrize('path', [

@@ -219,7 +219,7 @@ class PairedSequenceReader:
                 try:
                     next(it2)
                     raise FileFormatError("Reads are improperly paired. There are more reads in "
-                        "file 2 than in file 1.")
+                        "file 2 than in file 1.", line=None) from None
                 except StopIteration:
                     pass
                 break
@@ -227,10 +227,10 @@ class PairedSequenceReader:
                 r2 = next(it2)
             except StopIteration:
                 raise FileFormatError("Reads are improperly paired. There are more reads in "
-                    "file 1 than in file 2.")
+                    "file 1 than in file 2.", line=None) from None
             if not _sequence_names_match(r1, r2):
-                raise FileFormatError("Reads are improperly paired. Read name '{0}' "
-                    "in file 1 does not match '{1}' in file 2.".format(r1.name, r2.name))
+                raise FileFormatError("Reads are improperly paired. Read name '{}' "
+                    "in file 1 does not match '{}' in file 2.".format(r1.name, r2.name), line=None) from None
             yield (r1, r2)
 
     def close(self):
@@ -254,17 +254,16 @@ class InterleavedSequenceReader:
         self.delivers_qualities = self.reader.delivers_qualities
 
     def __iter__(self):
-        # Avoid usage of zip() below since it will consume one item too many.
         it = iter(self.reader)
         for r1 in it:
             try:
                 r2 = next(it)
             except StopIteration:
                 raise FileFormatError("Interleaved input file incomplete: Last record "
-                    "{!r} has no partner.".format(r1.name), line=None)  # TODO
+                    "{!r} has no partner.".format(r1.name), line=None) from None
             if not _sequence_names_match(r1, r2):
-                raise FileFormatError("Reads are improperly paired. Name {0!r} "
-                    "(first) does not match {1!r} (second).".format(r1.name, r2.name), line=None)  # TODO
+                raise FileFormatError("Reads are improperly paired. Name {!r} "
+                    "(first) does not match {!r} (second).".format(r1.name, r2.name), line=None)
             yield (r1, r2)
 
     def close(self):
