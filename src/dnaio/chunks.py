@@ -15,7 +15,7 @@ def _fasta_head(buf, end):
         return pos + 1
     if buf[0:1] == b'>':
         return 0
-    raise FastaFormatError('File does not start with ">"', line=None)  # TODO: line
+    raise FastaFormatError('File does not start with ">"', line=None)
 
 
 def _fastq_head(buf, end=None):

@@ -112,17 +112,17 @@ def paired_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssiz
 
 def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 	"""
-	Parse the FASTQ file and yield Sequence objects
+	Parse a FASTQ file and yield Sequence objects
 
-	However, the very first value that the generator yields indicates whether
+	The *first value* that the generator yields is a boolean indicating whether
 	the first record in the FASTQ has a repeated header (in the third row
-	after the ``+``). This is a kludge, but we need to get this information
-	out of here somehow.
+	after the ``+``).
+
+	file -- a file-like object, opened in binary mode (it must have a readinto
+	method)
 
 	buffer_size -- size of the initial buffer. This is automatically grown
 	    if a FASTQ record is encountered that does not fit.
-
-	file -- an open binary file
 	"""
 	cdef:
 		bytearray buf = bytearray(buffer_size)

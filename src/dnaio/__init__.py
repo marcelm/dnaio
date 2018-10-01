@@ -1,6 +1,20 @@
 """
 Sequence I/O: Read and write FASTA and FASTQ files efficiently
 """
+
+__all__ = [
+    'open',
+    'Sequence',
+    'FastaReader',
+    'FastaWriter',
+    'FastqReader',
+    'FastqWriter',
+    'UnknownFileFormat',
+    'FileFormatError',
+    'FastaFormatError',
+    'FastqFormatError',
+]
+
 import os
 from contextlib import ExitStack
 import functools
@@ -33,7 +47,7 @@ def open(file1, file2=None, fileformat=None, interleaved=False, mode='r', qualit
     interleaved -- If True, then file1 contains interleaved paired-end data.
         file2 must be None in this case.
 
-    fileformat -- If set to None, file format is autodetected from the file name
+    fileformat -- If set to None, the file format is autodetected from the file name
         extension. Set to 'fasta' or 'fastq' to not auto-detect.
 
     qualities -- When mode is 'w' and fileformat is None, this can be set to
@@ -54,14 +68,13 @@ def open(file1, file2=None, fileformat=None, interleaved=False, mode='r', qualit
             return PairedSequenceReader(file1, file2, fileformat)
         else:
             return PairedSequenceWriter(file1, file2, fileformat, qualities)
-
     if interleaved:
         if mode == 'r':
             return InterleavedSequenceReader(file1, fileformat)
         else:
             return InterleavedSequenceWriter(file1, fileformat, qualities)
 
-    # All the multi-file options have been dealt with, delegate rest to the
+    # The multi-file options have been dealt with, delegate rest to the
     # single-file function.
     return _open_single(
         file1, fileformat=fileformat, mode=mode, qualities=qualities)
@@ -311,7 +324,3 @@ class InterleavedSequenceWriter:
 
     def __exit__(self, *args):
         self.close()
-
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
