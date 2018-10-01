@@ -25,9 +25,9 @@ from ._core import Sequence
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError
+from .chunks import read_chunks, read_paired_chunks
 
 from ._version import get_versions
-
 __version__ = get_versions()['version']
 del get_versions
 
