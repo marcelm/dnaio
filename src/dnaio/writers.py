@@ -99,6 +99,7 @@ class FastqWriter(FileWriter):
     +
     QUALITIS
     """
+    file_mode = 'wb'
 
     def __init__(self, file, two_headers=False, _close_file=None):
         super().__init__(file, _close_file=_close_file)
@@ -113,8 +114,8 @@ class FastqWriter(FileWriter):
         name2 = record.name if self._two_headers else ''
         s = ('@' + record.name + '\n' + record.sequence + '\n+'
              + name2 + '\n' + record.qualities + '\n')
-        self._file.write(s)
+        self._file.write(s.encode('ascii'))
 
     def writeseq(self, name, sequence, qualities):
-        print("@{0:s}\n{1:s}\n+\n{2:s}".format(
-            name, sequence, qualities), file=self._file)
+        self._file.write("@{0:s}\n{1:s}\n+\n{2:s}\n".format(
+            name, sequence, qualities).encode('ascii'))
