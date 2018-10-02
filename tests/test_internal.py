@@ -115,6 +115,7 @@ class TestFastqReader:
                 reads = list(f)
 
     def test_fastqreader_dos(self):
+        # DOS line breaks
         with open('tests/data/dos.fastq', 'rb') as f:
             assert b'\r\n' in f.read()
         with FastqReader("tests/data/dos.fastq") as f:
@@ -204,7 +205,7 @@ class TestFastqReader:
         filename = "tests/data/simple.fastq"
         with open(filename, 'rb') as f:
             assert not f.closed
-            reads = list(dnaio.open(f))
+            _ = list(dnaio.open(f))
             assert not f.closed
         assert f.closed
 
@@ -215,7 +216,7 @@ class TestFastqReader:
             assert not sr._file.closed
         assert tmp_sr._file is None
 
-    def test_two_headers_(self):
+    def test_two_header_detection(self):
         fastq = BytesIO(b'@r1\nACG\n+r1\nHHH\n@r2\nT\n+r2\n#\n')
         with FastqReader(fastq) as fq:
             assert fq.two_headers
@@ -225,6 +226,13 @@ class TestFastqReader:
         with FastqReader(fastq) as fq:
             assert not fq.two_headers
             list(fq)
+
+    def test_second_header_not_equal(self):
+        fastq = BytesIO(b'@r1\nACG\n+xy\n')
+        with raises(FastqFormatError) as info:
+            with FastqReader(fastq) as fq:
+                list(fq)
+        assert "Sequence descriptions don't match" in info.value.message
 
 
 class TestOpen:
