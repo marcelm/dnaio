@@ -137,7 +137,7 @@ def _open_single(file, fileformat=None, mode='r', qualities=None):
 
     # First, try to detect the file format from the file name only
     format = None
-    if hasattr(file, "name"):
+    if hasattr(file, "name") and isinstance(file.name, str):
         format = _detect_format_from_name(file.name)
     if format is None and mode == 'w' and qualities is not None:
         # Format not recognized, but we know whether to use a format with or without qualities
