@@ -112,7 +112,7 @@ def _open_single(file, *, fileformat=None, mode='r', qualities=None):
         file = xopen(file, mode + 'b')
         close_file = True
     else:
-        if not hasattr(file, 'readinto'):
+        if mode == 'r' and not hasattr(file, 'readinto'):
             raise ValueError(
                 'When passing in an open file-like object, it must have been opened in binary mode')
         close_file = False
