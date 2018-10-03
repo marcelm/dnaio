@@ -35,7 +35,7 @@ __version__ = get_versions()['version']
 del get_versions
 
 
-def open(file1, file2=None, fileformat=None, interleaved=False, mode='r', qualities=None):
+def open(file1, *, file2=None, fileformat=None, interleaved=False, mode='r', qualities=None):
     """
     Open sequence files in FASTA or FASTQ format for reading or writing. This is
     a factory that returns an instance of one of the ...Reader or ...Writer
@@ -102,7 +102,7 @@ def _detect_format_from_name(name):
     return None
 
 
-def _open_single(file, fileformat=None, mode='r', qualities=None):
+def _open_single(file, *, fileformat=None, mode='r', qualities=None):
     """
     Open a single sequence file. See description of open() above.
     """
