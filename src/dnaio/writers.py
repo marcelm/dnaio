@@ -3,36 +3,13 @@ from xopen import xopen
 
 
 class FileWriter:
-    file_mode = 'wt'
-
     def __init__(self, file, _close_file=None):
-        assert self.file_mode in ('wt', 'wb')
+        self._file = file
         if isinstance(file, str):
-            self._file = xopen(file, self.file_mode)
+            self._file = xopen(file, 'wb')
             self._close_on_exit = True
         else:
-            if self.file_mode == 'wb':
-                self._file = self._force_binary_stream(file)
-            else:
-                self._file = self._force_text_stream(file)
             self._close_on_exit = bool(_close_file)
-
-    @staticmethod
-    def _force_binary_stream(file):
-        if hasattr(file, 'readinto'):
-            return file
-        elif isinstance(file, io.StringIO):
-            return io.BytesIO(file.getvalue().encode('ascii'))
-        else:
-            return file.buffer
-
-    @staticmethod
-    def _force_text_stream(file):
-        if hasattr(file, 'readinto'):
-            import codecs
-            return codecs.getwriter('ascii')(file)
-        else:
-            return file
 
     def close(self):
         if self._close_on_exit:
@@ -80,13 +57,14 @@ class FastaWriter(FileWriter):
             name = name_or_record
 
         if self.line_length is not None:
-            print('>{0}'.format(name), file=self._file)
+            self._file.write(('>' + name + '\n').encode('ascii'))
+            s = []
             for i in range(0, len(sequence), self.line_length):
-                print(sequence[i:i + self.line_length], file=self._file)
-            if not sequence:
-                print(file=self._file)
+                s.append(sequence[i:i + self.line_length] + '\n')
+            self._file.write(''.join(s).encode('ascii'))
         else:
-            print('>{0}'.format(name), sequence, file=self._file, sep='\n')
+            s = '>' + name + '\n' + sequence + '\n'
+            self._file.write(s.encode('ascii'))
 
 
 class FastqWriter(FileWriter):

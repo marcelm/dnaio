@@ -265,13 +265,15 @@ class TestOpen:
         reads = list(dnaio.open(f))
         assert reads == simple_fasta
 
-    def test_autodetect_fasta_format(self):
-        path = os.path.join(self._tmpdir, 'tmp.fasta')
+    def test_autodetect_fasta_format(self, tmpdir):
+        path = str(tmpdir.join('tmp.fasta'))
         with dnaio.open(path, mode='w') as f:
             assert isinstance(f, FastaWriter)
             for seq in simple_fastq:
                 f.write(seq)
-        assert list(dnaio.open(path)) == simple_fasta
+        with dnaio.open(path) as f:
+            records = list(f)
+        assert records == simple_fasta
 
     def test_write_qualities_to_fasta(self):
         path = os.path.join(self._tmpdir, 'tmp.fasta')
@@ -379,7 +381,7 @@ class TestFastaWriter:
         bio = BytesIO()
         with FastaWriter(bio) as fw:
             fw.write(Sequence("name", ""))
-        assert bio.getvalue() == b'>name\n\n', '{0!r}'.format(bio.getvalue())
+        assert bio.getvalue() == b'>name\n\n', '{!r}'.format(bio.getvalue())
 
 
 class TestFastqWriter:
