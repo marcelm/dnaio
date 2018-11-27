@@ -1,6 +1,6 @@
 import sys
 import os.path
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_ext import build_ext as _build_ext
 import versioneer
@@ -74,8 +74,8 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     license='MIT',
-    packages=['dnaio'],
     package_dir={'': 'src'},
+    packages=find_packages('src'),
     extras_require={
         'dev': ['Cython', 'pytest'],
     },
