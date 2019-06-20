@@ -281,7 +281,8 @@ class TestOpen:
             assert isinstance(f, FastaWriter)
             for seq in simple_fastq:
                 f.write(seq)
-        assert list(dnaio.open(path)) == simple_fasta
+        with dnaio.open(path) as f:
+            assert list(f) == simple_fasta
 
     def test_autodetect_fastq_format(self):
         path = os.path.join(self._tmpdir, 'tmp.fastq')
@@ -289,7 +290,19 @@ class TestOpen:
             assert isinstance(f, FastqWriter)
             for seq in simple_fastq:
                 f.write(seq)
-        assert list(dnaio.open(path)) == simple_fastq
+        with dnaio.open(path) as f:
+            assert list(f) == simple_fastq
+
+    def test_autodetect_fastq_weird_name(self):
+        path = os.path.join(self._tmpdir, 'tmp.fastq.gz')
+        with dnaio.open(path, mode='w') as f:
+            assert isinstance(f, FastqWriter)
+            for seq in simple_fastq:
+                f.write(seq)
+        weird_path = os.path.join(self._tmpdir, 'tmp.weird.gz')
+        os.rename(path, weird_path)
+        with dnaio.open(weird_path) as f:
+            assert list(f) == simple_fastq
 
     def test_fastq_qualities_missing(self):
         path = os.path.join(self._tmpdir, 'tmp.fastq')
