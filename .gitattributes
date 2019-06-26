@@ -1,3 +1,2 @@
 *.fastq -crlf
 *.fasta -crlf
-src/dnaio/_version.py export-subst

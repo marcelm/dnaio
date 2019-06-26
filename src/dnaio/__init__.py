@@ -30,9 +30,7 @@ from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError
 from .chunks import read_chunks, read_paired_chunks
 
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
+from ._version import version as __version__
 
 
 def open(file1, *, file2=None, fileformat=None, interleaved=False, mode='r', qualities=None):

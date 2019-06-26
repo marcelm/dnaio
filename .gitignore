@@ -9,3 +9,4 @@ __pycache__
 /src/*/*.so
 /src/*.egg-info/
 /.tox/
+/src/dnaio/_version.py

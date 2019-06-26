@@ -3,7 +3,6 @@ import os.path
 from setuptools import setup, Extension, find_packages
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_ext import build_ext as _build_ext
-import versioneer
 
 if sys.version_info[:2] < (3, 4):
     sys.stdout.write('Python 3.4 or later is required\n')
@@ -30,12 +29,8 @@ extensions = [
     Extension('dnaio._core', sources=['src/dnaio/_core.pyx']),
 ]
 
-cmdclass = versioneer.get_cmdclass()
-versioneer_build_ext = cmdclass.get('build_ext', _build_ext)
-versioneer_sdist = cmdclass.get('sdist', _sdist)
 
-
-class build_ext(versioneer_build_ext):
+class BuildExt(_build_ext):
     def run(self):
         # If we encounter a PKG-INFO file, then this is likely a .tar.gz/.zip
         # file retrieved from PyPI that already includes the pre-cythonized
@@ -47,26 +42,24 @@ class build_ext(versioneer_build_ext):
             # only sensible thing is to require Cython to be installed.
             from Cython.Build import cythonize
             self.extensions = cythonize(self.extensions)
-        versioneer_build_ext.run(self)
+        super().run()
 
 
-class sdist(versioneer_sdist):
+class SDist(_sdist):
     def run(self):
         # Make sure the compiled Cython files in the distribution are up-to-date
         from Cython.Build import cythonize
         cythonize(extensions)
-        versioneer_sdist.run(self)
+        super().run()
 
-
-cmdclass['build_ext'] = build_ext
-cmdclass['sdist'] = sdist
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
     name='dnaio',
-    version=versioneer.get_version(),
+    setup_requires=['setuptools_scm'],  # Support pip versions that don't know about pyproject.toml
+    use_scm_version={'write_to': 'src/dnaio/_version.py'},
     author='Marcel Martin',
     author_email='marcel.martin@scilifelab.se',
     url='https://github.com/marcelm/dnaio/',
@@ -80,8 +73,9 @@ setup(
         'dev': ['Cython', 'pytest'],
     },
     ext_modules=extensions,
-    cmdclass=cmdclass,
-    install_requires=['xopen'],
+    cmdclass={'build_ext': BuildExt, 'sdist': SDist},
+    install_requires=['xopen>=0.5.0'],
+    python_requires='>=3.4',
     classifiers=[
             "Development Status :: 3 - Alpha",
             "Intended Audience :: Science/Research",
