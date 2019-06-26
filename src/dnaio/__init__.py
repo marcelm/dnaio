@@ -21,6 +21,7 @@ __all__ = [
 import os
 from contextlib import ExitStack
 import functools
+import pathlib
 
 from xopen import xopen
 
@@ -29,8 +30,19 @@ from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError
 from .chunks import read_chunks, read_paired_chunks
-
 from ._version import version as __version__
+
+
+try:
+    from os import fspath  # Exists in Python 3.6+
+except ImportError:
+    def fspath(path):
+        if hasattr(path, "__fspath__"):
+            return path.__fspath__()
+        # Python 3.4 and 3.5 do not support the file system path protocol
+        if pathlib is not None and isinstance(path, pathlib.Path):
+            return str(path)
+        return path
 
 
 def open(file1, *, file2=None, fileformat=None, interleaved=False, mode='r', qualities=None):
@@ -40,8 +52,8 @@ def open(file1, *, file2=None, fileformat=None, interleaved=False, mode='r', qua
     classes also defined in this module.
 
     file1, file2 -- Paths to regular or compressed files or file-like
-        objects. Use file1 if data is single-end. If also file2 is provided,
-        sequences are paired.
+        objects (as str or as pathlib.Path). Use only file1 if data is single-end.
+        If sequences are paired, use also file2.
 
     mode -- Either 'r' for reading or 'w' for writing.
 
@@ -106,7 +118,8 @@ def _open_single(file, *, fileformat=None, mode='r', qualities=None):
     """
     if mode not in ('r', 'w'):
         raise ValueError("Mode must be 'r' or 'w'")
-    if isinstance(file, str):
+
+    if isinstance(file, (str, pathlib.Path)):
         file = xopen(file, mode + 'b')
         close_file = True
     else:

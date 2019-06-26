@@ -1,6 +1,8 @@
 import dnaio
 from xopen import xopen
 
+from pathlib import Path
+
 
 def test_version():
     _ = dnaio.__version__
@@ -55,3 +57,10 @@ def test_write_gz_with_xopen(tmpdir):
     import gzip
     with gzip.open(str(out_fastq)) as f:
         assert f.read() == b'@name\nACGT\n+\nHHHH\n'
+
+
+def test_read_pathlib_path():
+    path = Path('tests/data/simple.fasta')
+    with dnaio.open(path) as f:
+        records = list(f)
+        assert len(records) == 2
