@@ -8,8 +8,26 @@ def test_version():
     _ = dnaio.__version__
 
 
-def test_open():
+def test_read_fasta():
     with dnaio.open('tests/data/simple.fasta') as f:
+        records = list(f)
+        assert len(records) == 2
+
+
+def test_read_fasta_gz():
+    with dnaio.open('tests/data/simple.fasta.gz') as f:
+        records = list(f)
+        assert len(records) == 2
+
+
+def test_read_fastq():
+    with dnaio.open('tests/data/simple.fastq') as f:
+        records = list(f)
+        assert len(records) == 2
+
+
+def test_read_fastq_gz():
+    with dnaio.open('tests/data/simple.fastq.gz') as f:
         records = list(f)
         assert len(records) == 2
 
