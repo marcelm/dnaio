@@ -13,7 +13,7 @@ set -xeuo pipefail
 if ! grep -q docker /proc/1/cgroup; then
   # We are not inside a container
   docker pull quay.io/pypa/manylinux1_x86_64
-  exec docker run --rm -v $(pwd):/io quay.io/pypa/manylinux1_x86_64 /io/$0
+  exec docker run --rm -v $(pwd):/io quay.io/pypa/manylinux2010_x86_64 /io/$0
 fi
 
 # Strip binaries (copied from multibuild)
