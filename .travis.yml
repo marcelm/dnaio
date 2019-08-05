@@ -14,10 +14,15 @@ python:
   - "nightly"
 
 install:
+  - pip install --upgrade coverage codecov
   - pip install .[dev]
 
 script:
-  - pytest
+  - coverage run -m pytest
+
+after_success:
+  - coverage combine
+  - codecov
 
 env:
   global:
