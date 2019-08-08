@@ -112,7 +112,7 @@ class TestFastqReader:
     def test_fastqreader_buffersize_too_small(self):
         with raises(ValueError):
             with FastqReader("tests/data/simple.fastq", buffer_size=0) as f:
-                reads = list(f)
+                reads = list(f)  # pragma: no cover
 
     def test_fastqreader_dos(self):
         # DOS line breaks
@@ -127,7 +127,7 @@ class TestFastqReader:
     def test_fastq_wrongformat(self):
         with raises(FastqFormatError) as info:
             with FastqReader("tests/data/withplus.fastq") as f:
-                list(f)
+                list(f)  # pragma: no cover
         assert info.value.line == 2
 
     def test_empty_fastq(self):
@@ -171,7 +171,7 @@ class TestFastqReader:
         buffer_size = len('@r\nACG\n+\n')
         with raises(FastqFormatError) as info:
             with FastqReader(fastq, buffer_size=buffer_size) as fq:
-                list(fq)
+                list(fq)  # pragma: no cover
         assert 'Length of sequence and qualities differ' in info.value.message
         assert info.value.line == 3
 
@@ -231,7 +231,7 @@ class TestFastqReader:
         fastq = BytesIO(b'@r1\nACG\n+xy\n')
         with raises(FastqFormatError) as info:
             with FastqReader(fastq) as fq:
-                list(fq)
+                list(fq)  # pragma: no cover
         assert "Sequence descriptions don't match" in info.value.message
 
 
