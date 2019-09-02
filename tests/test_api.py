@@ -3,33 +3,41 @@ from xopen import xopen
 
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(params=["", ".gz", ".bz2", ".xz"])
+def extension(request):
+    return request.param
+
 
 def test_version():
     _ = dnaio.__version__
 
 
-def test_read_fasta():
-    with dnaio.open('tests/data/simple.fasta') as f:
+def test_read_fasta(extension):
+    with dnaio.open("tests/data/simple.fasta" + extension) as f:
         records = list(f)
-        assert len(records) == 2
+    assert records == [
+        dnaio.Sequence("first_sequence", "SEQUENCE1"),
+        dnaio.Sequence("second_sequence", "SEQUENCE2"),
+    ]
 
 
-def test_read_fasta_gz():
-    with dnaio.open('tests/data/simple.fasta.gz') as f:
+def test_read_fastq(extension):
+    with dnaio.open("tests/data/simple.fastq" + extension) as f:
         records = list(f)
-        assert len(records) == 2
+    assert records == [
+        dnaio.Sequence("first_sequence", "SEQUENCE1", ":6;;8<=:<"),
+        dnaio.Sequence("second_sequence", "SEQUENCE2", "83<??:(61"),
+    ]
 
 
-def test_read_fastq():
-    with dnaio.open('tests/data/simple.fastq') as f:
+def test_read_pathlib_path():
+    path = Path('tests/data/simple.fasta')
+    with dnaio.open(path) as f:
         records = list(f)
-        assert len(records) == 2
-
-
-def test_read_fastq_gz():
-    with dnaio.open('tests/data/simple.fastq.gz') as f:
-        records = list(f)
-        assert len(records) == 2
+    assert len(records) == 2
 
 
 def test_detect_fastq_from_content():
