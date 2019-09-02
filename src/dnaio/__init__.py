@@ -55,7 +55,7 @@ def open(file1, *, file2=None, fileformat=None, interleaved=False, mode='r', qua
         objects (as str or as pathlib.Path). Use only file1 if data is single-end.
         If sequences are paired, use also file2.
 
-    mode -- Either 'r' for reading or 'w' for writing.
+    mode -- Either 'r' for reading, 'w' for writing or 'a' for appending.
 
     interleaved -- If True, then file1 contains interleaved paired-end data.
         file2 must be None in this case.
@@ -72,20 +72,26 @@ def open(file1, *, file2=None, fileformat=None, interleaved=False, mode='r', qua
         * When False (no qualities available), an exception is raised when the
           auto-detected output format is FASTQ.
     """
-    if mode not in ('r', 'w'):
-        raise ValueError("Mode must be 'r' or 'w'")
+    if mode not in ("r", "w", "a"):
+        raise ValueError("Mode must be 'r', 'w' or 'a'")
     if interleaved and file2 is not None:
         raise ValueError("When interleaved is set, file2 must be None")
     if file2 is not None:
-        if mode == 'r':
+        if mode in "wa" and file1 == file2:
+            raise ValueError("The paired-end output files are identical")
+        if mode == "r":
             return PairedSequenceReader(file1, file2, fileformat)
-        else:
+        elif mode == "w":
             return PairedSequenceWriter(file1, file2, fileformat, qualities)
-    if interleaved:
-        if mode == 'r':
-            return InterleavedSequenceReader(file1, fileformat)
         else:
+            return PairedSequenceAppender(file1, file2, fileformat, qualities)
+    if interleaved:
+        if mode == "r":
+            return InterleavedSequenceReader(file1, fileformat)
+        elif mode == "w":
             return InterleavedSequenceWriter(file1, fileformat, qualities)
+        else:
+            return InterleavedSequenceAppender(file1, fileformat, qualities)
 
     # The multi-file options have been dealt with, delegate rest to the
     # single-file function.
@@ -116,8 +122,8 @@ def _open_single(file, *, fileformat=None, mode='r', qualities=None):
     """
     Open a single sequence file. See description of open() above.
     """
-    if mode not in ('r', 'w'):
-        raise ValueError("Mode must be 'r' or 'w'")
+    if mode not in ("r", "w", "a"):
+        raise ValueError("Mode must be 'r', 'w' or 'a'")
 
     if isinstance(file, (str, pathlib.Path)):
         path = fspath(file)
@@ -183,7 +189,7 @@ def _open_single(file, *, fileformat=None, mode='r', qualities=None):
         extra = " because the output file name is not available" if path is None else ""
         raise UnknownFileFormat("Auto-detection of the output file format (FASTA/FASTQ) failed" + extra)
 
-    if fileformat == 'fastq' and mode == 'w' and qualities is False:
+    if fileformat == 'fastq' and mode in "wa" and qualities is False:
         raise ValueError(
             'Output format cannot be FASTQ since no quality values are available.')
 
@@ -293,11 +299,13 @@ class InterleavedSequenceReader:
 
 
 class PairedSequenceWriter:
+    _mode = "w"
+
     def __init__(self, file1, file2, fileformat='fastq', qualities=None):
         with ExitStack() as stack:
-            self._writer1 = stack.enter_context(_open_single(file1, fileformat=fileformat, mode='w',
+            self._writer1 = stack.enter_context(_open_single(file1, fileformat=fileformat, mode=self._mode,
                 qualities=qualities))
-            self._writer2 = stack.enter_context(_open_single(file2, fileformat=fileformat, mode='w',
+            self._writer2 = stack.enter_context(_open_single(file2, fileformat=fileformat, mode=self._mode,
                 qualities=qualities))
             self._close = stack.pop_all().close
 
@@ -316,15 +324,20 @@ class PairedSequenceWriter:
         self.close()
 
 
+class PairedSequenceAppender(PairedSequenceWriter):
+    _mode = "a"
+
+
 class InterleavedSequenceWriter:
     """
     Write paired-end reads to an interleaved FASTA or FASTQ file
     """
+    _mode = "w"
 
     def __init__(self, file, fileformat='fastq', qualities=None):
 
         self._writer = _open_single(
-            file, fileformat=fileformat, mode='w', qualities=qualities)
+            file, fileformat=fileformat, mode=self._mode, qualities=qualities)
 
     def write(self, read1, read2):
         self._writer.write(read1)
@@ -339,3 +352,7 @@ class InterleavedSequenceWriter:
 
     def __exit__(self, *args):
         self.close()
+
+
+class InterleavedSequenceAppender(InterleavedSequenceWriter):
+    _mode = "a"
