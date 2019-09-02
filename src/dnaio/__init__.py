@@ -120,12 +120,17 @@ def _open_single(file, *, fileformat=None, mode='r', qualities=None):
         raise ValueError("Mode must be 'r' or 'w'")
 
     if isinstance(file, (str, pathlib.Path)):
-        file = xopen(file, mode + 'b')
+        path = fspath(file)
+        file = xopen(path, mode + 'b')
         close_file = True
     else:
         if mode == 'r' and not hasattr(file, 'readinto'):
             raise ValueError(
                 'When passing in an open file-like object, it must have been opened in binary mode')
+        if hasattr(file, "name") and isinstance(file.name, str):
+            path = file.name
+        else:
+            path = None
         close_file = False
     if mode == 'r':
         fastq_handler = FastqReader
@@ -133,59 +138,55 @@ def _open_single(file, *, fileformat=None, mode='r', qualities=None):
     else:
         fastq_handler = FastqWriter
         fasta_handler = FastaWriter
-    fastq_handler = functools.partial(fastq_handler, _close_file=close_file)
-    fasta_handler = functools.partial(fasta_handler, _close_file=close_file)
+    handlers = {
+        'fastq': functools.partial(fastq_handler, _close_file=close_file),
+        'fasta': functools.partial(fasta_handler, _close_file=close_file),
+    }
 
-    if fileformat:  # Explict file format given
-        fileformat = fileformat.lower()
-        if fileformat == 'fasta':
-            return fasta_handler(file)
-        elif fileformat == 'fastq':
-            return fastq_handler(file)
-        else:
+    if fileformat:
+        try:
+            handler = handlers[fileformat.lower()]
+        except KeyError:
             raise UnknownFileFormat(
                 "File format {!r} is unknown (expected 'fasta' or 'fastq').".format(fileformat))
+        return handler(file)
 
-    # First, try to detect the file format from the file name only
-    format = None
-    if hasattr(file, "name") and isinstance(file.name, str):
-        format = _detect_format_from_name(file.name)
-    if format is None and mode == 'w' and qualities is not None:
+    if path is not None:
+        fileformat = _detect_format_from_name(path)
+    if fileformat is None and mode == 'w' and qualities is not None:
         # Format not recognized, but we know whether to use a format with or without qualities
-        format = 'fastq' if qualities else 'fasta'
+        fileformat = 'fastq' if qualities else 'fasta'
 
-    if mode == 'r' and format is None:
+    if mode == 'r' and fileformat is None:
         # No format detected so far. Try to read from the file.
         if file.seekable():
             first_char = file.read(1)
             file.seek(-1, 1)
         else:
             first_char = file.peek(1)[0:1]
-        if first_char == b'#':
-            # A comment char - only valid for some FASTA variants (csfasta)
-            format = 'fasta'
-        elif first_char == b'>':
-            format = 'fasta'
-        elif first_char == b'@':
-            format = 'fastq'
-        elif first_char == b'':
-            # Empty input. Pretend this is FASTQ
-            format = 'fastq'
-        else:
+        formats = {
+            b'@': 'fastq',
+            b'>': 'fasta',
+            b'#': 'fasta',  # Some FASTA variants allow comments
+            b'': 'fastq',  # Pretend FASTQ for empty input
+        }
+        try:
+            fileformat = formats[first_char]
+        except KeyError:
             raise UnknownFileFormat(
                 'Could not determine whether file {!r} is FASTA or FASTQ. The file extension was '
                 'not available or not recognized and the first character in the file ({!r}) is '
                 'unexpected.'.format(file, first_char))
 
-    if format is None:
+    if fileformat is None:
         assert mode == 'w'
         raise UnknownFileFormat('Cannot determine whether to write in FASTA or FASTQ format')
 
-    if format == 'fastq' and mode == 'w' and qualities is False:
+    if fileformat == 'fastq' and mode == 'w' and qualities is False:
         raise ValueError(
             'Output format cannot be FASTQ since no quality values are available.')
 
-    return fastq_handler(file) if format == 'fastq' else fasta_handler(file)
+    return handlers[fileformat](file)
 
 
 def _sequence_names_match(r1, r2):

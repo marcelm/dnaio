@@ -59,12 +59,13 @@ def test_detect_compressed_fastq_from_content():
     assert record.name == 'prefix:1_13_573/1'
 
 
-def test_write(tmpdir):
+def test_write(tmpdir, extension):
     s = dnaio.Sequence('name', 'ACGT', 'HHHH')
-    out_fastq = tmpdir.join('out.fastq')
+    out_fastq = tmpdir.join("out.fastq" + extension)
     with dnaio.open(str(out_fastq), mode='w') as f:
         f.write(s)
-    assert out_fastq.read() == '@name\nACGT\n+\nHHHH\n'
+    with xopen(out_fastq) as f:
+        assert f.read() == '@name\nACGT\n+\nHHHH\n'
 
 
 def test_write_gz(tmpdir):
@@ -90,8 +91,14 @@ def test_write_gz_with_xopen(tmpdir):
         assert f.read() == b'@name\nACGT\n+\nHHHH\n'
 
 
-def test_read_pathlib_path():
-    path = Path('tests/data/simple.fasta')
-    with dnaio.open(path) as f:
-        records = list(f)
-        assert len(records) == 2
+def test_write_pathlib(tmpdir, fileformat, extension):
+    s1 = dnaio.Sequence("s1", "ACGT", "HHHH")
+    path = Path(tmpdir / ("out." + fileformat + extension))
+    with dnaio.open(path, mode="w") as f:
+        f.write(s1)
+    if fileformat == "fasta":
+        expected = b">s1\nACGT\n"
+    else:
+        expected = b"@s1\nACGT\n+\nHHHH\n"
+    with xopen(path, "rb") as f:
+        assert f.read() == expected
