@@ -1,4 +1,3 @@
-import io
 from xopen import xopen
 
 

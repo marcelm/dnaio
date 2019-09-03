@@ -6,16 +6,16 @@ from io import BytesIO
 from tempfile import mkdtemp
 from textwrap import dedent
 
+from pytest import raises, mark
+
 import dnaio
 from dnaio import (
     FileFormatError, FastaFormatError, FastqFormatError,
     FastaReader, FastqReader, InterleavedSequenceReader,
     FastaWriter, FastqWriter, InterleavedSequenceWriter,
     PairedSequenceReader)
-from dnaio import _sequence_names_match
-from dnaio._core import Sequence
+from dnaio import _sequence_names_match, Sequence
 
-from pytest import raises, mark
 
 # files tests/data/simple.fast{q,a}
 simple_fastq = [
