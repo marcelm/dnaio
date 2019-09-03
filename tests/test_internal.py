@@ -449,6 +449,14 @@ class TestInterleavedWriter:
 
 
 class TestPairedSequenceReader:
+    def test_read(self):
+        s1 = BytesIO(b'@r1\nACG\n+\nHHH\n')
+        s2 = BytesIO(b'@r2\nGTT\n+\n858\n')
+        with PairedSequenceReader(s1, s2) as psr:
+            assert [
+                (Sequence("r1", "ACG", "HHH"), Sequence("r2", "GTT", "858")),
+            ] == list(psr)
+
     def test_sequence_names_match(self):
         def match(name1, name2):
             seq1 = Sequence(name1, 'ACGT')

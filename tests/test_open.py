@@ -141,6 +141,25 @@ def test_write_paired(tmpdir, fileformat, extension):
         assert formatted_sequences(r2, fileformat) == f.read()
 
 
+def test_write_interleaved(tmpdir, fileformat, extension):
+    r1 = [
+        dnaio.Sequence("s1", "ACGT", "HHHH"),
+        dnaio.Sequence("s2", "CGCA", "8383"),
+    ]
+    r2 = [
+        dnaio.Sequence("t1", "TCGT", "5HHH"),
+        dnaio.Sequence("t2", "TGCA", "5383"),
+    ]
+    path = str(tmpdir / ("out.interleaved." + fileformat + extension))
+
+    with dnaio.open(path, interleaved=True, fileformat=fileformat, mode="w") as f:
+        f.write(r1[0], r2[0])
+        f.write(r1[1], r2[1])
+    expected = [r1[0], r2[0], r1[1], r2[1]]
+    with xopen(path) as f:
+        assert formatted_sequences(expected, fileformat) == f.read()
+
+
 def test_append(tmpdir, fileformat, extension):
     s1 = dnaio.Sequence("s1", "ACGT", "HHHH")
     s2 = dnaio.Sequence("s2", "CGCA", "8383")
@@ -173,3 +192,23 @@ def test_append_paired(tmpdir, fileformat, extension):
         assert formatted_sequences(r1, fileformat) == f.read()
     with xopen(path2) as f:
         assert formatted_sequences(r2, fileformat) == f.read()
+
+
+def test_append_interleaved(tmpdir, fileformat, extension):
+    r1 = [
+        dnaio.Sequence("s1", "ACGT", "HHHH"),
+        dnaio.Sequence("s2", "CGCA", "8383"),
+    ]
+    r2 = [
+        dnaio.Sequence("t1", "TCGT", "5HHH"),
+        dnaio.Sequence("t2", "TGCA", "5383"),
+    ]
+    path = str(tmpdir / ("out.interleaved." + fileformat + extension))
+
+    with dnaio.open(path, interleaved=True, fileformat=fileformat, mode="w") as f:
+        f.write(r1[0], r2[0])
+    with dnaio.open(path, interleaved=True, fileformat=fileformat, mode="a") as f:
+        f.write(r1[1], r2[1])
+    expected = [r1[0], r2[0], r1[1], r2[1]]
+    with xopen(path) as f:
+        assert formatted_sequences(expected, fileformat) == f.read()
