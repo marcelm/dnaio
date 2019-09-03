@@ -180,7 +180,8 @@ def _open_single(file, *, fileformat=None, mode='r', qualities=None):
 
     if fileformat is None:
         assert mode == 'w'
-        raise UnknownFileFormat('Cannot determine whether to write in FASTA or FASTQ format')
+        extra = " because the output file name is not available" if path is None else ""
+        raise UnknownFileFormat("Auto-detection of the output file format (FASTA/FASTQ) failed" + extra)
 
     if fileformat == 'fastq' and mode == 'w' and qualities is False:
         raise ValueError(

@@ -68,16 +68,18 @@ def test_write(tmpdir, extension):
         assert f.read() == '@name\nACGT\n+\nHHHH\n'
 
 
-def test_write_gz_with_xopen(tmpdir):
+def test_write_with_xopen(tmpdir, fileformat, extension):
     s = dnaio.Sequence('name', 'ACGT', 'HHHH')
-    out_fastq = tmpdir.join('out.fastq.gz')
-    with xopen(str(out_fastq), 'wb') as gzf:
-        with dnaio.open(gzf, mode='w') as f:
+    out_fastq = str(tmpdir.join("out." + fileformat + extension))
+    with xopen(out_fastq, 'wb') as outer_f:
+        with dnaio.open(outer_f, mode='w', fileformat=fileformat) as f:
             f.write(s)
 
-    import gzip
-    with gzip.open(str(out_fastq)) as f:
-        assert f.read() == b'@name\nACGT\n+\nHHHH\n'
+    with xopen(out_fastq) as f:
+        if fileformat == "fasta":
+            assert f.read() == ">name\nACGT\n"
+        else:
+            assert f.read() == "@name\nACGT\n+\nHHHH\n"
 
 
 def test_write_pathlib(tmpdir, fileformat, extension):
