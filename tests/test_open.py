@@ -101,7 +101,7 @@ def test_write_with_xopen(tmpdir, fileformat, extension):
 
 def test_write_pathlib(tmpdir, fileformat, extension):
     s1 = dnaio.Sequence("s1", "ACGT", "HHHH")
-    path = Path(tmpdir / ("out." + fileformat + extension))
+    path = Path(str(tmpdir / ("out." + fileformat + extension)))
     with dnaio.open(path, mode="w") as f:
         f.write(s1)
     if fileformat == "fasta":
