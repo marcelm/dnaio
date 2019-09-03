@@ -93,3 +93,49 @@ def test_write_pathlib(tmpdir, fileformat, extension):
         expected = b"@s1\nACGT\n+\nHHHH\n"
     with xopen(path, "rb") as f:
         assert f.read() == expected
+
+
+def formatted_sequence(record, fileformat):
+    if fileformat == "fastq":
+        return "@{}\n{}\n+\n{}\n".format(record.name, record.sequence, record.qualities)
+    else:
+        return ">{}\n{}\n".format(record.name, record.sequence)
+
+
+def formatted_sequences(records, fileformat):
+    return "".join(formatted_sequence(record, fileformat) for record in records)
+
+
+def test_formatted_sequence():
+    s = dnaio.Sequence("s1", "ACGT", "HHHH")
+    assert ">s1\nACGT\n" == formatted_sequence(s, "fasta")
+    assert "@s1\nACGT\n+\nHHHH\n" == formatted_sequence(s, "fastq")
+
+
+def test_write_paired_same_path(tmpdir):
+    path1 = str(tmpdir / "same.fastq")
+    path2 = str(tmpdir / "same.fastq")
+    with pytest.raises(ValueError) as e:
+        with dnaio.open(file1=path1, file2=path2, mode="w") as f:
+            pass
+
+
+def test_write_paired(tmpdir, fileformat, extension):
+    r1 = [
+        dnaio.Sequence("s1", "ACGT", "HHHH"),
+        dnaio.Sequence("s2", "CGCA", "8383"),
+    ]
+    r2 = [
+        dnaio.Sequence("t1", "TCGT", "5HHH"),
+        dnaio.Sequence("t2", "TGCA", "5383"),
+    ]
+    path1 = str(tmpdir / ("out.1." + fileformat + extension))
+    path2 = str(tmpdir / ("out.2." + fileformat + extension))
+
+    with dnaio.open(path1, file2=path2, fileformat=fileformat, mode="w") as f:
+        f.write(r1[0], r2[0])
+        f.write(r1[1], r2[1])
+    with xopen(path1) as f:
+        assert formatted_sequences(r1, fileformat) == f.read()
+    with xopen(path2) as f:
+        assert formatted_sequences(r2, fileformat) == f.read()
