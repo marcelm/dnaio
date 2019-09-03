@@ -28,6 +28,23 @@ SIMPLE_RECORDS = {
 }
 
 
+def formatted_sequence(record, fileformat):
+    if fileformat == "fastq":
+        return "@{}\n{}\n+\n{}\n".format(record.name, record.sequence, record.qualities)
+    else:
+        return ">{}\n{}\n".format(record.name, record.sequence)
+
+
+def formatted_sequences(records, fileformat):
+    return "".join(formatted_sequence(record, fileformat) for record in records)
+
+
+def test_formatted_sequence():
+    s = dnaio.Sequence("s1", "ACGT", "HHHH")
+    assert ">s1\nACGT\n" == formatted_sequence(s, "fasta")
+    assert "@s1\nACGT\n+\nHHHH\n" == formatted_sequence(s, "fastq")
+
+
 def test_version():
     _ = dnaio.__version__
 
@@ -93,23 +110,6 @@ def test_write_pathlib(tmpdir, fileformat, extension):
         expected = b"@s1\nACGT\n+\nHHHH\n"
     with xopen(path, "rb") as f:
         assert f.read() == expected
-
-
-def formatted_sequence(record, fileformat):
-    if fileformat == "fastq":
-        return "@{}\n{}\n+\n{}\n".format(record.name, record.sequence, record.qualities)
-    else:
-        return ">{}\n{}\n".format(record.name, record.sequence)
-
-
-def formatted_sequences(records, fileformat):
-    return "".join(formatted_sequence(record, fileformat) for record in records)
-
-
-def test_formatted_sequence():
-    s = dnaio.Sequence("s1", "ACGT", "HHHH")
-    assert ">s1\nACGT\n" == formatted_sequence(s, "fasta")
-    assert "@s1\nACGT\n+\nHHHH\n" == formatted_sequence(s, "fastq")
 
 
 def test_write_paired_same_path(tmpdir):
