@@ -68,17 +68,6 @@ def test_write(tmpdir, extension):
         assert f.read() == '@name\nACGT\n+\nHHHH\n'
 
 
-def test_write_gz(tmpdir):
-    s = dnaio.Sequence('name', 'ACGT', 'HHHH')
-    out_fastq = tmpdir.join('out.fastq.gz')
-    with dnaio.open(str(out_fastq), mode='w') as f:
-        f.write(s)
-
-    import gzip
-    with gzip.open(str(out_fastq)) as f:
-        assert f.read() == b'@name\nACGT\n+\nHHHH\n'
-
-
 def test_write_gz_with_xopen(tmpdir):
     s = dnaio.Sequence('name', 'ACGT', 'HHHH')
     out_fastq = tmpdir.join('out.fastq.gz')
