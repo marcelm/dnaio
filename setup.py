@@ -74,7 +74,7 @@ setup(
     },
     ext_modules=extensions,
     cmdclass={'build_ext': BuildExt, 'sdist': SDist},
-    install_requires=['xopen>=0.7.1'],
+    install_requires=['xopen>=0.8.2'],
     python_requires='>=3.4',
     classifiers=[
             "Development Status :: 3 - Alpha",

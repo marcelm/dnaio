@@ -212,3 +212,20 @@ def test_append_interleaved(tmpdir, fileformat, extension):
     expected = [r1[0], r2[0], r1[1], r2[1]]
     with xopen(path) as f:
         assert formatted_sequences(expected, fileformat) == f.read()
+
+
+def make_random_fasta(path, n_records):
+    from random import choice
+    with xopen(path, "w") as f:
+        for i in range(n_records):
+            name = "sequence_{}".format(i)
+            sequence = "".join(choice("ACGT") for _ in range(300))
+            print(">", name, "\n", sequence, sep="", file=f)
+
+
+def test_islice_gzip_does_not_fail(tmpdir):
+    path = str(tmpdir / "file.fasta.gz")
+    make_random_fasta(path, 100)
+    f = dnaio.open(path)
+    next(iter(f))
+    f.close()
