@@ -52,3 +52,7 @@ def test_read_chunks():
         # Buffer too small
         with raises(OverflowError):
             list(read_chunks(BytesIO(data), buffer_size=4))
+
+
+def test_read_chunks_empty():
+    assert list(read_chunks(BytesIO(b''))) == []

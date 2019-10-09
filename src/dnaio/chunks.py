@@ -1,4 +1,5 @@
 """Chunked reading of FASTA and FASTQ files"""
+
 from ._core import paired_fastq_heads as _paired_fastq_heads
 from .exceptions import FileFormatError, FastaFormatError, UnknownFileFormat
 
@@ -53,6 +54,9 @@ def read_chunks(f, buffer_size=4*1024**2):
         head = _fastq_head
     elif start == 1 and (buf[0:1] == b'#' or buf[0:1] == b'>'):
         head = _fasta_head
+    elif start == 0:
+        # Empty file
+        return
     else:
         raise UnknownFileFormat('Input file format unknown')
 
