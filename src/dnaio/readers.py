@@ -18,13 +18,13 @@ class BinaryFileReader:
     paired = False
     mode = 'rb'
 
-    def __init__(self, file, _close_file=None):
+    def __init__(self, file, opener=xopen, _close_file=None):
         """
         The file is a path or a file-like object. In both cases, the file may
         be compressed (.gz, .bz2, .xz).
         """
         if isinstance(file, str):
-            file = xopen(file, self.mode)
+            file = opener(file, self.mode)
             self._close_on_exit = True
         elif _close_file:
             self._close_on_exit = True
@@ -49,14 +49,14 @@ class FastaReader(BinaryFileReader):
     Reader for FASTA files.
     """
 
-    def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence, _close_file=None):
+    def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence, opener=xopen, _close_file=None):
         """
         file is a path or a file-like object. In both cases, the file may
         be compressed (.gz, .bz2, .xz).
 
         keep_linebreaks -- whether to keep newline characters in the sequence
         """
-        super().__init__(file, _close_file=_close_file)
+        super().__init__(file, opener=opener, _close_file=_close_file)
         self.sequence_class = sequence_class
         self.delivers_qualities = False
         self._delimiter = '\n' if keep_linebreaks else ''
@@ -97,12 +97,12 @@ class FastqReader(BinaryFileReader):
     Reader for FASTQ files. Does not support multi-line FASTQ files.
     """
 
-    def __init__(self, file, sequence_class=Sequence, buffer_size=1048576, _close_file=None):
+    def __init__(self, file, sequence_class=Sequence, buffer_size=1048576, opener=xopen, _close_file=None):
         """
         file is a filename or a file-like object.
         If file is a filename, then .gz files are supported.
         """
-        super().__init__(file, _close_file=_close_file)
+        super().__init__(file, opener=opener, _close_file=_close_file)
         self.sequence_class = sequence_class
         self.delivers_qualities = True
         self.buffer_size = buffer_size

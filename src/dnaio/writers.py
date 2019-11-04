@@ -2,10 +2,10 @@ from xopen import xopen
 
 
 class FileWriter:
-    def __init__(self, file, _close_file=None):
+    def __init__(self, file, opener=xopen, _close_file=None):
         self._file = file
         if isinstance(file, str):
-            self._file = xopen(file, 'wb')
+            self._file = opener(file, "wb")
             self._close_on_exit = True
         else:
             self._close_on_exit = bool(_close_file)
@@ -28,12 +28,12 @@ class FastaWriter(FileWriter):
     Write FASTA-formatted sequences to a file.
     """
 
-    def __init__(self, file, line_length=None, _close_file=None):
+    def __init__(self, file, line_length=None, opener=xopen, _close_file=None):
         """
         If line_length is not None, the lines will
         be wrapped after line_length characters.
         """
-        super().__init__(file, _close_file=_close_file)
+        super().__init__(file, opener=opener, _close_file=_close_file)
         self.line_length = line_length if line_length != 0 else None
 
     def write(self, name_or_record, sequence=None):
@@ -78,8 +78,8 @@ class FastqWriter(FileWriter):
     """
     file_mode = 'wb'
 
-    def __init__(self, file, two_headers=False, _close_file=None):
-        super().__init__(file, _close_file=_close_file)
+    def __init__(self, file, two_headers=False, opener=xopen, _close_file=None):
+        super().__init__(file, opener=opener, _close_file=_close_file)
         self._two_headers = two_headers
 
     def write(self, record):

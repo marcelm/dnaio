@@ -45,7 +45,7 @@ except ImportError:
         return path
 
 
-def open(file1, *, file2=None, fileformat=None, interleaved=False, mode='r', qualities=None):
+def open(file1, *, file2=None, fileformat=None, interleaved=False, mode="r", qualities=None, opener=xopen):
     """
     Open sequence files in FASTA or FASTQ format for reading or writing. This is
     a factory that returns an instance of one of the ...Reader or ...Writer
@@ -71,32 +71,37 @@ def open(file1, *, file2=None, fileformat=None, interleaved=False, mode='r', qua
           appropriately.
         * When False (no qualities available), an exception is raised when the
           auto-detected output format is FASTQ.
+
+    opener -- A function that is used to open file1 and file2 if they are not
+        already open file-like objects. By default, xopen is used, which can
+        also open compressed file formats.
     """
     if mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")
     if interleaved and file2 is not None:
         raise ValueError("When interleaved is set, file2 must be None")
+
     if file2 is not None:
         if mode in "wa" and file1 == file2:
             raise ValueError("The paired-end output files are identical")
         if mode == "r":
-            return PairedSequenceReader(file1, file2, fileformat)
+            return PairedSequenceReader(file1, file2, fileformat, opener=opener)
         elif mode == "w":
-            return PairedSequenceWriter(file1, file2, fileformat, qualities)
+            return PairedSequenceWriter(file1, file2, fileformat, qualities, opener=opener)
         else:
-            return PairedSequenceAppender(file1, file2, fileformat, qualities)
+            return PairedSequenceAppender(file1, file2, fileformat, qualities, opener=opener)
     if interleaved:
         if mode == "r":
-            return InterleavedSequenceReader(file1, fileformat)
+            return InterleavedSequenceReader(file1, fileformat, opener=opener)
         elif mode == "w":
-            return InterleavedSequenceWriter(file1, fileformat, qualities)
+            return InterleavedSequenceWriter(file1, fileformat, qualities, opener=opener)
         else:
-            return InterleavedSequenceAppender(file1, fileformat, qualities)
+            return InterleavedSequenceAppender(file1, fileformat, qualities, opener=opener)
 
     # The multi-file options have been dealt with, delegate rest to the
     # single-file function.
     return _open_single(
-        file1, fileformat=fileformat, mode=mode, qualities=qualities)
+        file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities)
 
 
 def _detect_format_from_name(name):
@@ -118,16 +123,16 @@ def _detect_format_from_name(name):
     return None
 
 
-def _open_single(file, *, fileformat=None, mode='r', qualities=None):
+def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
     """
     Open a single sequence file. See description of open() above.
     """
     if mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")
 
-    if isinstance(file, (str, pathlib.Path)):
+    if isinstance(file, (str, pathlib.Path)):  # TODO Use os.PathLike in Python 3.6+
         path = fspath(file)
-        file = xopen(path, mode + 'b')
+        file = opener(path, mode + "b")
         close_file = True
     else:
         if mode == 'r' and not hasattr(file, 'readinto'):
@@ -220,10 +225,10 @@ class PairedSequenceReader:
     """
     paired = True
 
-    def __init__(self, file1, file2, fileformat=None):
+    def __init__(self, file1, file2, fileformat=None, opener=xopen):
         with ExitStack() as stack:
-            self.reader1 = stack.enter_context(_open_single(file1, fileformat=fileformat))
-            self.reader2 = stack.enter_context(_open_single(file2, fileformat=fileformat))
+            self.reader1 = stack.enter_context(_open_single(file1, opener=opener, fileformat=fileformat))
+            self.reader2 = stack.enter_context(_open_single(file2, opener=opener, fileformat=fileformat))
             self._close = stack.pop_all().close
         self.delivers_qualities = self.reader1.delivers_qualities
 
@@ -271,8 +276,8 @@ class InterleavedSequenceReader:
     """
     paired = True
 
-    def __init__(self, file, fileformat=None):
-        self.reader = _open_single(file, fileformat=fileformat)
+    def __init__(self, file, fileformat=None, opener=xopen):
+        self.reader = _open_single(file, opener=opener, fileformat=fileformat)
         self.delivers_qualities = self.reader.delivers_qualities
 
     def __iter__(self):
@@ -301,12 +306,12 @@ class InterleavedSequenceReader:
 class PairedSequenceWriter:
     _mode = "w"
 
-    def __init__(self, file1, file2, fileformat='fastq', qualities=None):
+    def __init__(self, file1, file2, fileformat='fastq', qualities=None, opener=xopen):
         with ExitStack() as stack:
-            self._writer1 = stack.enter_context(_open_single(file1, fileformat=fileformat, mode=self._mode,
-                qualities=qualities))
-            self._writer2 = stack.enter_context(_open_single(file2, fileformat=fileformat, mode=self._mode,
-                qualities=qualities))
+            self._writer1 = stack.enter_context(
+                _open_single(file1, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
+            self._writer2 = stack.enter_context(
+                _open_single(file2, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
             self._close = stack.pop_all().close
 
     def write(self, read1, read2):
@@ -334,10 +339,10 @@ class InterleavedSequenceWriter:
     """
     _mode = "w"
 
-    def __init__(self, file, fileformat='fastq', qualities=None):
+    def __init__(self, file, fileformat='fastq', qualities=None, opener=xopen):
 
         self._writer = _open_single(
-            file, fileformat=fileformat, mode=self._mode, qualities=qualities)
+            file, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities)
 
     def write(self, read1, read2):
         self._writer.write(read1)
