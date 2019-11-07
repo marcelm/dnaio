@@ -83,8 +83,9 @@ class FastaReader(BinaryFileReader):
             elif name is not None:
                 seq.append(line)
             else:
-                raise FastaFormatError("Expected '>' at beginning of "
-                    "record, but got {!r}.".format(_shorten(line)), line=i)
+                raise FastaFormatError(
+                    "Expected '>' at beginning of record, but got {!r}."
+                    .format(_shorten(line)), line=i)
 
         if name is not None:
             yield self.sequence_class(name, self._delimiter.join(seq), None)

@@ -82,18 +82,18 @@ class TestFastaReader:
         filename = "tests/data/simple.fasta"
         with open(filename, 'rb') as f:
             assert not f.closed
-            reads = list(dnaio.open(f))
+            _ = list(dnaio.open(f))
             assert not f.closed
         assert f.closed
 
         with FastaReader(filename) as sr:
             tmp_sr = sr
             assert not sr._file.closed
-            reads = list(sr)
+            _ = list(sr)
             assert not sr._file.closed
         assert tmp_sr._file is None
         # Open it a second time
-        with FastaReader(filename) as sr:
+        with FastaReader(filename):
             pass
 
 
@@ -112,7 +112,7 @@ class TestFastqReader:
     def test_fastqreader_buffersize_too_small(self):
         with raises(ValueError):
             with FastqReader("tests/data/simple.fastq", buffer_size=0) as f:
-                reads = list(f)  # pragma: no cover
+                _ = list(f)  # pragma: no cover
 
     def test_fastqreader_dos(self):
         # DOS line breaks
@@ -212,7 +212,7 @@ class TestFastqReader:
         with FastqReader(filename) as sr:
             tmp_sr = sr
             assert not sr._file.closed
-            reads = list(sr)
+            _ = list(sr)
             assert not sr._file.closed
         assert tmp_sr._file is None
 
@@ -445,7 +445,12 @@ class TestInterleavedWriter:
         with InterleavedSequenceWriter(bio) as writer:
             for read1, read2 in reads:
                 writer.write(read1, read2)
-        assert bio.getvalue() == b'@A/1 comment\nTTA\n+\n##H\n@A/2 comment\nGCT\n+\nHH#\n@B/1\nCC\n+\nHH\n@B/2\nTG\n+\n#H\n'
+        assert bio.getvalue() == (
+            b'@A/1 comment\nTTA\n+\n##H\n'
+            b'@A/2 comment\nGCT\n+\nHH#\n'
+            b'@B/1\nCC\n+\nHH\n'
+            b'@B/2\nTG\n+\n#H\n'
+        )
 
 
 class TestPairedSequenceReader:

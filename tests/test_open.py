@@ -158,8 +158,8 @@ def test_write_pathlib(tmpdir, fileformat, extension):
 def test_write_paired_same_path(tmpdir):
     path1 = str(tmpdir / "same.fastq")
     path2 = str(tmpdir / "same.fastq")
-    with pytest.raises(ValueError) as e:
-        with dnaio.open(file1=path1, file2=path2, mode="w") as f:
+    with pytest.raises(ValueError):
+        with dnaio.open(file1=path1, file2=path2, mode="w"):
             pass
 
 

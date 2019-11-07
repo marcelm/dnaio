@@ -103,7 +103,8 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
     start1 = f.readinto(memoryview(buf1)[0:1])
     start2 = f2.readinto(memoryview(buf2)[0:1])
     if (start1 == 1 and buf1[0:1] != b'@') or (start2 == 1 and buf2[0:1] != b'@'):
-        raise FileFormatError('Paired-end data must be in FASTQ format when using multiple cores', line=None)
+        raise FileFormatError(
+            "Paired-end data must be in FASTQ format when using multiple cores", line=None)
 
     while True:
         if start1 == len(buf1) or start2 == len(buf2):

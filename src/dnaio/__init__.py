@@ -16,6 +16,9 @@ __all__ = [
     'InterleavedSequenceReader',
     'InterleavedSequenceWriter',
     'PairedSequenceReader',
+    'read_chunks',
+    'read_paired_chunks',
+    '__version__',
 ]
 
 import os
@@ -45,7 +48,9 @@ except ImportError:
         return path
 
 
-def open(file1, *, file2=None, fileformat=None, interleaved=False, mode="r", qualities=None, opener=xopen):
+def open(
+    file1, *, file2=None, fileformat=None, interleaved=False, mode="r", qualities=None, opener=xopen
+):
     """
     Open sequence files in FASTA or FASTQ format for reading or writing. This is
     a factory that returns an instance of one of the ...Reader or ...Writer
@@ -179,7 +184,8 @@ def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
     if fileformat is None:
         assert mode == 'w'
         extra = " because the output file name is not available" if path is None else ""
-        raise UnknownFileFormat("Auto-detection of the output file format (FASTA/FASTQ) failed" + extra)
+        raise UnknownFileFormat(
+            "Auto-detection of the output file format (FASTA/FASTQ) failed" + extra)
 
     if fileformat == 'fastq' and mode in "wa" and qualities is False:
         raise ValueError(
@@ -250,7 +256,8 @@ class PairedSequenceReader:
                 # End of file 1. Make sure that file 2 is also at end.
                 try:
                     next(it2)
-                    raise FileFormatError("Reads are improperly paired. There are more reads in "
+                    raise FileFormatError(
+                        "Reads are improperly paired. There are more reads in "
                         "file 2 than in file 1.", line=None) from None
                 except StopIteration:
                     pass
@@ -258,10 +265,12 @@ class PairedSequenceReader:
             try:
                 r2 = next(it2)
             except StopIteration:
-                raise FileFormatError("Reads are improperly paired. There are more reads in "
+                raise FileFormatError(
+                    "Reads are improperly paired. There are more reads in "
                     "file 1 than in file 2.", line=None) from None
             if not _sequence_names_match(r1, r2):
-                raise FileFormatError("Reads are improperly paired. Read name '{}' "
+                raise FileFormatError(
+                    "Reads are improperly paired. Read name '{}' "
                     "in file 1 does not match '{}' in file 2.".format(r1.name, r2.name), line=None) from None
             yield (r1, r2)
 
@@ -291,10 +300,12 @@ class InterleavedSequenceReader:
             try:
                 r2 = next(it)
             except StopIteration:
-                raise FileFormatError("Interleaved input file incomplete: Last record "
+                raise FileFormatError(
+                    "Interleaved input file incomplete: Last record "
                     "{!r} has no partner.".format(r1.name), line=None) from None
             if not _sequence_names_match(r1, r2):
-                raise FileFormatError("Reads are improperly paired. Name {!r} "
+                raise FileFormatError(
+                    "Reads are improperly paired. Name {!r} "
                     "(first) does not match {!r} (second).".format(r1.name, r2.name), line=None)
             yield (r1, r2)
 
@@ -314,9 +325,11 @@ class PairedSequenceWriter:
     def __init__(self, file1, file2, fileformat='fastq', qualities=None, opener=xopen):
         with ExitStack() as stack:
             self._writer1 = stack.enter_context(
-                _open_single(file1, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
+                _open_single(
+                    file1, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
             self._writer2 = stack.enter_context(
-                _open_single(file2, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
+                _open_single(
+                    file2, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
             self._close = stack.pop_all().close
 
     def write(self, read1, read2):
