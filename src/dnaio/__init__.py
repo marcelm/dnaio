@@ -169,25 +169,12 @@ def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
         fileformat = 'fastq' if qualities else 'fasta'
 
     if mode == 'r' and fileformat is None:
-        # No format detected so far. Try to read from the file.
-        if file.seekable():
-            first_char = file.read(1)
-            file.seek(-1, 1)
-        else:
-            first_char = file.peek(1)[0:1]
-        formats = {
-            b'@': 'fastq',
-            b'>': 'fasta',
-            b'#': 'fasta',  # Some FASTA variants allow comments
-            b'': 'fastq',  # Pretend FASTQ for empty input
-        }
-        try:
-            fileformat = formats[first_char]
-        except KeyError:
+        fileformat = _detect_format_from_content(file)
+        if fileformat is None:
             raise UnknownFileFormat(
                 'Could not determine whether file {!r} is FASTA or FASTQ. The file extension was '
-                'not available or not recognized and the first character in the file ({!r}) is '
-                'unexpected.'.format(file, first_char))
+                'not available or not recognized and the first character in the file is '
+                'unexpected.'.format(file))
 
     if fileformat is None:
         assert mode == 'w'
@@ -199,6 +186,24 @@ def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
             'Output format cannot be FASTQ since no quality values are available.')
 
     return handlers[fileformat](file)
+
+
+def _detect_format_from_content(file):
+    """
+    Return 'fasta', 'fastq' or None
+    """
+    if file.seekable():
+        first_char = file.read(1)
+        file.seek(-1, 1)
+    else:
+        first_char = file.peek(1)[0:1]
+    formats = {
+        b'@': 'fastq',
+        b'>': 'fasta',
+        b'#': 'fasta',  # Some FASTA variants allow comments
+        b'': 'fastq',  # Pretend FASTQ for empty input
+    }
+    return formats.get(first_char, None)
 
 
 def _sequence_names_match(r1, r2):
