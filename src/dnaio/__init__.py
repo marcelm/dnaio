@@ -28,7 +28,7 @@ import pathlib
 
 from xopen import xopen
 
-from ._core import Sequence
+from ._core import Sequence, record_names_match as _record_names_match
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError
@@ -212,21 +212,6 @@ def _detect_format_from_content(file):
     return formats.get(first_char, None)
 
 
-def _sequence_names_match(r1, r2):
-    """
-    Check whether the sequence records r1 and r2 have identical names, ignoring a
-    suffix of '1' or '2'. Some old paired-end reads have names that end in '/1'
-    and '/2'. Also, the fastq-dump tool (used for converting SRA files to FASTQ)
-    appends a .1 and .2 to paired-end reads if option -I is used.
-    """
-    name1 = r1.name.split(None, 1)[0]
-    name2 = r2.name.split(None, 1)[0]
-    if name1[-1:] in '12' and name2[-1:] in '12':
-        name1 = name1[:-1]
-        name2 = name2[:-1]
-    return name1 == name2
-
-
 class PairedSequenceReader:
     """
     Read paired-end reads from two files.
@@ -268,7 +253,7 @@ class PairedSequenceReader:
                 raise FileFormatError(
                     "Reads are improperly paired. There are more reads in "
                     "file 1 than in file 2.", line=None) from None
-            if not _sequence_names_match(r1, r2):
+            if not _record_names_match(r1.name, r2.name):
                 raise FileFormatError(
                     "Reads are improperly paired. Read name '{}' "
                     "in file 1 does not match '{}' in file 2.".format(r1.name, r2.name), line=None) from None
@@ -303,7 +288,7 @@ class InterleavedSequenceReader:
                 raise FileFormatError(
                     "Interleaved input file incomplete: Last record "
                     "{!r} has no partner.".format(r1.name), line=None) from None
-            if not _sequence_names_match(r1, r2):
+            if not _record_names_match(r1.name, r2.name):
                 raise FileFormatError(
                     "Reads are improperly paired. Name {!r} "
                     "(first) does not match {!r} (second).".format(r1.name, r2.name), line=None)

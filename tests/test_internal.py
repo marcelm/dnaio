@@ -14,7 +14,7 @@ from dnaio import (
     FastaReader, FastqReader, InterleavedSequenceReader,
     FastaWriter, FastqWriter, InterleavedSequenceWriter,
     PairedSequenceReader)
-from dnaio import _sequence_names_match, Sequence
+from dnaio import _record_names_match, Sequence
 
 
 # files tests/data/simple.fast{q,a}
@@ -462,12 +462,8 @@ class TestPairedSequenceReader:
                 (Sequence("r1", "ACG", "HHH"), Sequence("r2", "GTT", "858")),
             ] == list(psr)
 
-    def test_sequence_names_match(self):
-        def match(name1, name2):
-            seq1 = Sequence(name1, 'ACGT')
-            seq2 = Sequence(name2, 'AACC')
-            return _sequence_names_match(seq1, seq2)
-
+    def test_record_names_match(self):
+        match = _record_names_match
         assert match('abc', 'abc')
         assert match('abc/1', 'abc/2')
         assert match('abc.1', 'abc.2')
