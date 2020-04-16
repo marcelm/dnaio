@@ -81,17 +81,23 @@ class FastqWriter(FileWriter):
     def __init__(self, file, two_headers=False, opener=xopen, _close_file=None):
         super().__init__(file, opener=opener, _close_file=_close_file)
         self._two_headers = two_headers
+        self.write = self._write_two_headers if self._two_headers else self._write
 
-    def write(self, record):
+    def _write(self, record):
         """
         Write a Sequence record to the FASTQ file.
 
         The record object must have attributes .name, .sequence and .qualities.
         """
-        name2 = record.name if self._two_headers else ''
-        s = ('@' + record.name + '\n' + record.sequence + '\n+'
-             + name2 + '\n' + record.qualities + '\n')
-        self._file.write(s.encode('ascii'))
+        self._file.write(record.fastq_bytes())
+
+    def _write_two_headers(self, record):
+        """
+        Write a Sequence record to the FASTQ file.
+
+        The record object must have attributes .name, .sequence and .qualities.
+        """
+        self._file.write(record.fastq_bytes_two_headers())
 
     def writeseq(self, name, sequence, qualities):
         self._file.write("@{0:s}\n{1:s}\n+\n{2:s}\n".format(

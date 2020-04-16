@@ -62,6 +62,16 @@ cdef class Sequence:
     def __reduce__(self):
         return (Sequence, (self.name, self.sequence, self.qualities))
 
+    def fastq_bytes(self):
+        s = ('@' + self.name + '\n' + self.sequence + '\n+\n'
+             + self.qualities + '\n')
+        return s.encode('ascii')
+
+    def fastq_bytes_two_headers(self):
+        s = ('@' + self.name + '\n' + self.sequence + '\n+'
+             + self.name + '\n' + self.qualities + '\n')
+        return s.encode('ascii')
+
 
 # It would be nice to be able to have the first parameter be an
 # unsigned char[:] (memory view), but this fails with a BufferError
