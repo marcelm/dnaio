@@ -87,15 +87,13 @@ class FastqWriter(FileWriter):
         """
         Write a Sequence record to the FASTQ file.
 
-        The record object must have attributes .name, .sequence and .qualities.
         """
         self._file.write(record.fastq_bytes())
 
     def _write_two_headers(self, record):
         """
-        Write a Sequence record to the FASTQ file.
-
-        The record object must have attributes .name, .sequence and .qualities.
+        Write a Sequence record to the FASTQ file, repeating the header
+        in the third line after the "+" .
         """
         self._file.write(record.fastq_bytes_two_headers())
 
