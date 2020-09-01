@@ -324,8 +324,6 @@ class TestInterleavedReader:
         ]
         with InterleavedSequenceReader("tests/data/interleaved.fastq") as isr:
             reads = list(isr)
-        for (r1, r2), (e1, e2) in zip(reads, expected):
-            print(r1, r2, e1, e2)
 
         assert reads == expected
         with dnaio.open("tests/data/interleaved.fastq", interleaved=True) as f:
