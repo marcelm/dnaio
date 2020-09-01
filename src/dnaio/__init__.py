@@ -200,7 +200,8 @@ def _detect_format_from_content(file):
     """
     if file.seekable():
         first_char = file.read(1)
-        file.seek(-1, 1)
+        if file.tell() > 0:
+            file.seek(-1, 1)
     else:
         first_char = file.peek(1)[0:1]
     formats = {

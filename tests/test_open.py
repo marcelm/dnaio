@@ -49,6 +49,20 @@ def test_version():
     _ = dnaio.__version__
 
 
+def test_open_nonexistent(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        with dnaio.open(tmp_path / "nonexistent"):
+            pass
+
+
+def test_open_empty_file_with_unrecognized_extension(tmp_path):
+    path = tmp_path / "unrecognized-extension.tmp"
+    path.touch()
+    with dnaio.open(path) as f:
+        records = list(f)
+    assert records == []
+
+
 def test_read(fileformat, extension):
     with dnaio.open("tests/data/simple." + fileformat + extension) as f:
         records = list(f)
