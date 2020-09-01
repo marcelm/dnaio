@@ -77,7 +77,7 @@ setup(
     install_requires=['xopen>=0.8.2'],
     python_requires='>=3.4',
     classifiers=[
-            "Development Status :: 4 - Beta",
+            "Development Status :: 5 - Production/Stable",
             "Intended Audience :: Science/Research",
             "License :: OSI Approved :: MIT License",
             "Natural Language :: English",
