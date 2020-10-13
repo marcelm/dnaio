@@ -30,6 +30,9 @@ class BinaryFileReader:
             self._close_on_exit = True
         self._file = file
 
+    def __repr__(self):
+        return "{}({!r})".format(self.__class__.__name__, getattr(self._file, "name", self._file))
+
     def close(self):
         if self._close_on_exit and self._file is not None:
             self._file.close()

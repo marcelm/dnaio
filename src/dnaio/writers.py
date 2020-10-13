@@ -10,6 +10,9 @@ class FileWriter:
         else:
             self._close_on_exit = bool(_close_file)
 
+    def __repr__(self):
+        return "{}({!r})".format(self.__class__.__name__, getattr(self._file, "name", self._file))
+
     def close(self):
         if self._close_on_exit:
             self._file.close()
@@ -35,6 +38,9 @@ class FastaWriter(FileWriter):
         """
         super().__init__(file, opener=opener, _close_file=_close_file)
         self.line_length = line_length if line_length != 0 else None
+
+    def __repr__(self):
+        return "FastaWriter({!r})".format(getattr(self._file, "name", self._file))
 
     def write(self, name_or_record, sequence=None):
         """Write an entry to the the FASTA file.

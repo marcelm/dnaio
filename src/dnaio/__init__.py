@@ -244,6 +244,9 @@ class PairedSequenceReader:
             self._close = stack.pop_all().close
         self.delivers_qualities = self.reader1.delivers_qualities
 
+    def __repr__(self):
+        return "PairedSequenceReader(file1={}, file2={})".format(self.reader1, self.reader2)
+
     def __iter__(self):
         """
         Iterate over the paired reads. Each item is a pair of Sequence objects.
@@ -295,6 +298,9 @@ class InterleavedSequenceReader:
         self.reader = _open_single(file, opener=opener, fileformat=fileformat)
         self.delivers_qualities = self.reader.delivers_qualities
 
+    def __repr__(self):
+        return "InterleavedSequenceReader({})".format(self.reader)
+
     def __iter__(self):
         it = iter(self.reader)
         for r1 in it:
@@ -333,6 +339,9 @@ class PairedSequenceWriter:
                     file2, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
             self._close = stack.pop_all().close
 
+    def __repr__(self):
+        return "{}({}, {})".format(self.__class__.__name__, self._writer1, self._writer2)
+
     def write(self, read1, read2):
         self._writer1.write(read1)
         self._writer2.write(read2)
@@ -362,6 +371,9 @@ class InterleavedSequenceWriter:
 
         self._writer = _open_single(
             file, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities)
+
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self._writer)
 
     def write(self, read1, read2):
         self._writer.write(read1)
