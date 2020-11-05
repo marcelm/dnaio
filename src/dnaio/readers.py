@@ -120,6 +120,9 @@ class FastqReader(BinaryFileReader):
             # Empty file
             self.two_headers = False
             self._iter = iter(())
+        except Exception:
+            self.close()
+            raise
 
     def __iter__(self):
         return self._iter

@@ -173,11 +173,11 @@ def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
         'fastq': functools.partial(fastq_handler, _close_file=close_file),
         'fasta': functools.partial(fasta_handler, _close_file=close_file),
     }
-
     if fileformat:
         try:
             handler = handlers[fileformat.lower()]
         except KeyError:
+            file.close()
             raise UnknownFileFormat(
                 "File format {!r} is unknown (expected 'fasta' or 'fastq').".format(fileformat))
         return handler(file)
@@ -191,6 +191,7 @@ def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
     if mode == 'r' and fileformat is None:
         fileformat = _detect_format_from_content(file)
         if fileformat is None:
+            file.close()
             raise UnknownFileFormat(
                 'Could not determine whether file {!r} is FASTA or FASTQ. The file extension was '
                 'not available or not recognized and the first character in the file is '
@@ -199,10 +200,12 @@ def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
     if fileformat is None:
         assert mode == 'w'
         extra = " because the output file name is not available" if path is None else ""
+        file.close()
         raise UnknownFileFormat(
             "Auto-detection of the output file format (FASTA/FASTQ) failed" + extra)
 
     if fileformat == 'fastq' and mode in "wa" and qualities is False:
+        file.close()
         raise ValueError(
             'Output format cannot be FASTQ since no quality values are available.')
 

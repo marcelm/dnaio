@@ -110,9 +110,10 @@ class TestFastqReader:
         assert reads == simple_fastq
 
     def test_fastqreader_buffersize_too_small(self):
-        with raises(ValueError):
+        with raises(ValueError) as e:
             with FastqReader("tests/data/simple.fastq", buffer_size=0) as f:
                 _ = list(f)  # pragma: no cover
+        assert "buffer size too small" in e.value.args[0]
 
     def test_fastqreader_dos(self):
         # DOS line breaks
@@ -257,12 +258,15 @@ class TestOpen:
         assert reads == simple_fastq
 
         # make the name attribute unavailable
-        f = BytesIO(open("tests/data/simple.fastq", 'rb').read())
-        reads = list(dnaio.open(f))
+        with open("tests/data/simple.fastq", 'rb') as f:
+            data = f.read()
+        bio = BytesIO(data)
+        reads = list(dnaio.open(bio))
         assert reads == simple_fastq
-
-        f = BytesIO(open("tests/data/simple.fasta", 'rb').read())
-        reads = list(dnaio.open(f))
+        with open("tests/data/simple.fasta", 'rb') as f:
+            data = f.read()
+        bio = BytesIO(data)
+        reads = list(dnaio.open(bio))
         assert reads == simple_fasta
 
     def test_autodetect_fasta_format(self, tmpdir):
@@ -307,7 +311,8 @@ class TestOpen:
     def test_fastq_qualities_missing(self):
         path = os.path.join(self._tmpdir, 'tmp.fastq')
         with raises(ValueError):
-            dnaio.open(path, mode='w', qualities=False)
+            with dnaio.open(path, mode='w', qualities=False):
+                pass
 
 
 class TestInterleavedReader:
@@ -507,10 +512,10 @@ def test_read_stdin(path):
         expected = len(list(f))
 
     # Use 'cat' to simulate that no file name is available for stdin of the subprocess
-    cat = subprocess.Popen(['cat', path], stdout=subprocess.PIPE)
-    py = subprocess.Popen(
-        [sys.executable, 'tests/read_from_stdin.py'], stdin=cat.stdout, stdout=subprocess.PIPE)
-    cat.stdout.close()
-
-    # Check that the read_from_stdin.py script prints the correct number of records
-    assert str(expected) == py.communicate()[0].decode().strip()
+    with subprocess.Popen(['cat', path], stdout=subprocess.PIPE) as cat:
+        with subprocess.Popen(
+            [sys.executable, 'tests/read_from_stdin.py'], stdin=cat.stdout, stdout=subprocess.PIPE
+        ) as py:
+            cat.stdout.close()
+            # Check that the read_from_stdin.py script prints the correct number of records
+            assert str(expected) == py.communicate()[0].decode().strip()
