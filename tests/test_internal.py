@@ -13,9 +13,11 @@ from dnaio import (
     FileFormatError, FastaFormatError, FastqFormatError,
     FastaReader, FastqReader, InterleavedSequenceReader,
     FastaWriter, FastqWriter, InterleavedSequenceWriter,
-    PairedSequenceReader)
+    PairedSequenceReader,
+)
 from dnaio import _record_names_match, Sequence
-
+from dnaio.writers import FileWriter
+from dnaio.readers import BinaryFileReader
 
 # files tests/data/simple.fast{q,a}
 simple_fastq = [
@@ -519,3 +521,35 @@ def test_read_stdin(path):
             cat.stdout.close()
             # Check that the read_from_stdin.py script prints the correct number of records
             assert str(expected) == py.communicate()[0].decode().strip()
+
+
+def test_file_writer(tmp_path):
+    path = tmp_path / "out.txt"
+    fw = FileWriter(path)
+    repr(fw)
+    fw.close()
+    assert path.exists()
+    with raises(ValueError) as e:
+        with fw:
+            pass
+    assert "operation on closed file" in e.value.args[0]
+
+
+def test_binary_file_reader():
+    bfr = BinaryFileReader("tests/data/simple.fasta")
+    repr(bfr)
+    bfr.close()
+    with raises(ValueError) as e:
+        with bfr:
+            pass
+    assert "operation on closed" in e.value.args[0]
+
+
+def test_fasta_writer_repr(tmp_path):
+    with FastaWriter(tmp_path / "out.fasta") as fw:
+        repr(fw)
+
+
+def test_fastq_writer_repr(tmp_path):
+    with FastqWriter(tmp_path / "out.fastq") as fw:
+        repr(fw)

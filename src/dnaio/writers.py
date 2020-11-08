@@ -1,10 +1,12 @@
 from xopen import xopen
 
+from ._util import _is_path
+
 
 class FileWriter:
     def __init__(self, file, opener=xopen, _close_file=None):
         self._file = file
-        if isinstance(file, str):
+        if _is_path(file):
             self._file = opener(file, "wb")
             self._close_on_exit = True
         else:
@@ -40,7 +42,7 @@ class FastaWriter(FileWriter):
         self.line_length = line_length if line_length != 0 else None
 
     def __repr__(self):
-        return "FastaWriter({!r})".format(getattr(self._file, "name", self._file))
+        return "FastaWriter('{}')".format(getattr(self._file, "name", self._file))
 
     def write(self, name_or_record, sequence=None):
         """Write an entry to the the FASTA file.
@@ -88,6 +90,9 @@ class FastqWriter(FileWriter):
         super().__init__(file, opener=opener, _close_file=_close_file)
         self._two_headers = two_headers
         self.write = self._write_two_headers if self._two_headers else self._write
+
+    def __repr__(self):
+        return "FastqWriter('{}')".format(getattr(self._file, "name", self._file))
 
     def _write(self, record):
         """

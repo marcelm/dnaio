@@ -34,7 +34,7 @@ from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError
 from .chunks import read_chunks, read_paired_chunks
 from ._version import version as __version__
-
+from ._util import _is_path
 
 try:
     from os import fspath  # Exists in Python 3.6+
@@ -126,21 +126,6 @@ def _detect_format_from_name(name):
     elif ext in ['.fastq', '.fq'] or (ext == '.txt' and name.endswith('_sequence')):
         return 'fastq'
     return None
-
-
-def _is_path(obj):
-    """
-    Return whether the given object looks like a path (str, pathlib.Path or pathlib2.Path)
-    """
-    # pytest uses pathlib2.Path objects on Python 3.5 for its tmp_path fixture.
-    # On Python 3.6+, this function can be replaced with isinstance(obj, os.PathLike)
-    import sys
-    if "pathlib2" in sys.modules:
-        import pathlib2
-        path_classes = (str, pathlib.Path, pathlib2.Path)
-    else:
-        path_classes = (str, pathlib.Path)
-    return isinstance(obj, path_classes)
 
 
 def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
