@@ -176,11 +176,12 @@ def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
     if mode == 'r' and fileformat is None:
         fileformat = _detect_format_from_content(file)
         if fileformat is None:
+            name = getattr(file, "name", repr(file))
             file.close()
             raise UnknownFileFormat(
-                'Could not determine whether file {!r} is FASTA or FASTQ. The file extension was '
+                'Could not determine whether file "{}" is FASTA or FASTQ. The file extension was '
                 'not available or not recognized and the first character in the file is '
-                'unexpected.'.format(file))
+                'unexpected.'.format(name))
 
     if fileformat is None:
         assert mode == 'w'
