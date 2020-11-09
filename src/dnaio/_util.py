@@ -9,7 +9,7 @@ def _is_path(obj):
     # On Python 3.6+, this function can be replaced with isinstance(obj, os.PathLike)
     import sys
     if "pathlib2" in sys.modules:
-        import pathlib2
+        import pathlib2  # type: ignore
         path_classes = (str, pathlib.Path, pathlib2.Path)
     else:
         path_classes = (str, pathlib.Path)

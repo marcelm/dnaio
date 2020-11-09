@@ -49,5 +49,11 @@ jobs:
       install: python3 -m pip install flake8
       script: flake8 src/ tests/
 
+    - stage: test
+      name: mypy
+      python: "3.6"
+      install: python3 -m pip install mypy
+      script: mypy src/
+
   allow_failures:
     - python: "nightly"
