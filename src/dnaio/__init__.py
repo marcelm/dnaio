@@ -22,9 +22,9 @@ __all__ = [
 ]
 
 import os
+from os import fspath
 from contextlib import ExitStack
 import functools
-import pathlib
 
 from xopen import xopen
 
@@ -35,17 +35,6 @@ from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, Fa
 from .chunks import read_chunks, read_paired_chunks
 from ._version import version as __version__
 from ._util import _is_path
-
-try:
-    from os import fspath  # Exists in Python 3.6+
-except ImportError:
-    def fspath(path):
-        if hasattr(path, "__fspath__"):
-            return path.__fspath__()
-        # Python 3.4 and 3.5 do not support the file system path protocol
-        if isinstance(path, pathlib.Path):
-            return str(path)
-        return path
 
 
 def open(
