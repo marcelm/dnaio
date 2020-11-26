@@ -52,7 +52,7 @@ jobs:
     - stage: test
       name: mypy
       python: "3.6"
-      install: python3 -m pip install mypy
+      install: python3 -m pip install mypy .
       script: mypy src/
 
   allow_failures:
