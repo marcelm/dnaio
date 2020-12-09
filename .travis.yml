@@ -3,7 +3,9 @@ language: python
 cache:
   directories:
     - $HOME/.cache/pip
-
+arch:
+ - amd64
+ - ppc64le
 python:
   - "3.6"
   - "3.7"
@@ -52,6 +54,34 @@ jobs:
     - stage: test
       name: mypy
       python: "3.6"
+      install: python3 -m pip install mypy .
+      script: mypy src/
+  
+    - stage: deploy
+      arch: ppc64le
+      services:
+        - docker
+      python: "3.6"
+      install: python3 -m pip install Cython twine
+      if: tag IS present
+      script:
+        - |
+          python3 setup.py sdist
+          ./buildwheels.sh
+          ls -l dist/
+          python3 -m twine upload dist/*
+
+    - stage: test
+      name: flake8
+      arch: ppc64le
+      python: "3.6"
+      install: python3 -m pip install flake8
+      script: flake8 src/ tests/
+
+    - stage: test
+      name: mypy
+      python: "3.6"
+      arch: ppc64le
       install: python3 -m pip install mypy .
       script: mypy src/
 
