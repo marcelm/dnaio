@@ -4,6 +4,8 @@ Classes for reading FASTA and FASTQ files
 __all__ = ['FastaReader', 'FastqReader']
 
 import io
+from typing import Union, BinaryIO, Optional, Iterator, List
+
 from xopen import xopen
 from ._core import fastq_iter as _fastq_iter, Sequence
 from ._util import shorten as _shorten
@@ -15,25 +17,27 @@ class BinaryFileReader:
     A mixin for readers that ensures that a file or a path can be passed in to the constructor.
     """
     _close_on_exit = False
-    paired = False
-    mode = 'rb'
+    paired: bool = False
+    mode: str = 'rb'
 
-    def __init__(self, file, opener=xopen, _close_file=None):
+    def __init__(self, file: Union[str, BinaryIO], opener=xopen, _close_file: Optional[bool] = None):
         """
         The file is a path or a file-like object. In both cases, the file may
         be compressed (.gz, .bz2, .xz).
         """
         if isinstance(file, str):
-            file = opener(file, self.mode)
+            self._file = opener(file, self.mode)
             self._close_on_exit = True
         elif _close_file:
             self._close_on_exit = True
-        self._file = file
+            self._file = file
+        else:
+            self._file = file
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}({!r})".format(self.__class__.__name__, getattr(self._file, "name", self._file))
 
-    def close(self):
+    def close(self) -> None:
         if self._close_on_exit and self._file is not None:
             self._file.close()
             self._file = None
@@ -52,7 +56,14 @@ class FastaReader(BinaryFileReader):
     Reader for FASTA files.
     """
 
-    def __init__(self, file, keep_linebreaks=False, sequence_class=Sequence, opener=xopen, _close_file=None):
+    def __init__(
+        self,
+        file: Union[str, BinaryIO],
+        keep_linebreaks: bool = False,
+        sequence_class=Sequence,
+        opener=xopen,
+        _close_file: Optional[bool] = None,
+    ):
         """
         file is a path or a file-like object. In both cases, the file may
         be compressed (.gz, .bz2, .xz).
@@ -64,12 +75,12 @@ class FastaReader(BinaryFileReader):
         self.delivers_qualities = False
         self._delimiter = '\n' if keep_linebreaks else ''
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Sequence]:
         """
         Read next entry from the file (single entry at a time).
         """
         name = None
-        seq = []
+        seq: List[str] = []
         f = io.TextIOWrapper(self._file)
         for i, line in enumerate(f):
             # strip() also removes DOS line breaks
@@ -101,7 +112,14 @@ class FastqReader(BinaryFileReader):
     Reader for FASTQ files. Does not support multi-line FASTQ files.
     """
 
-    def __init__(self, file, sequence_class=Sequence, buffer_size=1048576, opener=xopen, _close_file=None):
+    def __init__(
+        self,
+        file: Union[str, BinaryIO],
+        sequence_class=Sequence,
+        buffer_size: int = 1048576,
+        opener=xopen,
+        _close_file: Optional[bool] = None,
+    ):
         """
         file is a filename or a file-like object.
         If file is a filename, then .gz files are supported.
@@ -114,8 +132,9 @@ class FastqReader(BinaryFileReader):
         # whether the file has repeated headers
         self._iter = _fastq_iter(self._file, self.sequence_class, self.buffer_size)
         try:
-            self.two_headers = next(self._iter)
-            assert self.two_headers in (True, False)
+            th = next(self._iter)
+            assert isinstance(th, bool)
+            self.two_headers: bool = th
         except StopIteration:
             # Empty file
             self.two_headers = False
@@ -124,5 +143,5 @@ class FastqReader(BinaryFileReader):
             self.close()
             raise
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Sequence]:
         return self._iter

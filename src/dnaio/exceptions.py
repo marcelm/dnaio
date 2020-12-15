@@ -1,10 +1,13 @@
+from typing import Optional
+
+
 class FileFormatError(Exception):
     """
     The file is not formatted correctly
     """
     format = 'sequence'  # Something generic that works for both FASTA and FASTQ
 
-    def __init__(self, msg, line):
+    def __init__(self, msg: str, line: Optional[int]):
         super().__init__(msg, line)
         self.message = msg
         self.line = line  # starts at 0!

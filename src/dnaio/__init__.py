@@ -22,9 +22,10 @@ __all__ = [
 ]
 
 import os
-from os import fspath
+from os import fspath, PathLike
 from contextlib import ExitStack
 import functools
+from typing import Optional, Union, BinaryIO, Tuple, Iterator
 
 from xopen import xopen
 
@@ -38,8 +39,26 @@ from ._util import _is_path
 
 
 def open(
-    file1, *, file2=None, fileformat=None, interleaved=False, mode="r", qualities=None, opener=xopen
-):
+    file1: Union[str, PathLike, BinaryIO],
+    *,
+    file2: Optional[Union[str, PathLike, BinaryIO]] = None,
+    fileformat: Optional[str] = None,
+    interleaved: bool = False,
+    mode: str = "r",
+    qualities: Optional[bool] = None,
+    opener=xopen
+) -> Union[
+    FastaReader,
+    FastaWriter,
+    FastqReader,
+    FastqWriter,
+    "PairedSequenceReader",
+    "PairedSequenceWriter",
+    "PairedSequenceAppender",
+    "InterleavedSequenceReader",
+    "InterleavedSequenceWriter",
+    "InterleavedSequenceAppender",
+]:
     """
     Open sequence files in FASTA or FASTQ format for reading or writing. This is
     a factory that returns an instance of one of the ...Reader or ...Writer
@@ -98,7 +117,7 @@ def open(
         file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities)
 
 
-def _detect_format_from_name(name):
+def _detect_format_from_name(name: str) -> Optional[str]:
     """
     name -- file name
 
@@ -117,32 +136,37 @@ def _detect_format_from_name(name):
     return None
 
 
-def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
+def _open_single(
+    file_or_path: Union[str, PathLike, BinaryIO],
+    opener,
+    *,
+    fileformat: Optional[str] = None,
+    mode: str = "r",
+    qualities: Optional[bool] = None,
+) -> Union[FastaReader, FastaWriter, FastqReader, FastqWriter]:
     """
     Open a single sequence file. See description of open() above.
     """
     if mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")
 
-    if _is_path(file):
-        path = fspath(file)
+    path: Optional[str]
+    if _is_path(file_or_path):
+        path = fspath(file_or_path)  # type: ignore
         file = opener(path, mode + "b")
         close_file = True
     else:
-        if mode == 'r' and not hasattr(file, 'readinto'):
+        if mode == 'r' and not hasattr(file_or_path, 'readinto'):
             raise ValueError(
                 'When passing in an open file-like object, it must have been opened in binary mode')
+        file = file_or_path
         if hasattr(file, "name") and isinstance(file.name, str):
             path = file.name
         else:
             path = None
         close_file = False
-    if mode == 'r':
-        fastq_handler = FastqReader
-        fasta_handler = FastaReader
-    else:
-        fastq_handler = FastqWriter
-        fasta_handler = FastaWriter
+    fastq_handler = FastqReader if mode == "r" else FastqWriter
+    fasta_handler = FastaReader if mode == "r" else FastaWriter
     handlers = {
         'fastq': functools.partial(fastq_handler, _close_file=close_file),
         'fasta': functools.partial(fasta_handler, _close_file=close_file),
@@ -187,7 +211,7 @@ def _open_single(file, opener, *, fileformat=None, mode="r", qualities=None):
     return handlers[fileformat](file)
 
 
-def _detect_format_from_content(file):
+def _detect_format_from_content(file: BinaryIO) -> Optional[str]:
     """
     Return 'fasta', 'fastq' or None
     """
@@ -196,7 +220,7 @@ def _detect_format_from_content(file):
         if file.tell() > 0:
             file.seek(-1, 1)
     else:
-        first_char = file.peek(1)[0:1]
+        first_char = file.peek(1)[0:1]  # type: ignore
     formats = {
         b'@': 'fastq',
         b'>': 'fasta',
@@ -215,17 +239,23 @@ class PairedSequenceReader:
     """
     paired = True
 
-    def __init__(self, file1, file2, fileformat=None, opener=xopen):
+    def __init__(
+        self,
+        file1: Union[str, PathLike, BinaryIO],
+        file2: Union[str, PathLike, BinaryIO],
+        fileformat: Optional[str] = None,
+        opener=xopen,
+    ):
         with ExitStack() as stack:
             self.reader1 = stack.enter_context(_open_single(file1, opener=opener, fileformat=fileformat))
             self.reader2 = stack.enter_context(_open_single(file2, opener=opener, fileformat=fileformat))
             self._close = stack.pop_all().close
         self.delivers_qualities = self.reader1.delivers_qualities
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "PairedSequenceReader(file1={}, file2={})".format(self.reader1, self.reader2)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[Sequence, Sequence]]:
         """
         Iterate over the paired reads. Each item is a pair of Sequence objects.
         """
@@ -256,7 +286,7 @@ class PairedSequenceReader:
                     "in file 1 does not match '{}' in file 2.".format(r1.name, r2.name), line=None) from None
             yield (r1, r2)
 
-    def close(self):
+    def close(self) -> None:
         self._close()
 
     def __enter__(self):
@@ -272,14 +302,21 @@ class InterleavedSequenceReader:
     """
     paired = True
 
-    def __init__(self, file, fileformat=None, opener=xopen):
-        self.reader = _open_single(file, opener=opener, fileformat=fileformat)
+    def __init__(
+        self,
+        file: Union[str, PathLike, BinaryIO],
+        fileformat: Optional[str] = None,
+        opener=xopen,
+    ):
+        reader = _open_single(file, opener=opener, fileformat=fileformat)
+        assert isinstance(reader, (FastaReader, FastqReader))  # for Mypy
+        self.reader = reader
         self.delivers_qualities = self.reader.delivers_qualities
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "InterleavedSequenceReader({})".format(self.reader)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[Sequence, Sequence]]:
         it = iter(self.reader)
         for r1 in it:
             try:
@@ -294,7 +331,7 @@ class InterleavedSequenceReader:
                     "(first) does not match {!r} (second).".format(r1.name, r2.name), line=None)
             yield (r1, r2)
 
-    def close(self):
+    def close(self) -> None:
         self.reader.close()
 
     def __enter__(self):
@@ -307,8 +344,17 @@ class InterleavedSequenceReader:
 class PairedSequenceWriter:
     _mode = "w"
 
-    def __init__(self, file1, file2, fileformat='fastq', qualities=None, opener=xopen):
+    def __init__(
+        self,
+        file1: Union[str, PathLike, BinaryIO],
+        file2: Union[str, PathLike, BinaryIO],
+        fileformat: Optional[str] = "fastq",
+        qualities: Optional[bool] = None,
+        opener=xopen,
+    ):
         with ExitStack() as stack:
+            self._writer1: Union[FastaWriter, FastqWriter]
+            self._writer2: Union[FastaWriter, FastqWriter]
             self._writer1 = stack.enter_context(
                 _open_single(
                     file1, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
@@ -317,14 +363,14 @@ class PairedSequenceWriter:
                     file2, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
             self._close = stack.pop_all().close
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}({}, {})".format(self.__class__.__name__, self._writer1, self._writer2)
 
-    def write(self, read1, read2):
+    def write(self, read1, read2) -> None:
         self._writer1.write(read1)
         self._writer2.write(read2)
 
-    def close(self):
+    def close(self) -> None:
         self._close()
 
     def __enter__(self):
@@ -345,19 +391,26 @@ class InterleavedSequenceWriter:
     """
     _mode = "w"
 
-    def __init__(self, file, fileformat='fastq', qualities=None, opener=xopen):
-
-        self._writer = _open_single(
+    def __init__(
+        self,
+        file: Union[str, PathLike, BinaryIO],
+        fileformat: Optional[str] = "fastq",
+        qualities: Optional[bool] = None,
+        opener=xopen,
+    ):
+        writer = _open_single(
             file, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities)
+        assert isinstance(writer, (FastaWriter, FastqWriter))  # only for Mypy
+        self._writer = writer
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}({})".format(self.__class__.__name__, self._writer)
 
-    def write(self, read1, read2):
+    def write(self, read1: Sequence, read2: Sequence) -> None:
         self._writer.write(read1)
         self._writer.write(read2)
 
-    def close(self):
+    def close(self) -> None:
         self._writer.close()
 
     def __enter__(self):

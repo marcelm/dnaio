@@ -1,7 +1,7 @@
 import pathlib
 
 
-def _is_path(obj):
+def _is_path(obj: object) -> bool:
     """
     Return whether the given object looks like a path (str, pathlib.Path or pathlib2.Path)
     """
@@ -10,13 +10,14 @@ def _is_path(obj):
     import sys
     if "pathlib2" in sys.modules:
         import pathlib2  # type: ignore
-        path_classes = (str, pathlib.Path, pathlib2.Path)
+        path_classes = [str, pathlib.Path, pathlib2.Path]
     else:
-        path_classes = (str, pathlib.Path)
-    return isinstance(obj, path_classes)
+        path_classes = [str, pathlib.Path]
+    return isinstance(obj, tuple(path_classes))
 
 
-def shorten(s, n=100):
+def shorten(s: str, n: int = 100) -> str:
+
     """Shorten string s to at most n characters, appending "..." if necessary."""
     if s is None:
         return None

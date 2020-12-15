@@ -1,4 +1,5 @@
-from typing import Optional, Tuple, Union, Iterable, BinaryIO
+from typing import Optional, Tuple, Union, BinaryIO, Iterator
+
 
 class Sequence:
     name: str
@@ -14,5 +15,5 @@ class Sequence:
 
 def paired_fastq_heads(buf1: Union[bytes,bytearray], buf2: Union[bytes,bytearray], end1: int, end2: int) -> Tuple[int, int]: ...
 # TODO Sequence should be sequence_class, first yielded value is a bool
-def fastq_iter(file: BinaryIO, sequence_class, buffer_size: int) -> Iterable[Sequence]: ...
+def fastq_iter(file: BinaryIO, sequence_class, buffer_size: int) -> Iterator[Sequence]: ...
 def record_names_match(header1: str, header2: str) -> bool: ...

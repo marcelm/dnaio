@@ -1,10 +1,12 @@
 """Chunked reading of FASTA and FASTQ files"""
+from io import RawIOBase
+from typing import Optional, Iterator, Tuple
 
 from ._core import paired_fastq_heads as _paired_fastq_heads
 from .exceptions import FileFormatError, FastaFormatError, UnknownFileFormat
 
 
-def _fasta_head(buf, end):
+def _fasta_head(buf: bytes, end: Optional[int] = None) -> int:
     """
     Search for the end of the last complete FASTA record within buf[:end]
 
@@ -19,7 +21,7 @@ def _fasta_head(buf, end):
     raise FastaFormatError('File does not start with ">"', line=None)
 
 
-def _fastq_head(buf, end=None):
+def _fastq_head(buf: bytes, end: Optional[int] = None) -> int:
     """
     Search for the end of the last complete *two* FASTQ records in buf[:end].
 
@@ -33,10 +35,10 @@ def _fastq_head(buf, end=None):
     # Note that this works even if linebreaks == 0:
     # rfind() returns -1 and adding 1 gives index 0,
     # which is correct.
-    return right + 1
+    return right + 1  # type: ignore
 
 
-def read_chunks(f, buffer_size=4*1024**2):
+def read_chunks(f: RawIOBase, buffer_size: int = 4 * 1024**2) -> Iterator[memoryview]:
     """
     Read a chunk of complete FASTA or FASTQ records from a file.
     The size of a chunk is at most buffer_size.
@@ -76,7 +78,7 @@ def read_chunks(f, buffer_size=4*1024**2):
     while True:
         if start == len(buf):
             raise OverflowError('FASTA/FASTQ record does not fit into buffer')
-        bufend = f.readinto(memoryview(buf)[start:]) + start
+        bufend = f.readinto(memoryview(buf)[start:]) + start  # type: ignore
         if start == bufend:
             # End of file
             break
@@ -92,7 +94,11 @@ def read_chunks(f, buffer_size=4*1024**2):
         yield memoryview(buf)[0:start]
 
 
-def read_paired_chunks(f, f2, buffer_size=4*1024**2):
+def read_paired_chunks(
+    f: RawIOBase,
+    f2: RawIOBase,
+    buffer_size: int = 4 * 1024**2,
+) -> Iterator[Tuple[memoryview, memoryview]]:
     if buffer_size < 1:
         raise ValueError("Buffer size too small")
 
@@ -100,8 +106,8 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
     buf2 = bytearray(buffer_size)
 
     # Read one byte to make sure we are processing FASTQ
-    start1 = f.readinto(memoryview(buf1)[0:1])
-    start2 = f2.readinto(memoryview(buf2)[0:1])
+    start1 = f.readinto(memoryview(buf1)[0:1])  # type: ignore
+    start2 = f2.readinto(memoryview(buf2)[0:1])  # type: ignore
     if (start1 == 1 and buf1[0:1] != b'@') or (start2 == 1 and buf2[0:1] != b'@'):
         raise FileFormatError(
             "Paired-end data must be in FASTQ format when using multiple cores", line=None)
@@ -109,8 +115,8 @@ def read_paired_chunks(f, f2, buffer_size=4*1024**2):
     while True:
         if start1 == len(buf1) or start2 == len(buf2):
             raise ValueError("FASTQ record does not fit into buffer")
-        bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1
-        bufend2 = f2.readinto(memoryview(buf2)[start2:]) + start2
+        bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1  # type: ignore
+        bufend2 = f2.readinto(memoryview(buf2)[start2:]) + start2  # type: ignore
         if start1 == bufend1 and start2 == bufend2:
             break
 
