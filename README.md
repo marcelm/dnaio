@@ -1,4 +1,4 @@
-[![Travis](https://travis-ci.org/marcelm/dnaio.svg?branch=master)](https://travis-ci.org/marcelm/dnaio)
+![CI](https://github.com/marcelm/dnaio/workflows/CI/badge.svg)
 [![PyPI](https://img.shields.io/pypi/v/dnaio.svg?branch=master)](https://pypi.python.org/pypi/dnaio)
 [![Codecov](https://codecov.io/gh/marcelm/dnaio/branch/master/graph/badge.svg)](https://codecov.io/gh/marcelm/dnaio)
 
