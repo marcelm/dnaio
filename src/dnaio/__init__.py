@@ -18,6 +18,7 @@ __all__ = [
     'PairedSequenceReader',
     'read_chunks',
     'read_paired_chunks',
+    'record_names_match',
     '__version__',
 ]
 
@@ -29,7 +30,7 @@ from typing import Optional, Union, BinaryIO, Tuple, Iterator
 
 from xopen import xopen
 
-from ._core import Sequence, record_names_match as _record_names_match
+from ._core import Sequence, record_names_match
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError
@@ -280,7 +281,7 @@ class PairedSequenceReader:
                 raise FileFormatError(
                     "Reads are improperly paired. There are more reads in "
                     "file 1 than in file 2.", line=None) from None
-            if not _record_names_match(r1.name, r2.name):
+            if not record_names_match(r1.name, r2.name):
                 raise FileFormatError(
                     "Reads are improperly paired. Read name '{}' "
                     "in file 1 does not match '{}' in file 2.".format(r1.name, r2.name), line=None) from None
@@ -325,7 +326,7 @@ class InterleavedSequenceReader:
                 raise FileFormatError(
                     "Interleaved input file incomplete: Last record "
                     "{!r} has no partner.".format(r1.name), line=None) from None
-            if not _record_names_match(r1.name, r2.name):
+            if not record_names_match(r1.name, r2.name):
                 raise FileFormatError(
                     "Reads are improperly paired. Name {!r} "
                     "(first) does not match {!r} (second).".format(r1.name, r2.name), line=None)

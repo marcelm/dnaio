@@ -15,7 +15,7 @@ from dnaio import (
     FastaWriter, FastqWriter, InterleavedSequenceWriter,
     PairedSequenceReader,
 )
-from dnaio import _record_names_match, Sequence
+from dnaio import record_names_match, Sequence
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
@@ -468,7 +468,7 @@ class TestPairedSequenceReader:
             ] == list(psr)
 
     def test_record_names_match(self):
-        match = _record_names_match
+        match = record_names_match
         assert match('abc', 'abc')
         assert match('abc/1', 'abc/2')
         assert match('abc.1', 'abc.2')
