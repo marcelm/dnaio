@@ -64,6 +64,7 @@ setup(
     license='MIT',
     package_dir={'': 'src'},
     packages=find_packages('src'),
+    package_data={"dnaio": ["py.typed", "*.pyi"]},
     extras_require={
         'dev': ['Cython', 'pytest'],
     },
