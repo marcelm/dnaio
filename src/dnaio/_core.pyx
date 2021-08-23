@@ -297,16 +297,17 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 def record_names_match(header1: str, header2: str):
     """
     Check whether the sequence record ids id1 and id2 are compatible, ignoring a
-    suffix of '1' or '2'. Some old paired-end reads have names that end in '/1'
-    and '/2'. Also, the fastq-dump tool (used for converting SRA files to FASTQ)
-    appends a .1 and .2 to paired-end reads if option -I is used.
+    suffix of '1', '2' or '3'. This exception allows to check some old
+    paired-end reads that have names ending in '/1' and '/2'. Also, the
+    fastq-dump tool (used for converting SRA files to FASTQ) appends '.1', '.2'
+    and sometimes '.3' to paired-end reads if option -I is used.
     """
-    # TODO optimize this a bit more
     cdef:
         str name1, name2
+
     name1 = header1.split()[0]
     name2 = header2.split()[0]
-    if name1[-1:] in '12' and name2[-1:] in '12':
+    if name1 and name2 and name1[-1] in '123' and name2[-1] in '123':
         name1 = name1[:-1]
         name2 = name2[:-1]
     return name1 == name2
