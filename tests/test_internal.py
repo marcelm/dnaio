@@ -470,10 +470,24 @@ class TestPairedSequenceReader:
     def test_record_names_match(self):
         match = record_names_match
         assert match('abc', 'abc')
+        assert match('abc def', 'abc')
+        assert match('abc def', 'abc ghi')
+        assert match('abc', 'abc ghi')
+        assert not match('abc', 'xyz')
+
+    def test_record_names_match_with_ignored_trailing_12(self):
+        match = record_names_match
         assert match('abc/1', 'abc/2')
         assert match('abc.1', 'abc.2')
         assert match('abc1', 'abc2')
-        assert not match('abc', 'xyz')
+        assert match('abc2', 'abc1')
+        assert match('abc1 def', 'abc1 ghi')
+        assert match('abc1 def', 'abc2 ghi')
+        assert match('abc2 def', 'abc1 ghi')
+        assert not match('abc1', 'abc4')
+        assert not match('abc1', 'abc')
+        assert not match('abc', 'abc1')
+        assert not match('abc', 'abc2')
 
     def test_missing_partner1(self):
         s1 = BytesIO(b'')
