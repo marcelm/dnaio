@@ -1,6 +1,7 @@
 # cython: language_level=3, emit_code_comments=False
 
-from libc.string cimport strncmp, memcmp
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
+from libc.string cimport strncmp, memcmp, memcpy
 cimport cython
 
 from .exceptions import FastqFormatError
@@ -62,10 +63,58 @@ cdef class Sequence:
     def __reduce__(self):
         return (Sequence, (self.name, self.sequence, self.qualities))
 
+    def qualities_bytes(self):
+        return self.qualities.encode('ascii')
+
     def fastq_bytes(self):
         s = ('@' + self.name + '\n' + self.sequence + '\n+\n'
              + self.qualities + '\n')
         return s.encode('ascii')
+
+    def fastq_bytes2(self):
+        cdef bytes name = self.name.encode('ascii')
+        cdef bytes sequence = self.sequence.encode('ascii')
+        cdef bytes qualities = self.qualities.encode('ascii')
+        cdef bytes RetVal = b"@" + name + b"\n" + sequence + b"\n+\n" + qualities + b"\n"
+        return RetVal
+
+    def fastq_bytes3(self):
+        cdef bytes name = self.name.encode('ascii')
+        cdef bytes sequence = self.sequence.encode('ascii')
+        cdef bytes qualities = self.qualities.encode('ascii')
+        cdef bytes RetVal = b"".join([b"@", name, b"\n", sequence,
+        b"\n+\n", qualities, b"\n"])
+        return RetVal
+
+    def fastq_bytes4(self):
+        cdef bytes name = self.name.encode('ascii')
+        cdef bytes sequence = self.sequence.encode('ascii')
+        cdef bytes qualities = self.qualities.encode('ascii')
+        cdef Py_ssize_t name_length = len(name)
+        cdef Py_ssize_t sequence_length = len(sequence)
+        cdef Py_ssize_t qualities_length = len(qualities)
+        cdef char * name_ptr = PyBytes_AS_STRING(name)
+        cdef char * sequence_ptr = PyBytes_AS_STRING(sequence)
+        cdef char * qualities_ptr = PyBytes_AS_STRING(qualities)
+        cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
+        cdef Py_ssize_t pos = 0
+        cdef bytes RetVal = PyBytes_FromStringAndSize(NULL, total_size)
+        cdef char * retval_ptr = PyBytes_AS_STRING(RetVal)
+        retval_ptr[0] = b"@"
+        pos += 1
+        memcpy(retval_ptr + pos, name_ptr, name_length)
+        pos += name_length
+        retval_ptr[pos] = b"\n"
+        pos += 1
+        memcpy(retval_ptr + pos, sequence_ptr, sequence_length)
+        pos += sequence_length
+        retval_ptr[pos] = b"\n"; pos += 1
+        retval_ptr[pos] = b"+"; pos += 1
+        retval_ptr[pos] = b"\n"; pos += 1
+        memcpy(retval_ptr + pos, qualities_ptr, qualities_length)
+        pos += qualities_length
+        retval_ptr[pos] = b"\n"
+        return RetVal
 
     def fastq_bytes_two_headers(self):
         s = ('@' + self.name + '\n' + self.sequence + '\n+'
