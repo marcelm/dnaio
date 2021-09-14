@@ -63,10 +63,6 @@ cdef class Sequence:
     def __reduce__(self):
         return (Sequence, (self.name, self.sequence, self.qualities))
 
-    def sequence_bytes(self):
-        """Returns the sequence as a bytes object."""
-        return self.sequence.encode('ascii')
-
     def qualities_bytes(self):
         """Returns the qualities as a bytes object"""
         return self.qualities.encode('ascii')
