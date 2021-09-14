@@ -35,6 +35,10 @@ class TestSequence:
         with raises(ValueError):
             Sequence(name="name", sequence="ACGT", qualities="#####")
 
+    def test_fastq_bytes(self):
+        assert Sequence("name", "ACGT", "====").fastq_bytes() == \
+            b"@name\nACGT\n+\n====\n"
+
 
 class TestFastaReader:
     def test_file(self):
