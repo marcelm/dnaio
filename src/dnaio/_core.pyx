@@ -1,6 +1,7 @@
 # cython: language_level=3, emit_code_comments=False
 
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE
+from cpython.unicode cimport PyUnicode_AsASCIIString, PyUnicode_Check
 from libc.string cimport strncmp, memcmp, memcpy
 cimport cython
 
@@ -93,6 +94,40 @@ cdef class Sequence:
         cdef Py_ssize_t name_length = len(name)
         cdef Py_ssize_t sequence_length = len(sequence)
         cdef Py_ssize_t qualities_length = len(qualities)
+        cdef char * name_ptr = PyBytes_AS_STRING(name)
+        cdef char * sequence_ptr = PyBytes_AS_STRING(sequence)
+        cdef char * qualities_ptr = PyBytes_AS_STRING(qualities)
+        cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
+        cdef Py_ssize_t cursor
+        cdef bytes RetVal = PyBytes_FromStringAndSize(NULL, total_size)
+        cdef char * retval_ptr = PyBytes_AS_STRING(RetVal)
+        retval_ptr[0] = b"@"
+        memcpy(retval_ptr + 1, name_ptr, name_length)
+        cursor = name_length + 1
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        memcpy(retval_ptr + cursor, sequence_ptr, sequence_length)
+        cursor += sequence_length
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        retval_ptr[cursor] = b"+"; cursor += 1
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        memcpy(retval_ptr + cursor, qualities_ptr, qualities_length)
+        cursor += qualities_length
+        retval_ptr[cursor] = b"\n"
+        return RetVal
+
+    def fastq_bytes5(self):
+        if not PyUnicode_Check(self.name):
+            raise TypeError("Name should be of type: str")
+        if not PyUnicode_Check(self.sequence):
+            raise TypeError("Sequence should be of type: str")
+        if not PyUnicode_Check(self.qualities):
+            raise TypeError("Qualities should be of type: str")
+        cdef bytes name = PyUnicode_AsASCIIString(self.name)
+        cdef bytes sequence = PyUnicode_AsASCIIString(self.sequence)
+        cdef bytes qualities = PyUnicode_AsASCIIString(self.qualities)
+        cdef Py_ssize_t name_length = PyBytes_GET_SIZE(name)
+        cdef Py_ssize_t sequence_length = PyBytes_GET_SIZE(sequence)
+        cdef Py_ssize_t qualities_length = PyBytes_GET_SIZE(qualities)
         cdef char * name_ptr = PyBytes_AS_STRING(name)
         cdef char * sequence_ptr = PyBytes_AS_STRING(sequence)
         cdef char * qualities_ptr = PyBytes_AS_STRING(qualities)

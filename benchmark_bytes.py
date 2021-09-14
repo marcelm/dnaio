@@ -29,6 +29,7 @@ if __name__ == "__main__":
     benchmark("Calculate fastq bytes 2", "seq.fastq_bytes2()", SETUP)
     benchmark("Calculate fastq bytes 3", "seq.fastq_bytes3()", SETUP)
     benchmark("Calculate fastq bytes 4", "seq.fastq_bytes4()", SETUP)
+    benchmark("Calculate fastq bytes 5", "seq.fastq_bytes5()", SETUP)
     benchmark("Encode qualities ascii", "seq.qualities.encode('ascii')", SETUP)
     benchmark("Encode qualities ascii cython", "seq.qualities_bytes()", SETUP)
     benchmark("Encode qualities latin-1", "seq.qualities.encode('latin-1')",
