@@ -97,23 +97,21 @@ cdef class Sequence:
         cdef char * sequence_ptr = PyBytes_AS_STRING(sequence)
         cdef char * qualities_ptr = PyBytes_AS_STRING(qualities)
         cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
-        cdef Py_ssize_t pos = 0
+        cdef Py_ssize_t cursor
         cdef bytes RetVal = PyBytes_FromStringAndSize(NULL, total_size)
         cdef char * retval_ptr = PyBytes_AS_STRING(RetVal)
         retval_ptr[0] = b"@"
-        pos += 1
-        memcpy(retval_ptr + pos, name_ptr, name_length)
-        pos += name_length
-        retval_ptr[pos] = b"\n"
-        pos += 1
-        memcpy(retval_ptr + pos, sequence_ptr, sequence_length)
-        pos += sequence_length
-        retval_ptr[pos] = b"\n"; pos += 1
-        retval_ptr[pos] = b"+"; pos += 1
-        retval_ptr[pos] = b"\n"; pos += 1
-        memcpy(retval_ptr + pos, qualities_ptr, qualities_length)
-        pos += qualities_length
-        retval_ptr[pos] = b"\n"
+        memcpy(retval_ptr + 1, name_ptr, name_length)
+        cursor = name_length + 1
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        memcpy(retval_ptr + cursor, sequence_ptr, sequence_length)
+        cursor += sequence_length
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        retval_ptr[cursor] = b"+"; cursor += 1
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        memcpy(retval_ptr + cursor, qualities_ptr, qualities_length)
+        cursor += qualities_length
+        retval_ptr[cursor] = b"\n"
         return RetVal
 
     def fastq_bytes_two_headers(self):

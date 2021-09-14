@@ -2,7 +2,7 @@ import timeit
 import statistics
 
 
-def benchmark(name, line, setup, loops=10000, runs=10):
+def benchmark(name, line, setup, loops=100_000, runs=10):
     print(f"{name}")
     results = [timeit.timeit(line, setup, number=loops) for _ in range(runs)]
     # Calculate microseconds
