@@ -70,19 +70,30 @@ cdef class Sequence:
     def fastq_bytes(self):
         """Returns the entire fastq record as bytes which can be written
         into a file."""
+        # Convert to ascii bytes sequences first as these have a one-to-one
+        # relation between size and number of bytes
         cdef bytes name = self.name.encode('ascii')
         cdef bytes sequence = self.sequence.encode('ascii')
         cdef bytes qualities = self.qualities.encode('ascii')
         cdef Py_ssize_t name_length = len(name)
         cdef Py_ssize_t sequence_length = len(sequence)
         cdef Py_ssize_t qualities_length = len(qualities)
+
+        # Retrieve the pointers to the bytestrings
         cdef char * name_ptr = PyBytes_AS_STRING(name)
         cdef char * sequence_ptr = PyBytes_AS_STRING(sequence)
         cdef char * qualities_ptr = PyBytes_AS_STRING(qualities)
+
+        # Total size is name + sequence + qualities + 4 newlines + '+' and an
+        # '@' to be put in front of the name.
         cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
-        cdef Py_ssize_t cursor
+
+        # This is the canonical way to create an uninitialized bytestring of given size
         cdef bytes RetVal = PyBytes_FromStringAndSize(NULL, total_size)
         cdef char * retval_ptr = PyBytes_AS_STRING(RetVal)
+
+        # Write the sequences into the bytestring at the correct positions.
+        cdef Py_ssize_t cursor
         retval_ptr[0] = b"@"
         memcpy(retval_ptr + 1, name_ptr, name_length)
         cursor = name_length + 1
