@@ -64,7 +64,8 @@ cdef class Sequence:
         return (Sequence, (self.name, self.sequence, self.qualities))
 
     def qualities_as_bytes(self):
-        """Returns the qualities as a bytes object"""
+        """Returns the qualities as a bytes object. This is a faster version
+        of qualities.encode('ascii')."""
         return self.qualities.encode('ascii')
 
     def fastq_bytes(self):
