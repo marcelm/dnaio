@@ -113,9 +113,11 @@ cdef class Sequence:
         return retval
 
     def fastq_bytes_two_headers(self):
-        s = ('@' + self.name + '\n' + self.sequence + '\n+'
-             + self.name + '\n' + self.qualities + '\n')
-        return s.encode('ascii')
+        """
+        Return this record in FASTQ format as a bytes object where the header (after the @) is
+        repeated on the third line.
+        """
+        return f"@{self.name}\n{self.sequence}\n+{self.name}\n{self.qualities}\n".encode("ascii")
 
 
 # It would be nice to be able to have the first parameter be an
