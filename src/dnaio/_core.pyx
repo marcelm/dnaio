@@ -63,12 +63,12 @@ cdef class Sequence:
     def __reduce__(self):
         return (Sequence, (self.name, self.sequence, self.qualities))
 
-    def qualities_bytes(self):
+    def qualities_as_bytes(self):
         """Returns the qualities as a bytes object"""
         return self.qualities.encode('ascii')
 
     def fastq_bytes(self):
-        """Returns the entire fastq record as bytes which can be written
+        """Returns the entire FASTQ record as bytes which can be written
         into a file."""
         # Convert to ascii bytes sequences first as these have a one-to-one
         # relation between size and number of bytes
@@ -79,7 +79,9 @@ cdef class Sequence:
         cdef Py_ssize_t sequence_length = len(sequence)
         cdef Py_ssize_t qualities_length = len(qualities)
 
-        # Retrieve the pointers to the bytestrings
+        # Since Cython will generate code above that is a 100% sure to generate
+        # bytes objects, we can call Python C-API functions that don't perform
+        # checks on the object.
         cdef char * name_ptr = PyBytes_AS_STRING(name)
         cdef char * sequence_ptr = PyBytes_AS_STRING(sequence)
         cdef char * qualities_ptr = PyBytes_AS_STRING(qualities)
@@ -89,8 +91,8 @@ cdef class Sequence:
         cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
 
         # This is the canonical way to create an uninitialized bytestring of given size
-        cdef bytes RetVal = PyBytes_FromStringAndSize(NULL, total_size)
-        cdef char * retval_ptr = PyBytes_AS_STRING(RetVal)
+        cdef bytes retval = PyBytes_FromStringAndSize(NULL, total_size)
+        cdef char * retval_ptr = PyBytes_AS_STRING(retval)
 
         # Write the sequences into the bytestring at the correct positions.
         cdef Py_ssize_t cursor
@@ -106,7 +108,7 @@ cdef class Sequence:
         memcpy(retval_ptr + cursor, qualities_ptr, qualities_length)
         cursor += qualities_length
         retval_ptr[cursor] = b"\n"
-        return RetVal
+        return retval
 
     def fastq_bytes_two_headers(self):
         s = ('@' + self.name + '\n' + self.sequence + '\n+'
