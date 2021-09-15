@@ -1,6 +1,7 @@
 # cython: language_level=3, emit_code_comments=False
 
-from libc.string cimport strncmp, memcmp
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
+from libc.string cimport strncmp, memcmp, memcpy
 cimport cython
 
 from .exceptions import FastqFormatError
@@ -11,7 +12,7 @@ cdef class Sequence:
     """
     A record in a FASTA or FASTQ file. For FASTA, the qualities attribute
     is None. For FASTQ, qualities is a string and it contains the qualities
-    encoded as ascii(qual+33).
+    encoded as ASCII(qual+33).
     """
     cdef:
         public str name
@@ -62,10 +63,54 @@ cdef class Sequence:
     def __reduce__(self):
         return (Sequence, (self.name, self.sequence, self.qualities))
 
+    def qualities_as_bytes(self):
+        """Return the qualities as a bytes object.
+
+        This is a faster version of qualities.encode('ascii')."""
+        return self.qualities.encode('ascii')
+
     def fastq_bytes(self):
-        s = ('@' + self.name + '\n' + self.sequence + '\n+\n'
-             + self.qualities + '\n')
-        return s.encode('ascii')
+        """Return the entire FASTQ record as bytes which can be written
+        into a file."""
+        # Convert to ASCII bytes sequences first as these have a one-to-one
+        # relation between size and number of bytes
+        cdef bytes name = self.name.encode('ascii')
+        cdef bytes sequence = self.sequence.encode('ascii')
+        cdef bytes qualities = self.qualities.encode('ascii')
+        cdef Py_ssize_t name_length = len(name)
+        cdef Py_ssize_t sequence_length = len(sequence)
+        cdef Py_ssize_t qualities_length = len(qualities)
+
+        # Since Cython will generate code above that is a 100% sure to generate
+        # bytes objects, we can call Python C-API functions that don't perform
+        # checks on the object.
+        cdef char * name_ptr = PyBytes_AS_STRING(name)
+        cdef char * sequence_ptr = PyBytes_AS_STRING(sequence)
+        cdef char * qualities_ptr = PyBytes_AS_STRING(qualities)
+
+        # Total size is name + sequence + qualities + 4 newlines + '+' and an
+        # '@' to be put in front of the name.
+        cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
+
+        # This is the canonical way to create an uninitialized bytestring of given size
+        cdef bytes retval = PyBytes_FromStringAndSize(NULL, total_size)
+        cdef char * retval_ptr = PyBytes_AS_STRING(retval)
+
+        # Write the sequences into the bytestring at the correct positions.
+        cdef Py_ssize_t cursor
+        retval_ptr[0] = b"@"
+        memcpy(retval_ptr + 1, name_ptr, name_length)
+        cursor = name_length + 1
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        memcpy(retval_ptr + cursor, sequence_ptr, sequence_length)
+        cursor += sequence_length
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        retval_ptr[cursor] = b"+"; cursor += 1
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        memcpy(retval_ptr + cursor, qualities_ptr, qualities_length)
+        cursor += qualities_length
+        retval_ptr[cursor] = b"\n"
+        return retval
 
     def fastq_bytes_two_headers(self):
         s = ('@' + self.name + '\n' + self.sequence + '\n+'
