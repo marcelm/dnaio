@@ -12,7 +12,7 @@ cdef class Sequence:
     """
     A record in a FASTA or FASTQ file. For FASTA, the qualities attribute
     is None. For FASTQ, qualities is a string and it contains the qualities
-    encoded as ascii(qual+33).
+    encoded as ASCII(qual+33).
     """
     cdef:
         public str name
@@ -64,14 +64,15 @@ cdef class Sequence:
         return (Sequence, (self.name, self.sequence, self.qualities))
 
     def qualities_as_bytes(self):
-        """Returns the qualities as a bytes object. This is a faster version
-        of qualities.encode('ascii')."""
+        """Return the qualities as a bytes object.
+
+        This is a faster version of qualities.encode('ascii')."""
         return self.qualities.encode('ascii')
 
     def fastq_bytes(self):
-        """Returns the entire FASTQ record as bytes which can be written
+        """Return the entire FASTQ record as bytes which can be written
         into a file."""
-        # Convert to ascii bytes sequences first as these have a one-to-one
+        # Convert to ASCII bytes sequences first as these have a one-to-one
         # relation between size and number of bytes
         cdef bytes name = self.name.encode('ascii')
         cdef bytes sequence = self.sequence.encode('ascii')
