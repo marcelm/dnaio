@@ -12,6 +12,7 @@ class FileWriter:
     def __init__(
         self,
         file: Union[PathLike, str, BinaryIO],
+        *,
         opener=xopen,
         _close_file: Optional[bool] = None,
     ):
@@ -46,6 +47,7 @@ class FastaWriter(FileWriter, SingleEndWriter):
     def __init__(
         self,
         file: Union[PathLike, str, BinaryIO],
+        *,
         line_length: Optional[int] = None,
         opener=xopen,
         _close_file: Optional[bool] = None,
@@ -106,6 +108,7 @@ class FastqWriter(FileWriter, SingleEndWriter):
     def __init__(
         self,
         file: Union[PathLike, str, BinaryIO],
+        *,
         two_headers: bool = False,
         opener=xopen,
         _close_file: Optional[bool] = None,

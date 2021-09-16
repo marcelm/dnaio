@@ -22,7 +22,9 @@ class BinaryFileReader:
     paired: bool = False
     mode: str = 'rb'
 
-    def __init__(self, file: Union[str, BinaryIO], opener=xopen, _close_file: Optional[bool] = None):
+    def __init__(
+        self, file: Union[str, BinaryIO], *, opener=xopen, _close_file: Optional[bool] = None
+    ):
         """
         The file is a path or a file-like object. In both cases, the file may
         be compressed (.gz, .bz2, .xz).
@@ -61,6 +63,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
     def __init__(
         self,
         file: Union[str, BinaryIO],
+        *,
         keep_linebreaks: bool = False,
         sequence_class=Sequence,
         opener=xopen,
@@ -116,6 +119,7 @@ class FastqReader(BinaryFileReader, SingleEndReader):
     def __init__(
         self,
         file: Union[str, BinaryIO],
+        *,
         sequence_class=Sequence,
         buffer_size: int = 1048576,
         opener=xopen,

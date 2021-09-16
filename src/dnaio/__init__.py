@@ -104,18 +104,22 @@ def open(
         if mode in "wa" and file1 == file2:
             raise ValueError("The paired-end output files are identical")
         if mode == "r":
-            return TwoFilePairedEndReader(file1, file2, fileformat, opener=opener)
+            return TwoFilePairedEndReader(file1, file2, fileformat=fileformat, opener=opener)
         elif mode == "w":
-            return TwoFilePairedEndWriter(file1, file2, fileformat, qualities, opener=opener)
+            return TwoFilePairedEndWriter(
+                file1, file2, fileformat=fileformat, qualities=qualities, opener=opener)
         else:
-            return TwoFilePairedEndAppender(file1, file2, fileformat, qualities, opener=opener)
+            return TwoFilePairedEndAppender(
+                file1, file2, fileformat=fileformat, qualities=qualities, opener=opener)
     if interleaved:
         if mode == "r":
-            return InterleavedPairedEndReader(file1, fileformat, opener=opener)
+            return InterleavedPairedEndReader(file1, fileformat=fileformat, opener=opener)
         elif mode == "w":
-            return InterleavedPairedEndWriter(file1, fileformat, qualities, opener=opener)
+            return InterleavedPairedEndWriter(
+                file1, fileformat=fileformat, qualities=qualities, opener=opener)
         else:
-            return InterleavedPairedEndAppender(file1, fileformat, qualities, opener=opener)
+            return InterleavedPairedEndAppender(
+                file1, fileformat=fileformat, qualities=qualities, opener=opener)
 
     # The multi-file options have been dealt with, delegate rest to the
     # single-file function.
@@ -249,6 +253,7 @@ class TwoFilePairedEndReader(PairedEndReader):
         self,
         file1: Union[str, PathLike, BinaryIO],
         file2: Union[str, PathLike, BinaryIO],
+        *,
         fileformat: Optional[str] = None,
         opener=xopen,
     ):
@@ -311,6 +316,7 @@ class InterleavedPairedEndReader(PairedEndReader):
     def __init__(
         self,
         file: Union[str, PathLike, BinaryIO],
+        *,
         fileformat: Optional[str] = None,
         opener=xopen,
     ):
@@ -354,6 +360,7 @@ class TwoFilePairedEndWriter(PairedEndWriter):
         self,
         file1: Union[str, PathLike, BinaryIO],
         file2: Union[str, PathLike, BinaryIO],
+        *,
         fileformat: Optional[str] = "fastq",
         qualities: Optional[bool] = None,
         opener=xopen,
@@ -400,6 +407,7 @@ class InterleavedPairedEndWriter(PairedEndWriter):
     def __init__(
         self,
         file: Union[str, PathLike, BinaryIO],
+        *,
         fileformat: Optional[str] = "fastq",
         qualities: Optional[bool] = None,
         opener=xopen,
