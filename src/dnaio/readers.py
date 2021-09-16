@@ -7,6 +7,7 @@ import io
 from typing import Union, BinaryIO, Optional, Iterator, List
 
 from xopen import xopen
+
 from ._core import fastq_iter as _fastq_iter, Sequence
 from ._util import shorten as _shorten
 from .exceptions import FastaFormatError

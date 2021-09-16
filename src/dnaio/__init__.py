@@ -13,9 +13,10 @@ __all__ = [
     'FileFormatError',
     'FastaFormatError',
     'FastqFormatError',
-    'InterleavedSequenceReader',
-    'InterleavedSequenceWriter',
-    'PairedSequenceReader',
+    'InterleavedPairedEndReader',
+    'InterleavedPairedEndWriter',
+    'TwoFilePairedEndReader',
+    'TwoFilePairedEndWriter',
     'read_chunks',
     'read_paired_chunks',
     'record_names_match',
@@ -53,12 +54,10 @@ def open(
     FastaWriter,
     FastqReader,
     FastqWriter,
-    "PairedSequenceReader",
-    "PairedSequenceWriter",
-    "PairedSequenceAppender",
-    "InterleavedSequenceReader",
-    "InterleavedSequenceWriter",
-    "InterleavedSequenceAppender",
+    "PairedEndTwoFileReader",
+    "PairedEndTwoFileWriter",
+    "PairedEndInterleavedReader",
+    "PairedEndInterleavedWriter",
 ]:
     """
     Open sequence files in FASTA or FASTQ format for reading or writing.
@@ -104,18 +103,18 @@ def open(
         if mode in "wa" and file1 == file2:
             raise ValueError("The paired-end output files are identical")
         if mode == "r":
-            return PairedSequenceReader(file1, file2, fileformat, opener=opener)
+            return TwoFilePairedEndReader(file1, file2, fileformat, opener=opener)
         elif mode == "w":
-            return PairedSequenceWriter(file1, file2, fileformat, qualities, opener=opener)
+            return TwoFilePairedEndWriter(file1, file2, fileformat, qualities, opener=opener)
         else:
-            return PairedSequenceAppender(file1, file2, fileformat, qualities, opener=opener)
+            return TwoFilePairedEndAppender(file1, file2, fileformat, qualities, opener=opener)
     if interleaved:
         if mode == "r":
-            return InterleavedSequenceReader(file1, fileformat, opener=opener)
+            return InterleavedPairedEndReader(file1, fileformat, opener=opener)
         elif mode == "w":
-            return InterleavedSequenceWriter(file1, fileformat, qualities, opener=opener)
+            return InterleavedPairedEndWriter(file1, fileformat, qualities, opener=opener)
         else:
-            return InterleavedSequenceAppender(file1, fileformat, qualities, opener=opener)
+            return InterleavedPairedEndAppender(file1, fileformat, qualities, opener=opener)
 
     # The multi-file options have been dealt with, delegate rest to the
     # single-file function.
@@ -236,7 +235,7 @@ def _detect_format_from_content(file: BinaryIO) -> Optional[str]:
     return formats.get(first_char, None)
 
 
-class PairedSequenceReader:
+class TwoFilePairedEndReader:
     """
     Read paired-end reads from two files.
 
@@ -302,7 +301,7 @@ class PairedSequenceReader:
         self.close()
 
 
-class InterleavedSequenceReader:
+class InterleavedPairedEndReader:
     """
     Read paired-end reads from an interleaved FASTQ file.
     """
@@ -347,7 +346,7 @@ class InterleavedSequenceReader:
         self.close()
 
 
-class PairedSequenceWriter:
+class TwoFilePairedEndWriter:
     _mode = "w"
 
     def __init__(
@@ -387,11 +386,11 @@ class PairedSequenceWriter:
         self.close()
 
 
-class PairedSequenceAppender(PairedSequenceWriter):
+class TwoFilePairedEndAppender(TwoFilePairedEndWriter):
     _mode = "a"
 
 
-class InterleavedSequenceWriter:
+class InterleavedPairedEndWriter:
     """
     Write paired-end reads to an interleaved FASTA or FASTQ file
     """
@@ -427,5 +426,5 @@ class InterleavedSequenceWriter:
         self.close()
 
 
-class InterleavedSequenceAppender(InterleavedSequenceWriter):
+class InterleavedPairedEndAppender(InterleavedPairedEndWriter):
     _mode = "a"
