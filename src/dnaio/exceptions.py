@@ -18,11 +18,17 @@ class FileFormatError(Exception):
 
 
 class FastqFormatError(FileFormatError):
-    format = 'FASTQ'
+    """
+    The FASTQ file is not formatted correctly
+    """
+    format = "FASTQ"
 
 
 class FastaFormatError(FileFormatError):
-    format = 'FASTA'
+    """
+    The FASTA file is not formatted correctly
+    """
+    format = "FASTA"
 
 
 class UnknownFileFormat(Exception):

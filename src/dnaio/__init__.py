@@ -61,34 +61,39 @@ def open(
     "InterleavedSequenceAppender",
 ]:
     """
-    Open sequence files in FASTA or FASTQ format for reading or writing. This is
-    a factory that returns an instance of one of the ...Reader or ...Writer
-    classes also defined in this module.
+    Open sequence files in FASTA or FASTQ format for reading or writing.
 
-    file1, file2 -- Paths to regular or compressed files or file-like
+    Parameters:
+      file1:
+      file2:
+        Paths to regular or compressed files or file-like
         objects (as str or as pathlib.Path). Use only file1 if data is single-end.
         If sequences are paired, use also file2.
-
-    mode -- Either 'r' for reading, 'w' for writing or 'a' for appending.
-
-    interleaved -- If True, then file1 contains interleaved paired-end data.
+      mode:
+        Either ``'r'`` for reading, ``'w'`` for writing or ``'a'`` for appending.
+      interleaved:
+        If True, then file1 contains interleaved paired-end data.
         file2 must be None in this case.
+      fileformat:
+        If *None*, the file format is autodetected from the file name
+        extension. Set to ``'fasta'`` or ``'fastq'`` to not auto-detect.
+      qualities:
+        When mode is ``'w'`` and fileformat is *None*, this can be set
+        to *True* or *False* to specify whether the written sequences will have
+        quality values. This is is used in two ways:
 
-    fileformat -- If set to None, the file format is autodetected from the file name
-        extension. Set to 'fasta' or 'fastq' to not auto-detect.
-
-    qualities -- When mode is 'w' and fileformat is None, this can be set to
-        True or False to specify whether the written sequences will have quality
-        values. This is is used in two ways:
-        * If the output format cannot be determined (unrecognized extension
+        - If the output format cannot be determined (unrecognized extension
           etc), no exception is raised, but fasta or fastq format is chosen
           appropriately.
-        * When False (no qualities available), an exception is raised when the
-          auto-detected output format is FASTQ.
 
-    opener -- A function that is used to open file1 and file2 if they are not
-        already open file-like objects. By default, xopen is used, which can
+        - When False (no qualities available), an exception is raised when the
+          auto-detected output format is FASTQ.
+      opener: A function that is used to open file1 and file2 if they are not
+        already open file-like objects. By default, ``xopen`` is used, which can
         also open compressed file formats.
+
+    Return:
+       An instance of one of the ...Reader or ...Writer classes
     """
     if mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")

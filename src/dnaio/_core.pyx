@@ -10,9 +10,18 @@ from ._util import shorten
 
 cdef class Sequence:
     """
-    A record in a FASTA or FASTQ file. For FASTA, the qualities attribute
+    A sequencing read with read name/id and (optional) qualities
+
+    If qualities are available, they are as
+    For a Sequence a FASTA file
+    record containing a read in a FASTA or FASTQ file. For FASTA, the qualities attribute
     is None. For FASTQ, qualities is a string and it contains the qualities
     encoded as ASCII(qual+33).
+
+    Attributes:
+      name (str): The read description
+      sequence (str):
+      qualities (str):
     """
     cdef:
         public str name
@@ -32,7 +41,13 @@ cdef class Sequence:
                     rname, len(qualities), len(sequence)))
 
     def __getitem__(self, key):
-        """slicing"""
+        """
+        Slice this Sequence. If the qualities attribute is not None, it is
+        sliced accordingly. The read name is copied unchanged.
+
+        Returns:
+          A new Sequence object with a sliced sequence.
+        """
         return self.__class__(
             self.name,
             self.sequence[key],
@@ -46,6 +61,10 @@ cdef class Sequence:
             shorten(self.name), shorten(self.sequence), qstr)
 
     def __len__(self):
+        """
+        Returns:
+           The number of characters in this sequence
+        """
         return len(self.sequence)
 
     def __richcmp__(self, other, int op):

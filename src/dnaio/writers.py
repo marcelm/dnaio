@@ -93,11 +93,12 @@ class FastqWriter(FileWriter):
     """
     Write sequences with qualities in FASTQ format.
 
-    FASTQ files are formatted like this:
-    @read name
-    SEQUENCE
-    +
-    QUALITIS
+    FASTQ files are formatted like this::
+
+        @read name
+        AACCGGTT
+        +
+        FF,:F,,F
     """
     file_mode = 'wb'
 
