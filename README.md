@@ -34,7 +34,7 @@ The main interface is the `dnaio.open` function:
 
 # Limitations
 
-- Multi-line FASTQ files are not supported. You shouldn’t use them anyway.
+- Multi-line FASTQ files are not supported.
 - FASTQ parsing is the focus of this library. The FASTA parser is not as optimized.
 
 
