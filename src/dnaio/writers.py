@@ -5,6 +5,7 @@ from xopen import xopen
 
 from . import Sequence
 from ._util import _is_path
+from .interfaces import SingleEndWriter
 
 
 class FileWriter:
@@ -37,7 +38,7 @@ class FileWriter:
         self.close()
 
 
-class FastaWriter(FileWriter):
+class FastaWriter(FileWriter, SingleEndWriter):
     """
     Write FASTA-formatted sequences to a file.
     """
@@ -89,7 +90,7 @@ class FastaWriter(FileWriter):
             self._file.write(text.encode('ascii'))
 
 
-class FastqWriter(FileWriter):
+class FastqWriter(FileWriter, SingleEndWriter):
     """
     Write sequences with qualities in FASTQ format.
 
@@ -111,10 +112,18 @@ class FastqWriter(FileWriter):
     ):
         super().__init__(file, opener=opener, _close_file=_close_file)
         self._two_headers = two_headers
-        self.write = self._write_two_headers if self._two_headers else self._write
+        # setattr avoids a complaint from Mypy
+        setattr(self, "write", self._write_two_headers if self._two_headers else self._write)
 
     def __repr__(self) -> str:
         return f"FastqWriter('{getattr(self._file, 'name', self._file)}')"
+
+    def write(self, record: Sequence) -> None:
+        """
+        Dummy method to make it possible to instantiate this class.
+        The correct write method is assigned in the constructor.
+        """
+        assert False
 
     def _write(self, record: Sequence) -> None:
         """

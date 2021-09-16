@@ -11,6 +11,7 @@ from xopen import xopen
 from ._core import fastq_iter as _fastq_iter, Sequence
 from ._util import shorten as _shorten
 from .exceptions import FastaFormatError
+from .interfaces import SingleEndReader
 
 
 class BinaryFileReader:
@@ -52,7 +53,7 @@ class BinaryFileReader:
         self.close()
 
 
-class FastaReader(BinaryFileReader):
+class FastaReader(BinaryFileReader, SingleEndReader):
     """
     Reader for FASTA files.
     """
@@ -107,7 +108,7 @@ class FastaReader(BinaryFileReader):
         f.detach()
 
 
-class FastqReader(BinaryFileReader):
+class FastqReader(BinaryFileReader, SingleEndReader):
     """
     Reader for FASTQ files. Does not support multi-line FASTQ files.
     """

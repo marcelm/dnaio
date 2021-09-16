@@ -5,6 +5,10 @@ Sequence I/O: Read and write FASTA and FASTQ files efficiently
 __all__ = [
     'open',
     'Sequence',
+    'SingleEndReader',
+    'PairedEndReader',
+    'SingleEndWriter',
+    'PairedEndWriter',
     'FastaReader',
     'FastaWriter',
     'FastqReader',
@@ -35,6 +39,7 @@ from ._core import Sequence, record_names_match
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError
+from .interfaces import SingleEndReader, PairedEndReader, SingleEndWriter, PairedEndWriter
 from .chunks import read_chunks, read_paired_chunks
 from ._version import version as __version__
 from ._util import _is_path
@@ -50,14 +55,10 @@ def open(
     qualities: Optional[bool] = None,
     opener=xopen
 ) -> Union[
-    FastaReader,
-    FastaWriter,
-    FastqReader,
-    FastqWriter,
-    "PairedEndTwoFileReader",
-    "PairedEndTwoFileWriter",
-    "PairedEndInterleavedReader",
-    "PairedEndInterleavedWriter",
+    SingleEndReader,
+    PairedEndReader,
+    SingleEndWriter,
+    PairedEndWriter,
 ]:
     """
     Open sequence files in FASTA or FASTQ format for reading or writing.
@@ -235,7 +236,7 @@ def _detect_format_from_content(file: BinaryIO) -> Optional[str]:
     return formats.get(first_char, None)
 
 
-class TwoFilePairedEndReader:
+class TwoFilePairedEndReader(PairedEndReader):
     """
     Read paired-end reads from two files.
 
@@ -301,7 +302,7 @@ class TwoFilePairedEndReader:
         self.close()
 
 
-class InterleavedPairedEndReader:
+class InterleavedPairedEndReader(PairedEndReader):
     """
     Read paired-end reads from an interleaved FASTQ file.
     """
@@ -346,7 +347,7 @@ class InterleavedPairedEndReader:
         self.close()
 
 
-class TwoFilePairedEndWriter:
+class TwoFilePairedEndWriter(PairedEndWriter):
     _mode = "w"
 
     def __init__(
@@ -390,7 +391,7 @@ class TwoFilePairedEndAppender(TwoFilePairedEndWriter):
     _mode = "a"
 
 
-class InterleavedPairedEndWriter:
+class InterleavedPairedEndWriter(PairedEndWriter):
     """
     Write paired-end reads to an interleaved FASTA or FASTQ file
     """
