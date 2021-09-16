@@ -13,8 +13,8 @@ class FileFormatError(Exception):
         self.line = line  # starts at 0!
 
     def __str__(self):
-        line = 'unknown line' if self.line is None else 'line {}'.format(self.line + 1)
-        return 'Error in {} file at {}: {}'.format(self.format, line, self.message)
+        line = "unknown line" if self.line is None else f"line {self.line + 1}"
+        return f"Error in {self.format} file at {line}: {self.message}"
 
 
 class FastqFormatError(FileFormatError):

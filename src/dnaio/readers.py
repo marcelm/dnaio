@@ -35,7 +35,7 @@ class BinaryFileReader:
             self._file = file
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(self.__class__.__name__, getattr(self._file, "name", self._file))
+        return f"{self.__class__.__name__}('{getattr(self._file, 'name', self._file)}')"
 
     def close(self) -> None:
         if self._close_on_exit and self._file is not None:
@@ -98,8 +98,7 @@ class FastaReader(BinaryFileReader):
                 seq.append(line)
             else:
                 raise FastaFormatError(
-                    "Expected '>' at beginning of record, but got {!r}."
-                    .format(_shorten(line)), line=i)
+                    f"Expected '>' at beginning of record, but got '{_shorten(line)}'.", line=i)
 
         if name is not None:
             yield self.sequence_class(name, self._delimiter.join(seq), None)

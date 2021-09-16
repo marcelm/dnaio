@@ -183,7 +183,7 @@ def _open_single(
         except KeyError:
             file.close()
             raise UnknownFileFormat(
-                "File format {!r} is unknown (expected 'fasta' or 'fastq').".format(fileformat))
+                f"File format '{fileformat}' is unknown (expected 'fasta' or 'fastq').")
         return handler(file)
 
     if path is not None:
@@ -198,9 +198,9 @@ def _open_single(
             name = getattr(file, "name", repr(file))
             file.close()
             raise UnknownFileFormat(
-                'Could not determine whether file "{}" is FASTA or FASTQ. The file extension was '
-                'not available or not recognized and the first character in the file is '
-                'unexpected.'.format(name))
+                f"Could not determine whether file '{name}' is FASTA or FASTQ. The file extension "
+                "is not available or not recognized, and the first character in the file is "
+                "unexpected.")
 
     if fileformat is None:
         assert mode == 'w'
@@ -259,7 +259,7 @@ class PairedSequenceReader:
         self.delivers_qualities = self.reader1.delivers_qualities
 
     def __repr__(self) -> str:
-        return "PairedSequenceReader(file1={}, file2={})".format(self.reader1, self.reader2)
+        return f"PairedSequenceReader(file1={self.reader1}, file2={self.reader2})"
 
     def __iter__(self) -> Iterator[Tuple[Sequence, Sequence]]:
         """
@@ -288,8 +288,8 @@ class PairedSequenceReader:
                     "file 1 than in file 2.", line=None) from None
             if not record_names_match(r1.name, r2.name):
                 raise FileFormatError(
-                    "Reads are improperly paired. Read name '{}' "
-                    "in file 1 does not match '{}' in file 2.".format(r1.name, r2.name), line=None) from None
+                    f"Reads are improperly paired. Read name '{r1.name}' "
+                    f"in file 1 does not match '{r2.name}' in file 2.", line=None) from None
             yield (r1, r2)
 
     def close(self) -> None:
@@ -320,7 +320,7 @@ class InterleavedSequenceReader:
         self.delivers_qualities = self.reader.delivers_qualities
 
     def __repr__(self) -> str:
-        return "InterleavedSequenceReader({})".format(self.reader)
+        return f"InterleavedSequenceReader({self.reader})"
 
     def __iter__(self) -> Iterator[Tuple[Sequence, Sequence]]:
         it = iter(self.reader)
@@ -330,11 +330,11 @@ class InterleavedSequenceReader:
             except StopIteration:
                 raise FileFormatError(
                     "Interleaved input file incomplete: Last record "
-                    "{!r} has no partner.".format(r1.name), line=None) from None
+                    f"'{r1.name}' has no partner.", line=None) from None
             if not record_names_match(r1.name, r2.name):
                 raise FileFormatError(
-                    "Reads are improperly paired. Name {!r} "
-                    "(first) does not match {!r} (second).".format(r1.name, r2.name), line=None)
+                    f"Reads are improperly paired. Name '{r1.name}' "
+                    f"(first) does not match '{r2.name}' (second).", line=None)
             yield (r1, r2)
 
     def close(self) -> None:
@@ -370,7 +370,7 @@ class PairedSequenceWriter:
             self._close = stack.pop_all().close
 
     def __repr__(self) -> str:
-        return "{}({}, {})".format(self.__class__.__name__, self._writer1, self._writer2)
+        return f"{self.__class__.__name__}({self._writer1}, {self._writer2})"
 
     def write(self, read1, read2) -> None:
         self._writer1.write(read1)
@@ -410,7 +410,7 @@ class InterleavedSequenceWriter:
         self._writer = writer
 
     def __repr__(self) -> str:
-        return "{}({})".format(self.__class__.__name__, self._writer)
+        return f"{self.__class__.__name__}({self._writer})"
 
     def write(self, read1: Sequence, read2: Sequence) -> None:
         self._writer.write(read1)

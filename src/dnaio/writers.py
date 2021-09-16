@@ -22,7 +22,7 @@ class FileWriter:
             self._close_on_exit = bool(_close_file)
 
     def __repr__(self) -> str:
-        return "{}({!r})".format(self.__class__.__name__, getattr(self._file, "name", self._file))
+        return f"{self.__class__.__name__}('{getattr(self._file, 'name', self._file)}')"
 
     def close(self) -> None:
         if self._close_on_exit:
@@ -57,7 +57,7 @@ class FastaWriter(FileWriter):
         self.line_length = line_length if line_length != 0 else None
 
     def __repr__(self) -> str:
-        return "FastaWriter('{}')".format(getattr(self._file, "name", self._file))
+        return f"FastaWriter('{getattr(self._file, 'name', self._file)}')"
 
     def write(self, name_or_record, sequence: Optional[str] = None):
         """Write an entry to the the FASTA file.
@@ -114,7 +114,7 @@ class FastqWriter(FileWriter):
         self.write = self._write_two_headers if self._two_headers else self._write
 
     def __repr__(self) -> str:
-        return "FastqWriter('{}')".format(getattr(self._file, "name", self._file))
+        return f"FastqWriter('{getattr(self._file, 'name', self._file)}')"
 
     def _write(self, record: Sequence) -> None:
         """
@@ -131,5 +131,4 @@ class FastqWriter(FileWriter):
         self._file.write(record.fastq_bytes_two_headers())
 
     def writeseq(self, name: str, sequence: str, qualities: str) -> None:
-        self._file.write("@{0:s}\n{1:s}\n+\n{2:s}\n".format(
-            name, sequence, qualities).encode('ascii'))
+        self._file.write(f"@{name:s}\n{sequence:s}\n+\n{qualities:s}\n".encode("ascii"))
