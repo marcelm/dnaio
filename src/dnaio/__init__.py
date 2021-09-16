@@ -105,21 +105,16 @@ def open(
             raise ValueError("The paired-end output files are identical")
         if mode == "r":
             return TwoFilePairedEndReader(file1, file2, fileformat=fileformat, opener=opener)
-        elif mode == "w":
-            return TwoFilePairedEndWriter(
-                file1, file2, fileformat=fileformat, qualities=qualities, opener=opener)
-        else:
-            return TwoFilePairedEndAppender(
-                file1, file2, fileformat=fileformat, qualities=qualities, opener=opener)
+        append = mode == "a"
+        return TwoFilePairedEndWriter(
+            file1, file2, fileformat=fileformat, qualities=qualities, opener=opener, append=append
+        )
     if interleaved:
         if mode == "r":
             return InterleavedPairedEndReader(file1, fileformat=fileformat, opener=opener)
-        elif mode == "w":
-            return InterleavedPairedEndWriter(
-                file1, fileformat=fileformat, qualities=qualities, opener=opener)
-        else:
-            return InterleavedPairedEndAppender(
-                file1, fileformat=fileformat, qualities=qualities, opener=opener)
+        append = mode == "a"
+        return InterleavedPairedEndWriter(
+            file1, fileformat=fileformat, qualities=qualities, opener=opener, append=append)
 
     # The multi-file options have been dealt with, delegate rest to the
     # single-file function.
@@ -354,7 +349,6 @@ class InterleavedPairedEndReader(PairedEndReader):
 
 
 class TwoFilePairedEndWriter(PairedEndWriter):
-    _mode = "w"
 
     def __init__(
         self,
@@ -364,16 +358,18 @@ class TwoFilePairedEndWriter(PairedEndWriter):
         fileformat: Optional[str] = "fastq",
         qualities: Optional[bool] = None,
         opener=xopen,
+        append: bool = False,
     ):
+        mode = "a" if append else "w"
         with ExitStack() as stack:
             self._writer1: Union[FastaWriter, FastqWriter]
             self._writer2: Union[FastaWriter, FastqWriter]
             self._writer1 = stack.enter_context(
                 _open_single(
-                    file1, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
+                    file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities))
             self._writer2 = stack.enter_context(
                 _open_single(
-                    file2, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities))
+                    file2, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities))
             self._close = stack.pop_all().close
 
     def __repr__(self) -> str:
@@ -394,15 +390,10 @@ class TwoFilePairedEndWriter(PairedEndWriter):
         self.close()
 
 
-class TwoFilePairedEndAppender(TwoFilePairedEndWriter):
-    _mode = "a"
-
-
 class InterleavedPairedEndWriter(PairedEndWriter):
     """
     Write paired-end reads to an interleaved FASTA or FASTQ file
     """
-    _mode = "w"
 
     def __init__(
         self,
@@ -411,9 +402,12 @@ class InterleavedPairedEndWriter(PairedEndWriter):
         fileformat: Optional[str] = "fastq",
         qualities: Optional[bool] = None,
         opener=xopen,
+        append: bool = False,
     ):
+        mode = "a" if append else "w"
         writer = _open_single(
-            file, opener=opener, fileformat=fileformat, mode=self._mode, qualities=qualities)
+            file, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities
+        )
         assert isinstance(writer, (FastaWriter, FastqWriter))  # only for Mypy
         self._writer = writer
 
@@ -433,7 +427,3 @@ class InterleavedPairedEndWriter(PairedEndWriter):
 
     def __exit__(self, *args):
         self.close()
-
-
-class InterleavedPairedEndAppender(InterleavedPairedEndWriter):
-    _mode = "a"
