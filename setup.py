@@ -53,7 +53,7 @@ setup(
     author='Marcel Martin',
     author_email='marcel.martin@scilifelab.se',
     url='https://github.com/marcelm/dnaio/',
-    description='Read FASTA and FASTQ files efficiently',
+    description='Read and write FASTA and FASTQ files efficiently',
     long_description=long_description,
     long_description_content_type='text/markdown',
     license='MIT',
