@@ -268,6 +268,11 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             name_length = pos - endskip - record_start - 1
             name_encoded = c_buf + record_start + 1
             # .decode('latin-1') is 50% faster than .decode('ascii')
+            # This is because PyUnicode_DecodeLatin1 is an alias for
+            # _PyUnicode_FromUCS1. Which directly copies the bytes into a
+            # string object. No operations are taking place. With
+            # PyUnicode_DecodeASCII, all characters are checked whether they
+            # exceed 128.
             name = c_buf[record_start+1:pos-endskip].decode('latin-1')
 
             pos += 1
