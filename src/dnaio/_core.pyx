@@ -93,6 +93,11 @@ cdef class Sequence:
         into a file."""
         # Convert to ASCII bytes sequences first as these have a one-to-one
         # relation between size and number of bytes
+        # Unlike decoding, ascii is not slower than latin-1. This is because
+        # CPython performs a call to PyUnicodeCheck on both occassions. This
+        # determines the type of the Unicode object. In fact, the ascii encode
+        # is slightly faster because the check for PyASCIIObject is performed
+        # first.
         cdef bytes name = self.name.encode('ascii')
         cdef bytes sequence = self.sequence.encode('ascii')
         cdef bytes qualities = self.qualities.encode('ascii')
