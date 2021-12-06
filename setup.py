@@ -1,7 +1,7 @@
 import os.path
 from setuptools import setup, Extension, find_packages
-from distutils.command.sdist import sdist
-from distutils.command.build_ext import build_ext
+from setuptools.command.sdist import sdist
+from setuptools.command.build_ext import build_ext
 
 
 def no_cythonize(extensions, **_ignore):
