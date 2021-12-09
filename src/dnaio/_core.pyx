@@ -327,9 +327,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 qualities_end -= 1
 
             name_length = name_end - name_start
-            sequence_length = sequence_end - sequence_start
             second_header_length = second_header_end - second_header_start
-            qualities_length = qualities_end - qualities_start
 
             if second_header_length:  # should be 0 when only + is present
                 second_header = True
