@@ -1,7 +1,7 @@
 # cython: language_level=3, emit_code_comments=False
 
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
-from libc.string cimport strncmp, memcmp, memcpy
+from libc.string cimport strncmp, memcmp, memcpy, memchr
 cimport cython
 
 from .exceptions import FastqFormatError
@@ -215,8 +215,10 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         Py_ssize_t bufstart, bufend, pos, record_start, sequence_start
         Py_ssize_t second_header_start, sequence_length, qualities_start
         Py_ssize_t second_header_length, name_length
-        Py_ssize_t name_start, name_end, second_header_end, sequence_end,
+        Py_ssize_t name_start, name_end, second_header_end, sequence_end
         Py_ssize_t qualities_end
+        cdef char *name_end_ptr, *sequence_end_ptr, *second_header_end_ptr
+        cdef char *qualities_end_ptr
         bint custom_class = sequence_class is not Sequence
         Py_ssize_t n_records = 0
         bint extra_newline = False
@@ -244,6 +246,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
     while True:
         assert bufstart < len(buf_view)
         bufend = readinto(buf_view[bufstart:]) + bufstart
+        bufend_ptr = c_buf + bufend
         if bufstart == bufend:
             # End of file
             if bufstart > 0 and buf_view[bufstart-1] != b'\n':
@@ -262,25 +265,30 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         record_start = 0
         while True:
             ### Check for a complete record (i.e 4 newlines are present)
-            while pos < bufend and c_buf[pos] != b'\n':
-                pos += 1
-            if pos == bufend:
+            # Use libc memchr, as some libc functions will be implemented in assembly
+            # void *memchr(const void *str, int c, size_t n)
+            name_end_ptr = <char *>memchr(c_buf + pos, 10, <size_t>(bufend - pos))
+            if name_end_ptr == NULL or name_end_ptr == bufend_ptr:
+                pos = bufend
                 break
-            name_end = pos
+            name_end = name_end_ptr - c_buf
+            pos = name_end
             pos += 1
             sequence_start = pos
-            while pos < bufend and c_buf[pos] != b'\n':
-                pos += 1
-            if pos == bufend:
+            sequence_end_ptr = <char *>memchr(c_buf + pos, 10, <size_t>(bufend - pos))
+            if sequence_end_ptr == NULL or sequence_end_ptr == bufend_ptr:
+                pos = bufend
                 break
-            sequence_end = pos
+            sequence_end = sequence_end_ptr - c_buf
+            pos = sequence_end
             pos += 1
             second_header_start = pos
-            while pos < bufend and c_buf[pos] != b'\n':
-                pos += 1
-            if pos == bufend:
+            second_header_end_ptr = <char *>memchr(c_buf + pos, 10, <size_t>(bufend - pos))
+            if second_header_end_ptr == NULL or second_header_end_ptr == bufend_ptr:
+                pos = bufend
                 break
-            second_header_end = pos
+            second_header_end = second_header_end_ptr - c_buf
+            pos = second_header_end
             pos += 1
 
             # Since we know the length of the sequence we do know the length
@@ -293,9 +301,9 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 # EOF and there might be a missing newline. Proceed carefully
                 # here towards the end of the buffer. So the correct errors
                 # will be thrown.
-                while pos < bufend and c_buf[pos] != b'\n':
-                    pos += 1
-                if pos == bufend:
+                qualities_end_ptr = <char *>memchr(c_buf + pos, 10, <size_t>(bufend - pos))
+                if qualities_end_ptr == NULL or second_header_end_ptr == bufend_ptr:
+                    pos = bufend
                     break
             else:  # No careful checking required.
                 pos = qualities_end
