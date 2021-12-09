@@ -215,6 +215,8 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         Py_ssize_t bufstart, bufend, pos, record_start, sequence_start
         Py_ssize_t second_header_start, sequence_length, qualities_start
         Py_ssize_t second_header_length, name_length
+        Py_ssize_t name_start, name_end, second_header_end, sequence_end,
+        Py_ssize_t qualities_end
         bint custom_class = sequence_class is not Sequence
         Py_ssize_t n_records = 0
         bint extra_newline = False
@@ -259,89 +261,100 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         pos = 0
         record_start = 0
         while True:
-            # Parse the name (line 0)
-            if c_buf[pos] != b'@':
-                raise FastqFormatError("Line expected to "
-                    "start with '@', but found {!r}".format(chr(c_buf[pos])),
-                    line=n_records * 4)
-            pos += 1
+            ### Check for a complete record (i.e 4 newlines are present)
             while pos < bufend and c_buf[pos] != b'\n':
                 pos += 1
             if pos == bufend:
                 break
-            endskip = 1 if c_buf[pos-1] == b'\r' else 0
-            name_length = pos - endskip - record_start - 1
-            name_encoded = c_buf + record_start + 1
+            name_end = pos
+            pos += 1
+            sequence_start = pos
+            while pos < bufend and c_buf[pos] != b'\n':
+                pos += 1
+            if pos == bufend:
+                break
+            sequence_end = pos
+            pos += 1
+            second_header_start = pos
+            while pos < bufend and c_buf[pos] != b'\n':
+                pos += 1
+            if pos == bufend:
+                break
+            second_header_end = pos
+            pos += 1
+            qualities_start = pos
+            while pos < bufend and c_buf[pos] != b'\n':
+                pos += 1
+            if pos == bufend:
+                break
+            qualities_end = pos
+
+            if c_buf[record_start] != b'@':
+                raise FastqFormatError("Line expected to "
+                    "start with '@', but found {!r}".format(chr(c_buf[pos])),
+                    line=n_records * 4)
+            if c_buf[second_header_start] != b'+':
+                raise FastqFormatError("Line expected to "
+                    "start with '+', but found {!r}".format(chr(c_buf[pos])),
+                    line=n_records * 4 + 2)
+
+            name_start = record_start + 1  # Skip @
+            second_header_start += 1  # Skip +
+
+            # Check for \r\n line-endings and compensate
+            if c_buf[name_end - 1] == b'\r':
+                name_end -= 1
+            if c_buf[sequence_end - 1] == b'\r':
+                sequence_end -= 1
+            if c_buf[second_header_end - 1] == b'\r':
+                second_header_end -= 1
+            if c_buf[qualities_end - 1] == b'\r':
+                qualities_end -= 1
+
+            name_length = name_end - name_start
+            sequence_length = sequence_end - sequence_start
+            second_header_length = second_header_end - second_header_start
+            qualities_length = qualities_end - qualities_start
+
+            if second_header_length:  # should be 0 when only + is present
+                second_header = True
+                if (name_length != second_header_length or
+                        strncmp(c_buf+second_header_start,
+                            c_buf + name_start, second_header_length) != 0):
+                    raise FastqFormatError(
+                        "Sequence descriptions don't match ('{}' != '{}').\n"
+                        "The second sequence description must be either "
+                        "empty or equal to the first description.".format(
+                            c_buf[name_start:name_end].decode('latin-1'),
+                            c_buf[second_header_start:second_header_end]
+                            .decode('latin-1')), line=n_records * 4 + 2)
+            else:
+                second_header = False
+
+            if qualities_length != sequence_length:
+                raise FastqFormatError("Length of sequence and "
+                    "qualities differ", line=n_records * 4 + 3)
+
+            ### Copy record into python variables
             # .decode('latin-1') is 50% faster than .decode('ascii')
             # This is because PyUnicode_DecodeLatin1 is an alias for
             # _PyUnicode_FromUCS1. Which directly copies the bytes into a
             # string object. No operations are taking place. With
             # PyUnicode_DecodeASCII, all characters are checked whether they
             # exceed 128.
-            name = c_buf[record_start+1:pos-endskip].decode('latin-1')
+            name = c_buf[name_start:name_end].decode('latin-1')
+            sequence = c_buf[sequence_start:sequence_end].decode('latin-1')
+            qualities = c_buf[qualities_start:qualities_end].decode('latin-1')
 
-            pos += 1
-
-            # Parse the sequence (line 1)
-            sequence_start = pos
-            while pos < bufend and c_buf[pos] != b'\n':
-                pos += 1
-            if pos == bufend:
-                break
-            endskip = 1 if c_buf[pos-1] == b'\r' else 0
-            sequence = c_buf[sequence_start:pos-endskip].decode('latin-1')
-            sequence_length = pos - endskip - sequence_start
-            pos += 1
-
-            # Parse second header (line 2)
-            second_header_start = pos
-            if pos == bufend:
-                break
-            if c_buf[pos] != b'+':
-                raise FastqFormatError("Line expected to "
-                    "start with '+', but found {!r}".format(chr(c_buf[pos])),
-                    line=n_records * 4 + 2)
-            pos += 1  # skip over the '+'
-            while pos < bufend and c_buf[pos] != b'\n':
-                pos += 1
-            if pos == bufend:
-                break
-            endskip = 1 if c_buf[pos-1] == b'\r' else 0
-            second_header_length = pos - endskip - second_header_start - 1
-            if second_header_length == 0:
-                second_header = False
-            else:
-                if (name_length != second_header_length or
-                        strncmp(c_buf+second_header_start+1,
-                            name_encoded, second_header_length) != 0):
-                    raise FastqFormatError(
-                        "Sequence descriptions don't match ('{}' != '{}').\n"
-                        "The second sequence description must be either "
-                        "empty or equal to the first description.".format(
-                            name_encoded[:name_length].decode('latin-1'),
-                            c_buf[second_header_start+1:pos-endskip]
-                            .decode('latin-1')), line=n_records * 4 + 2)
-                second_header = True
-            pos += 1
-
-            # Parse qualities (line 3)
-            qualities_start = pos
-            while pos < bufend and c_buf[pos] != b'\n':
-                pos += 1
-            if pos == bufend:
-                break
-            endskip = 1 if c_buf[pos-1] == b'\r' else 0
-            qualities = c_buf[qualities_start:pos-endskip].decode('latin-1')
-            if pos - endskip - qualities_start != sequence_length:
-                raise FastqFormatError("Length of sequence and "
-                    "qualities differ", line=n_records * 4 + 3)
-            pos += 1
             if n_records == 0:
                 yield second_header  # first yielded value is special
             if custom_class:
                 yield sequence_class(name, sequence, qualities)
             else:
                 yield Sequence.__new__(Sequence, name, sequence, qualities)
+
+            ### Advance record to next position
+            pos += 1
             n_records += 1
             record_start = pos
             if pos == bufend:
