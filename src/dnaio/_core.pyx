@@ -282,12 +282,27 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 break
             second_header_end = pos
             pos += 1
+
+            # Since we know the length of the sequence we do know the length
+            # of the qualities.
+            sequence_length = sequence_end - sequence_start
             qualities_start = pos
-            while pos < bufend and c_buf[pos] != b'\n':
-                pos += 1
-            if pos == bufend:
-                break
-            qualities_end = pos
+            qualities_end = pos + sequence_length
+            if qualities_end >= bufend:
+                # We have reached the edge of the buffer. This might be the
+                # EOF and there might be a missing newline. Proceed carefully
+                # here towards the end of the buffer. So the correct errors
+                # will be thrown.
+                while pos < bufend and c_buf[pos] != b'\n':
+                    pos += 1
+                if pos == bufend:
+                    break
+            else:  # No careful checking required.
+                pos = qualities_end
+            if c_buf[qualities_end] != b'\n':
+                raise FastqFormatError("Length of sequence and "
+                                       "qualities differ",
+                                       line=n_records * 4 + 3)
 
             if c_buf[record_start] != b'@':
                 raise FastqFormatError("Line expected to "
@@ -330,10 +345,6 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                             .decode('latin-1')), line=n_records * 4 + 2)
             else:
                 second_header = False
-
-            if qualities_length != sequence_length:
-                raise FastqFormatError("Length of sequence and "
-                    "qualities differ", line=n_records * 4 + 3)
 
             ### Copy record into python variables
             # .decode('latin-1') is 50% faster than .decode('ascii')
