@@ -217,7 +217,9 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         Py_ssize_t second_header_length, name_length
         Py_ssize_t name_start, name_end, second_header_end, sequence_end
         Py_ssize_t qualities_end
-        cdef char *name_end_ptr, *sequence_end_ptr, *second_header_end_ptr
+        cdef char *name_end_ptr
+        cdef char *sequence_end_ptr
+        cdef char *second_header_end_ptr
         cdef char *qualities_end_ptr
         bint custom_class = sequence_class is not Sequence
         Py_ssize_t n_records = 0
