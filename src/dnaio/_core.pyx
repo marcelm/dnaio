@@ -300,20 +300,18 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             qualities_start = second_header_end + 1
             sequence_length = sequence_end - sequence_start
             qualities_end = qualities_start + sequence_length
-            if qualities_end >= bufend:
-                # We have reached the edge of the buffer. This might be the
-                # EOF and there might be a missing newline. Proceed carefully
-                # here towards the end of the buffer. So the correct errors
-                # will be thrown.
-                qualities_end_ptr = <char *>memchr(c_buf + qualities_start, 10, <size_t>(bufend - qualities_start))
-                if qualities_end_ptr == NULL or second_header_end_ptr == bufend_ptr:
-                    break
+            if qualities_end > bufend:
+                break
             next_record_start = qualities_end + 1
-            if c_buf[qualities_end] != b'\n':
-                raise FastqFormatError("Length of sequence and "
-                                       "qualities differ",
-                                       line=n_records * 4 + 3)
 
+            if c_buf[qualities_end] != b'\n':
+                if not extra_newline:
+                    # We look if the sequence quality is too short.
+                    qualities_end_ptr = <char *>memchr(c_buf + qualities_start, 10, <size_t>(bufend - qualities_start))
+                    if qualities_end_ptr == NULL:  # No newline found, add the missing one.
+                        break
+                raise FastqFormatError(
+                    "Length of sequence and qualities differ", line=n_records * 4 + 3)
             if c_buf[record_start] != b'@':
                 raise FastqFormatError("Line expected to "
                     "start with '@', but found {!r}".format(chr(c_buf[record_start])),
