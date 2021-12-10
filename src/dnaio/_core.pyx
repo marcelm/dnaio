@@ -212,7 +212,9 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         int endskip
         str name
         char* name_encoded
-        Py_ssize_t bufstart, bufend, pos, record_start, sequence_start
+        Py_ssize_t last_read_position = 0
+        Py_ssize_t record_start = 0
+        Py_ssize_t bufstart, bufend, sequence_start
         Py_ssize_t second_header_start, sequence_length, qualities_start
         Py_ssize_t second_header_length, name_length
         Py_ssize_t name_start, name_end, second_header_end, sequence_end
@@ -259,11 +261,20 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 bufstart += 1
                 bufend += 1
                 extra_newline = True
-            else:
-                break
+            elif last_read_position > record_start:  # Incomplete fastq records are present.
+                    if extra_newline:
+                        last_read_position -= 1
+                    lines = buf[record_start:last_read_position].count(b'\n')
+                    raise FastqFormatError(
+                        'Premature end of file encountered. The incomplete final record was: '
+                        '{!r}'.format(
+                            shorten(buf[record_start:last_read_position].decode('latin-1'),
+                                    500)),
+                        line=n_records * 4 + lines)
+            else:  # EOF Reached. Stop iterating.
+                return
 
         # Parse all complete FASTQ records in this chunk
-        pos = 0
         record_start = 0
         while True:
             ### Check for a complete record (i.e 4 newlines are present)
@@ -365,7 +376,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             n_records += 1
             record_start = next_record_start
         # bufend reached
-        pos = bufend
+        last_read_position = bufend
         if record_start == 0 and bufend == len(buf):
             # buffer too small, double it
             buffer_size *= 2
@@ -379,14 +390,6 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         else:
             bufstart = bufend - record_start
             buf[0:bufstart] = buf[record_start:bufend]
-    if pos > record_start:
-        if extra_newline:
-            pos -= 1
-        lines = buf[record_start:pos].count(b'\n')
-        raise FastqFormatError(
-            'Premature end of file encountered. The incomplete final record was: '
-            '{!r}'.format(shorten(buf[record_start:pos].decode('latin-1'), 500)),
-            line=n_records * 4 + lines)
 
 
 def record_names_match(header1: str, header2: str):
