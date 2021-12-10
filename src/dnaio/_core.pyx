@@ -269,46 +269,35 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             ### Check for a complete record (i.e 4 newlines are present)
             # Use libc memchr, as some libc functions will be implemented in assembly
             # void *memchr(const void *str, int c, size_t n)
-            name_end_ptr = <char *>memchr(c_buf + pos, 10, <size_t>(bufend - pos))
+            name_end_ptr = <char *>memchr(c_buf + record_start, 10, <size_t>(bufend - record_start))
             if name_end_ptr == NULL or name_end_ptr == bufend_ptr:
-                pos = bufend
                 break
             name_end = name_end_ptr - c_buf
-            pos = name_end
-            pos += 1
-            sequence_start = pos
-            sequence_end_ptr = <char *>memchr(c_buf + pos, 10, <size_t>(bufend - pos))
+            sequence_start = name_end + 1
+            sequence_end_ptr = <char *>memchr(c_buf + sequence_start, 10, <size_t>(bufend - sequence_start))
             if sequence_end_ptr == NULL or sequence_end_ptr == bufend_ptr:
-                pos = bufend
                 break
             sequence_end = sequence_end_ptr - c_buf
-            pos = sequence_end
-            pos += 1
-            second_header_start = pos
-            second_header_end_ptr = <char *>memchr(c_buf + pos, 10, <size_t>(bufend - pos))
+            second_header_start = sequence_end + 1
+            second_header_end_ptr = <char *>memchr(c_buf + second_header_start, 10, <size_t>(bufend - second_header_start))
             if second_header_end_ptr == NULL or second_header_end_ptr == bufend_ptr:
-                pos = bufend
                 break
             second_header_end = second_header_end_ptr - c_buf
-            pos = second_header_end
-            pos += 1
 
             # Since we know the length of the sequence we do know the length
             # of the qualities.
+            qualities_start = second_header_end + 1
             sequence_length = sequence_end - sequence_start
-            qualities_start = pos
-            qualities_end = pos + sequence_length
+            qualities_end = qualities_start + sequence_length
             if qualities_end >= bufend:
                 # We have reached the edge of the buffer. This might be the
                 # EOF and there might be a missing newline. Proceed carefully
                 # here towards the end of the buffer. So the correct errors
                 # will be thrown.
-                qualities_end_ptr = <char *>memchr(c_buf + pos, 10, <size_t>(bufend - pos))
+                qualities_end_ptr = <char *>memchr(c_buf + qualities_start, 10, <size_t>(bufend - qualities_start))
                 if qualities_end_ptr == NULL or second_header_end_ptr == bufend_ptr:
-                    pos = bufend
                     break
-            else:  # No careful checking required.
-                pos = qualities_end
+            next_record_start = qualities_end + 1
             if c_buf[qualities_end] != b'\n':
                 raise FastqFormatError("Length of sequence and "
                                        "qualities differ",
@@ -316,11 +305,11 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 
             if c_buf[record_start] != b'@':
                 raise FastqFormatError("Line expected to "
-                    "start with '@', but found {!r}".format(chr(c_buf[pos])),
+                    "start with '@', but found {!r}".format(chr(c_buf[record_start])),
                     line=n_records * 4)
             if c_buf[second_header_start] != b'+':
                 raise FastqFormatError("Line expected to "
-                    "start with '+', but found {!r}".format(chr(c_buf[pos])),
+                    "start with '+', but found {!r}".format(chr(c_buf[second_header_start])),
                     line=n_records * 4 + 2)
 
             name_start = record_start + 1  # Skip @
@@ -373,25 +362,23 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 yield Sequence.__new__(Sequence, name, sequence, qualities)
 
             ### Advance record to next position
-            pos += 1
             n_records += 1
-            record_start = pos
-            if pos == bufend:
-                break
-        if pos == bufend:
-            if record_start == 0 and bufend == len(buf):
-                # buffer too small, double it
-                buffer_size *= 2
-                prev_buf = buf
-                buf = bytearray(buffer_size)
-                buf[0:bufend] = prev_buf
-                del prev_buf
-                bufstart = bufend
-                buf_view = buf
-                c_buf = buf
-            else:
-                bufstart = bufend - record_start
-                buf[0:bufstart] = buf[record_start:bufend]
+            record_start = next_record_start
+        # bufend reached
+        pos = bufend
+        if record_start == 0 and bufend == len(buf):
+            # buffer too small, double it
+            buffer_size *= 2
+            prev_buf = buf
+            buf = bytearray(buffer_size)
+            buf[0:bufend] = prev_buf
+            del prev_buf
+            bufstart = bufend
+            buf_view = buf
+            c_buf = buf
+        else:
+            bufstart = bufend - record_start
+            buf[0:bufstart] = buf[record_start:bufend]
     if pos > record_start:
         if extra_newline:
             pos -= 1
