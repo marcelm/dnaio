@@ -338,7 +338,6 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             second_header_length = second_header_end - second_header_start
 
             if second_header_length:  # should be 0 when only + is present
-                second_header = True
                 if (name_length != second_header_length or
                         strncmp(c_buf+second_header_start,
                             c_buf + name_start, second_header_length) != 0):
@@ -349,8 +348,6 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                             c_buf[name_start:name_end].decode('latin-1'),
                             c_buf[second_header_start:second_header_end]
                             .decode('latin-1')), line=n_records * 4 + 2)
-            else:
-                second_header = False
 
             ### Copy record into python variables
             # .decode('latin-1') is 50% faster than .decode('ascii')
@@ -364,7 +361,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             qualities = c_buf[qualities_start:qualities_end].decode('latin-1')
 
             if n_records == 0:
-                yield second_header  # first yielded value is special
+                yield bool(second_header_length)  # first yielded value is special
             if custom_class:
                 yield sequence_class(name, sequence, qualities)
             else:
