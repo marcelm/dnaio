@@ -209,16 +209,15 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         bytearray buf = bytearray(buffer_size)
         char[:] buf_view = buf
         char* c_buf = buf
-        int endskip
         str name
-        char* name_encoded
+        str sequence
+        str qualities
         Py_ssize_t last_read_position = 0
         Py_ssize_t record_start = 0
-        Py_ssize_t bufstart, bufend, sequence_start
-        Py_ssize_t second_header_start, sequence_length, qualities_start
-        Py_ssize_t second_header_length, name_length
-        Py_ssize_t name_start, name_end, second_header_end, sequence_end
-        Py_ssize_t qualities_end
+        Py_ssize_t bufstart, bufend, name_start, name_end, name_length
+        Py_ssize_t sequence_start, sequence_end, sequence_length
+        Py_ssize_t second_header_start, second_header_end, second_header_length
+        Py_ssize_t qualities_start, qualities_end, qualities_length
         cdef char *name_end_ptr
         cdef char *sequence_end_ptr
         cdef char *second_header_end_ptr
