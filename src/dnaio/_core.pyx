@@ -301,24 +301,13 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             if second_header_end_ptr == NULL or second_header_end_ptr == bufend_ptr:
                 break
             second_header_end = second_header_end_ptr - c_buf
-
-            # Since we know the length of the sequence we do know the length
-            # of the qualities.
             qualities_start = second_header_end + 1
-            sequence_length = sequence_end - sequence_start
-            qualities_end = qualities_start + sequence_length
-            if qualities_end > bufend:
+            qualities_end_ptr = <char *>memchr(c_buf + qualities_start, 10, <size_t>(bufend - qualities_start))
+            if qualities_end_ptr == NULL:
                 break
+            qualities_end = qualities_end_ptr - c_buf
             next_record_start = qualities_end + 1
 
-            if c_buf[qualities_end] != b'\n':
-                if not extra_newline:
-                    # We look if the sequence quality is too short.
-                    qualities_end_ptr = <char *>memchr(c_buf + qualities_start, 10, <size_t>(bufend - qualities_start))
-                    if qualities_end_ptr == NULL:  # No newline found, add the missing one.
-                        break
-                raise FastqFormatError(
-                    "Length of sequence and qualities differ", line=n_records * 4 + 3)
             if c_buf[record_start] != b'@':
                 raise FastqFormatError("Line expected to "
                     "start with '@', but found {!r}".format(chr(c_buf[record_start])),
@@ -342,7 +331,9 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 qualities_end -= 1
 
             name_length = name_end - name_start
+            sequence_length = sequence_end - sequence_start
             second_header_length = second_header_end - second_header_start
+            qualities_length = qualities_end - qualities_start
 
             if second_header_length:  # should be 0 when only + is present
                 if (name_length != second_header_length or
@@ -355,6 +346,10 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                             c_buf[name_start:name_end].decode('latin-1'),
                             c_buf[second_header_start:second_header_end]
                             .decode('latin-1')), line=n_records * 4 + 2)
+
+            if qualities_length != sequence_length:
+                raise FastqFormatError(
+                    "Length of sequence and qualities differ", line=n_records * 4 + 3)
 
             ### Copy record into python variables
             # .decode('latin-1') is 50% faster than .decode('ascii')
