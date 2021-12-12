@@ -277,7 +277,9 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         record_start = 0
         while True:
             ### Check for a complete record (i.e 4 newlines are present)
-            # Use libc memchr, as some libc functions will be implemented in assembly
+            # Use libc memchr, this optimizes looking for characters by
+            # using 64-bit integers. See:
+            # https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=string/memchr.c;hb=HEAD
             # void *memchr(const void *str, int c, size_t n)
             name_end_ptr = <char *>memchr(c_buf + record_start, 10, <size_t>(bufend - record_start))
             if name_end_ptr == NULL or name_end_ptr == bufend_ptr:
