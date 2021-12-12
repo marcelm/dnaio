@@ -32,6 +32,10 @@ class BuildExt(build_ext):
             # only sensible thing is to require Cython to be installed.
             from Cython.Build import cythonize
             self.extensions = cythonize(self.extensions)
+            # Setuptools build_meta requires a _needs_stub attribute.
+            # This is required for `pip install .`
+            for i in range(len(self.extensions)):
+                setattr(self.extensions[i], "_needs_stub", False)
         super().run()
 
 
