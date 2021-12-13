@@ -121,7 +121,7 @@ class FastqReader(BinaryFileReader, SingleEndReader):
         file: Union[str, BinaryIO],
         *,
         sequence_class=Sequence,
-        buffer_size: int = 1048576,
+        buffer_size: int = 128 * 1024,  # Buffer size used by cat, pigz etc.
         opener=xopen,
         _close_file: Optional[bool] = None,
     ):
