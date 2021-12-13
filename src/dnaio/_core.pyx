@@ -34,11 +34,13 @@ cdef class Sequence:
         self.sequence = sequence
         self.qualities = qualities
 
+    def __init__(self, str name, str sequence, str qualities = None):
+        # __cinit__ is called first and sets all the variables.
         if qualities is not None and len(qualities) != len(sequence):
             rname = shorten(name)
             raise ValueError("In read named {!r}: length of quality sequence "
-                "({}) and length of read ({}) do not match".format(
-                    rname, len(qualities), len(sequence)))
+                             "({}) and length of read ({}) do not match".format(
+                rname, len(qualities), len(sequence)))
 
     def __getitem__(self, key):
         """
