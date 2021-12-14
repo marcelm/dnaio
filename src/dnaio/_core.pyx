@@ -1,10 +1,13 @@
 # cython: language_level=3, emit_code_comments=False
 
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check
-from cpython.buffer cimport  PyBUF_SIMPLE, PyObject_GetBuffer
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
 from libc.string cimport strncmp, memcmp, memcpy, memchr
 cimport cython
 
+cdef extern from *:
+    char * PyUnicode_1BYTE_DATA(object o)
+    int PyUnicode_KIND(object o)
+    int PyUnicode_1BYTE_KIND
 from .exceptions import FastqFormatError
 from ._util import shorten
 
@@ -373,7 +376,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             line=n_records * 4 + lines)
 
 
-def record_names_match(header1, header2):
+def record_names_match(header1: str, header2: str):
     """
     Check whether the sequence record ids id1 and id2 are compatible, ignoring a
     suffix of '1', '2' or '3'. This exception allows to check some old
@@ -381,29 +384,24 @@ def record_names_match(header1, header2):
     fastq-dump tool (used for converting SRA files to FASTQ) appends '.1', '.2'
     and sometimes '.3' to paired-end reads if option -I is used.
     """
-    cdef bytes header1bytes
-    cdef bytes header2bytes
-    header1bytes = header1 if PyBytes_Check(header1) else header1.encode('ascii')
-    header2bytes = header2 if PyBytes_Check(header2) else header2.encode('ascii')
-    return record_name_bytes_match(header1bytes, header2bytes)
+    if (PyUnicode_KIND(header1) != PyUnicode_1BYTE_KIND or
+        PyUnicode_KIND(header2) != PyUnicode_1BYTE_KIND):
+        raise ValueError("Strings are not valid latin-1 encoded data.")
+    # No encoding, we can compare the unicode data directly. Provided it is
+    # in 1-byte encoding, so we can find the spaces and tabs easily.
+    cdef char * header1chars = PyUnicode_1BYTE_DATA(header1)
+    cdef char * header2chars = PyUnicode_1BYTE_DATA(header2)
+    return record_name_bytes_match(header1chars, header2chars, len(header1), len(header2))
 
 
-cdef object record_name_bytes_match(bytes header1, bytes header2):
+cdef object record_name_bytes_match(char *header1chars, char* header2chars, Py_ssize_t header1length, Py_ssize_t header2length):
     """
     Check whether the ascii-encoded names match.
     """
-    cdef Py_buffer header1buffer
-    cdef Py_buffer header2buffer
-    cdef Py_buffer *header1buf = &header1buffer
-    cdef Py_buffer *header2buf = &header2buffer
-    PyObject_GetBuffer(header1, header1buf, PyBUF_SIMPLE)
-    PyObject_GetBuffer(header2, header2buf, PyBUF_SIMPLE)
-    cdef char *header1chars = <char *>header1buf.buf
-    cdef char *header2chars = <char *>header2buf.buf
     # Only the first part (i.e. the name without the comment) is of interest.
     # Find the first tab or space.
-    cdef size_t header1_ends = whitespace_at(header1chars, <size_t>header1buf.len)
-    cdef size_t header2_ends = whitespace_at(header2chars, <size_t>header2buf.len)
+    cdef size_t header1_ends = whitespace_at(header1chars, <size_t>header1length)
+    cdef size_t header2_ends = whitespace_at(header2chars, <size_t>header2length)
     # Quick check if the lengths match
     if header1_ends != header2_ends:
         return False
@@ -416,7 +414,7 @@ cdef object record_name_bytes_match(bytes header1, bytes header2):
         header1_ends -= 1
 
     # Compare the strings up to the whitespace or up to the read pair number.
-    return memcmp(header1buf.buf, header2buf.buf, header1_ends) == 0
+    return memcmp(<void *>header1chars, <void *>header2chars, header1_ends) == 0
 
 
 
