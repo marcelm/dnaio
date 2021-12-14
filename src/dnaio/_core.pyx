@@ -5,7 +5,7 @@ from libc.string cimport strncmp, memcmp, memcpy, memchr
 cimport cython
 
 cdef extern from *:
-    char * PyUnicode_1BYTE_DATA(object o)
+    unsigned char * PyUnicode_1BYTE_DATA(object o)
     int PyUnicode_KIND(object o)
     int PyUnicode_1BYTE_KIND
 from .exceptions import FastqFormatError
@@ -384,17 +384,27 @@ def record_names_match(header1: str, header2: str):
     fastq-dump tool (used for converting SRA files to FASTQ) appends '.1', '.2'
     and sometimes '.3' to paired-end reads if option -I is used.
     """
-    if (PyUnicode_KIND(header1) != PyUnicode_1BYTE_KIND or
-        PyUnicode_KIND(header2) != PyUnicode_1BYTE_KIND):
-        raise ValueError("Strings are not valid latin-1 encoded data.")
-    # No encoding, we can compare the unicode data directly. Provided it is
-    # in 1-byte encoding, so we can find the spaces and tabs easily.
-    cdef char * header1chars = PyUnicode_1BYTE_DATA(header1)
-    cdef char * header2chars = PyUnicode_1BYTE_DATA(header2)
+    if (
+        PyUnicode_KIND(header1) != PyUnicode_1BYTE_KIND or
+        PyUnicode_KIND(header2) != PyUnicode_1BYTE_KIND
+    ):
+        # Fall back to slower code path.
+        name1 = header1.split(maxsplit=1)[0]
+        name2 = header2.split(maxsplit=1)[0]
+        if name1 and name2 and name1[-1] in '123' and name2[-1] in '123':
+            return name1[:-1] ==  name2[:-1]
+        return name1 == name2
+    # Do not call .encode functions but use the unicode pointer inside the
+    # python object directly, provided it is in 1-byte encoding, so we can
+    # find the spaces and tabs easily.
+    cdef unsigned char * header1chars = PyUnicode_1BYTE_DATA(header1)
+    cdef unsigned char * header2chars = PyUnicode_1BYTE_DATA(header2)
     return record_name_bytes_match(header1chars, header2chars, len(header1), len(header2))
 
 
-cdef object record_name_bytes_match(char *header1chars, char* header2chars, Py_ssize_t header1length, Py_ssize_t header2length):
+cdef bint record_name_bytes_match(
+    unsigned char *header1chars, unsigned char* header2chars,
+    Py_ssize_t header1length, Py_ssize_t header2length):
     """
     Check whether the ascii-encoded names match.
     """
@@ -407,8 +417,8 @@ cdef object record_name_bytes_match(char *header1chars, char* header2chars, Py_s
         return False
 
     # check if the names end with 1, 2 or 3. (ASCII 49, 50 , 51)
-    cdef bint name1endswithnumber = 48 < header1chars[header1_ends - 1] < 52
-    cdef bint name2endswithnumber = 48 < header2chars[header1_ends - 1] < 52
+    cdef bint name1endswithnumber = b'1' <= header1chars[header1_ends - 1] <= b'3'
+    cdef bint name2endswithnumber = b'1' <= header2chars[header1_ends - 1] <= b'3'
     if name1endswithnumber and name2endswithnumber:
         # Don't compare the read pair number
         header1_ends -= 1
@@ -417,21 +427,20 @@ cdef object record_name_bytes_match(char *header1chars, char* header2chars, Py_s
     return memcmp(<void *>header1chars, <void *>header2chars, header1_ends) == 0
 
 
-
-cdef size_t whitespace_at(char *str_ptr, size_t length):
+cdef size_t whitespace_at(unsigned char *str_ptr, size_t length):
     # Look for the first space or tab. Return length if not found.
-    cdef char *space_ptr
-    cdef char *tab_ptr
+    cdef unsigned char *space_ptr
+    cdef unsigned char *tab_ptr
     cdef size_t space_at
     cdef size_t tab_at
     # Look for space first as it is the most likely separator
-    space_ptr = <char *>memchr(str_ptr, 32, length)
+    space_ptr = <unsigned char *>memchr(str_ptr, b' ', length)
     if space_ptr == NULL:
         space_at = length
     else:
         space_at = space_ptr - str_ptr
     # Look if there is a tab before the space
-    tab_ptr = <char *>memchr(str_ptr, 9, space_at)
+    tab_ptr = <unsigned char *>memchr(str_ptr, b'\t', space_at)
     if tab_ptr == NULL:
         return space_at
     if tab_ptr < space_ptr:
