@@ -443,6 +443,4 @@ cdef size_t whitespace_at(unsigned char *str_ptr, size_t length):
     tab_ptr = <unsigned char *>memchr(str_ptr, b'\t', space_at)
     if tab_ptr == NULL:
         return space_at
-    if tab_ptr < space_ptr:
-        return tab_ptr - str_ptr
-    return space_at
+    return tab_ptr - str_ptr

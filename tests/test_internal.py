@@ -482,6 +482,11 @@ class TestPairedSequenceReader:
         assert match('abc def', 'abc ghi')
         assert match('abc', 'abc ghi')
         assert not match('abc', 'xyz')
+        assert match('abc\tdef', 'abc')
+        assert match('abc\tdef', 'abc\tghi')
+        assert match('abc somecomment\tanothercomment', 'abc andanothercomment\tbla')
+        assert match('abc\tcomments comments', 'abc\tothers others')
+        assert match('abc\tdef', 'abc def')
 
     def test_record_names_match_with_ignored_trailing_12(self):
         match = record_names_match
