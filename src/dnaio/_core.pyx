@@ -1,7 +1,8 @@
 # cython: language_level=3, emit_code_comments=False
 
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
-from libc.string cimport strncmp, memcmp, memcpy
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check
+from cpython.buffer cimport  PyBUF_SIMPLE, PyObject_GetBuffer
+from libc.string cimport strncmp, memcmp, memcpy, memchr
 cimport cython
 
 from .exceptions import FastqFormatError
@@ -372,7 +373,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             line=n_records * 4 + lines)
 
 
-def record_names_match(header1: str, header2: str):
+def record_names_match(header1, header2):
     """
     Check whether the sequence record ids id1 and id2 are compatible, ignoring a
     suffix of '1', '2' or '3'. This exception allows to check some old
@@ -380,12 +381,61 @@ def record_names_match(header1: str, header2: str):
     fastq-dump tool (used for converting SRA files to FASTQ) appends '.1', '.2'
     and sometimes '.3' to paired-end reads if option -I is used.
     """
-    cdef:
-        str name1, name2
+    cdef bytes header1bytes
+    cdef bytes header2bytes
+    header1bytes = header1 if PyBytes_Check(header1) else header1.encode('ascii')
+    header2bytes = header2 if PyBytes_Check(header2) else header2.encode('ascii')
+    return record_name_bytes_match(header1bytes, header2bytes)
 
-    name1 = header1.split()[0]
-    name2 = header2.split()[0]
-    if name1 and name2 and name1[-1] in '123' and name2[-1] in '123':
-        name1 = name1[:-1]
-        name2 = name2[:-1]
-    return name1 == name2
+
+cdef object record_name_bytes_match(bytes header1, bytes header2):
+    """
+    Check whether the ascii-encoded names match.
+    """
+    cdef Py_buffer header1buffer
+    cdef Py_buffer header2buffer
+    cdef Py_buffer *header1buf = &header1buffer
+    cdef Py_buffer *header2buf = &header2buffer
+    PyObject_GetBuffer(header1, header1buf, PyBUF_SIMPLE)
+    PyObject_GetBuffer(header2, header2buf, PyBUF_SIMPLE)
+    cdef char *header1chars = <char *>header1buf.buf
+    cdef char *header2chars = <char *>header2buf.buf
+    # Only the first part (i.e. the name without the comment) is of interest.
+    # Find the first tab or space.
+    cdef size_t header1_ends = whitespace_at(header1chars, <size_t>header1buf.len)
+    cdef size_t header2_ends = whitespace_at(header2chars, <size_t>header2buf.len)
+    # Quick check if the lengths match
+    if header1_ends != header2_ends:
+        return False
+
+    # check if the names end with 1, 2 or 3. (ASCII 49, 50 , 51)
+    cdef bint name1endswithnumber = 48 < header1chars[header1_ends - 1] < 52
+    cdef bint name2endswithnumber = 48 < header2chars[header1_ends - 1] < 52
+    if name1endswithnumber and name2endswithnumber:
+        # Don't compare the read pair number
+        header1_ends -= 1
+
+    # Compare the strings up to the whitespace or up to the read pair number.
+    return memcmp(header1buf.buf, header2buf.buf, header1_ends) == 0
+
+
+
+cdef size_t whitespace_at(char *str_ptr, size_t length):
+    # Look for the first space or tab. Return length if not found.
+    cdef char *space_ptr
+    cdef char *tab_ptr
+    cdef size_t space_at
+    cdef size_t tab_at
+    # Look for space first as it is the most likely separator
+    space_ptr = <char *>memchr(str_ptr, 32, length)
+    if space_ptr == NULL:
+        space_at = length
+    else:
+        space_at = space_ptr - str_ptr
+    # Look if there is a tab before the space
+    tab_ptr = <char *>memchr(str_ptr, 9, space_at)
+    if tab_ptr == NULL:
+        return space_at
+    if tab_ptr < space_ptr:
+        return tab_ptr - str_ptr
+    return space_at
