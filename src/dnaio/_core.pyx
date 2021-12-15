@@ -1,9 +1,13 @@
 # cython: language_level=3, emit_code_comments=False
 
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
-from libc.string cimport strncmp, memcmp, memcpy
+from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
 cimport cython
 
+cdef extern from *:
+    unsigned char * PyUnicode_1BYTE_DATA(object o)
+    int PyUnicode_KIND(object o)
+    int PyUnicode_1BYTE_KIND
 from .exceptions import FastqFormatError
 from ._util import shorten
 
@@ -380,12 +384,43 @@ def record_names_match(header1: str, header2: str):
     fastq-dump tool (used for converting SRA files to FASTQ) appends '.1', '.2'
     and sometimes '.3' to paired-end reads if option -I is used.
     """
-    cdef:
-        str name1, name2
+    if (
+        PyUnicode_KIND(header1) != PyUnicode_1BYTE_KIND or
+        PyUnicode_KIND(header2) != PyUnicode_1BYTE_KIND
+    ):
+        # Fall back to slower code path.
+        name1 = header1.split(maxsplit=1)[0]
+        name2 = header2.split(maxsplit=1)[0]
+        if name1 and name2 and name1[-1] in '123' and name2[-1] in '123':
+            return name1[:-1] == name2[:-1]
+        return name1 == name2
+    # Do not call .encode functions but use the unicode pointer inside the
+    # python object directly, provided it is in 1-byte encoding, so we can
+    # find the spaces and tabs easily.
+    cdef char * header1chars = <char *>PyUnicode_1BYTE_DATA(header1)
+    cdef char * header2chars = <char *>PyUnicode_1BYTE_DATA(header2)
+    return record_name_bytes_match(header1chars, header2chars)
 
-    name1 = header1.split()[0]
-    name2 = header2.split()[0]
-    if name1 and name2 and name1[-1] in '123' and name2[-1] in '123':
-        name1 = name1[:-1]
-        name2 = name2[:-1]
-    return name1 == name2
+
+cdef bint record_name_bytes_match(char *header1chars, char *header2chars):
+    """
+    Check whether the ascii-encoded names match.
+    """
+    # Only the first part (i.e. the name without the comment) is of interest.
+    # Find the first tab or space, if not present, strcspn will return the
+    # position of the terminating NULL byte. (I.e. the length).
+    cdef size_t header1_ends = strcspn(header1chars, b' \t')
+    cdef size_t header2_ends = strcspn(header2chars, b' \t')
+    # Quick check if the lengths match
+    if header1_ends != header2_ends:
+        return False
+
+    # check if the names end with 1, 2 or 3. (ASCII 49, 50 , 51)
+    cdef bint name1endswithnumber = b'1' <= header1chars[header1_ends - 1] <= b'3'
+    cdef bint name2endswithnumber = b'1' <= header2chars[header1_ends - 1] <= b'3'
+    if name1endswithnumber and name2endswithnumber:
+        # Don't compare the read pair number
+        header1_ends -= 1
+
+    # Compare the strings up to the whitespace or up to the read pair number.
+    return memcmp(<void *>header1chars, <void *>header2chars, header1_ends) == 0
