@@ -521,6 +521,15 @@ class TestPairedSequenceReader:
                 list(psr)
         assert "There are more reads in file 1 than in file 2" in info.value.message
 
+    def test_empty_sequences_do_not_stop_iteration(self):
+        s1 = BytesIO(b'@r1_1\nACG\n+\nHHH\n@r2_1\nACG\n+\nHHH\n@r3_2\nACG\n+\nHHH\n')
+        s2 = BytesIO(b'@r1_1\nACG\n+\nHHH\n@r2_2\n\n+\n\n@r3_2\nACG\n+\nHHH\n')
+        # Second sequence for s2 is empty but valid. Should not lead to a stop of iteration.
+        with TwoFilePairedEndReader(s1, s2) as psr:
+            seqs = list(psr)
+        print(seqs)
+        assert len(seqs) == 3
+
     def test_incorrectly_paired(self):
         s1 = BytesIO(b'@r1/1\nACG\n+\nHHH\n')
         s2 = BytesIO(b'@wrong_name\nTTT\n+\nHHH\n')

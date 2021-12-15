@@ -54,19 +54,19 @@ class TwoFilePairedEndReader(PairedEndReader):
         # but it will take a long time for 3.10 or higher to be available on
         # everyone's machine.
         # Instead use zip_longest from itertools. This yields None if one of
-        # the iterators is exhausted. Checking for truthy values is speedy.
+        # the iterators is exhausted. Checking for None identity is fast.
         # So we can quickly check if the iterator is still yielding.
         # This is faster than implementing a while loop with next calls,
         # which requires expensive function lookups.
         it1, it2 = iter(self.reader1), iter(self.reader2)
         for r1, r2 in itertools.zip_longest(it1, it2):
-            if not r1:
+            if r1 is None:
                 raise FileFormatError(
                     "Reads are improperly paired. There are more reads in "
                     "file 2 than in file 1.",
                     line=None,
                 ) from None
-            if not r2:
+            if r2 is None:
                 raise FileFormatError(
                     "Reads are improperly paired. There are more reads in "
                     "file 1 than in file 2.",
