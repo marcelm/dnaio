@@ -2,6 +2,7 @@
 
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
 from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
+from cpython.unicode cimport PyUnicode_GET_LENGTH
 cimport cython
 
 cdef extern from *:
@@ -399,21 +400,30 @@ def record_names_match(header1: str, header2: str):
     # find the spaces and tabs easily.
     cdef char * header1chars = <char *>PyUnicode_1BYTE_DATA(header1)
     cdef char * header2chars = <char *>PyUnicode_1BYTE_DATA(header2)
-    return record_name_bytes_match(header1chars, header2chars)
+    cdef size_t header2length = <size_t>PyUnicode_GET_LENGTH(header2)
+    return record_name_bytes_match(header1chars, header2chars, header2length)
 
 
-cdef bint record_name_bytes_match(char *header1chars, char *header2chars):
+cdef bint record_name_bytes_match(char *header1chars, char *header2chars,
+                                  size_t header2length):
     """
-    Check whether the ascii-encoded names match.
+    Check whether the ascii-encoded names match. Only header2length is needed.
     """
     # Only the first part (i.e. the name without the comment) is of interest.
     # Find the first tab or space, if not present, strcspn will return the
     # position of the terminating NULL byte. (I.e. the length).
     cdef size_t header1_ends = strcspn(header1chars, b' \t')
-    cdef size_t header2_ends = strcspn(header2chars, b' \t')
-    # Quick check if the lengths match
-    if header1_ends != header2_ends:
-        return False
+
+    if header1_ends > header2length:
+        return False  # Header2's name is shorter.
+
+    # No need to search whitespace in header2. We can check if there is
+    # whitespace or a 0-byte at the expected position
+    # Use optimized ordering of and statements. Most likely byte is 0. (No
+    # comments in the header). So that will end the comparison immediately.
+    cdef char end = header2chars[header1_ends]
+    if end != b'\000' and end != b' ' and end != b'\t':
+        return False  # Header2's name is longer.
 
     # check if the names end with 1, 2 or 3. (ASCII 49, 50 , 51)
     cdef bint name1endswithnumber = b'1' <= header1chars[header1_ends - 1] <= b'3'
