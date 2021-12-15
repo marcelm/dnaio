@@ -399,17 +399,16 @@ def record_names_match(header1: str, header2: str):
     # find the spaces and tabs easily.
     cdef char * header1chars = <char *>PyUnicode_1BYTE_DATA(header1)
     cdef char * header2chars = <char *>PyUnicode_1BYTE_DATA(header2)
-    return record_name_bytes_match(header1chars, header2chars, len(header1), len(header2))
+    return record_name_bytes_match(header1chars, header2chars)
 
 
-cdef bint record_name_bytes_match(
-    char *header1chars, char *header2chars,
-    Py_ssize_t header1length, Py_ssize_t header2length):
+cdef bint record_name_bytes_match(char *header1chars, char *header2chars):
     """
     Check whether the ascii-encoded names match.
     """
     # Only the first part (i.e. the name without the comment) is of interest.
-    # Find the first tab or space.
+    # Find the first tab or space, if not present, strcspn will return the
+    # position of the terminating NULL byte. (I.e. the length).
     cdef size_t header1_ends = strcspn(header1chars, b' \t')
     cdef size_t header2_ends = strcspn(header2chars, b' \t')
     # Quick check if the lengths match
