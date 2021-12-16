@@ -58,8 +58,7 @@ class TwoFilePairedEndReader(PairedEndReader):
         # So we can quickly check if the iterator is still yielding.
         # This is faster than implementing a while loop with next calls,
         # which requires expensive function lookups.
-        it1, it2 = iter(self.reader1), iter(self.reader2)
-        for r1, r2 in itertools.zip_longest(it1, it2):
+        for r1, r2 in itertools.zip_longest(self.reader1, self.reader2):
             if r1 is None:
                 raise FileFormatError(
                     "Reads are improperly paired. There are more reads in "
