@@ -381,7 +381,7 @@ def record_names_match(header1: str, header2: str):
     """
     Check whether the sequence record ids id1 and id2 are compatible, ignoring a
     suffix of '1', '2' or '3'. This exception allows to check some old
-    paired-end reads that have names ending in '/1' and '/2'. Also, the
+    paired-end reads that have IDs ending in '/1' and '/2'. Also, the
     fastq-dump tool (used for converting SRA files to FASTQ) appends '.1', '.2'
     and sometimes '.3' to paired-end reads if option -I is used.
     """
@@ -398,37 +398,36 @@ def record_names_match(header1: str, header2: str):
     # Do not call .encode functions but use the unicode pointer inside the
     # python object directly, provided it is in 1-byte encoding, so we can
     # find the spaces and tabs easily.
-    cdef char * header1chars = <char *>PyUnicode_1BYTE_DATA(header1)
-    cdef char * header2chars = <char *>PyUnicode_1BYTE_DATA(header2)
-    cdef size_t header2length = <size_t>PyUnicode_GET_LENGTH(header2)
-    return record_name_bytes_match(header1chars, header2chars, header2length)
+    cdef char * header1_chars = <char *>PyUnicode_1BYTE_DATA(header1)
+    cdef char * header2_chars = <char *>PyUnicode_1BYTE_DATA(header2)
+    cdef size_t header1_length = <size_t>PyUnicode_GET_LENGTH(header1)
+    return record_ids_match(header1_chars, header2_chars, header1_length)
 
 
-cdef bint record_name_bytes_match(char *header1chars, char *header2chars,
-                                  size_t header2length):
+cdef bint record_ids_match(char *header1, char *header2, size_t header1_length):
     """
-    Check whether the ascii-encoded names match. Only header2length is needed.
+    Check whether the ASCII-encoded IDs match. Only header1_length is needed.
     """
     # Only the read ID is of interest.
     # Find the first tab or space, if not present, strcspn will return the
     # position of the terminating NULL byte. (I.e. the length).
-    cdef size_t id1_ends = strcspn(header1chars, b' \t')
+    # Header1 is not searched because we can reuse the end of ID position of
+    # header2 as header1's ID should end at the same position.
+    cdef size_t id2_length = strcspn(header2, b' \t')
 
-    if id1_ends > header2length:
-        return False  # Header2's name is shorter.
+    if header1_length < id2_length:
+        return False
 
-    # No need to search whitespace in header2. We can check if there is
-    # whitespace or a 0-byte at the expected position
-    cdef char end = header2chars[id1_ends]
+    cdef char end = header1[id2_length]
     if end != b'\000' and end != b' ' and end != b'\t':
-        return False  # Header2's name is longer.
+        return False
 
-    # check if the names end with 1, 2 or 3. (ASCII 49, 50 , 51)
-    cdef bint id1endswithnumber = b'1' <= header1chars[id1_ends - 1] <= b'3'
-    cdef bint id2endswithnumber = b'1' <= header2chars[id1_ends - 1] <= b'3'
+    # Check if the IDs end with 1, 2 or 3. This is the read pair number
+    # which should not be included in the comparison.
+    cdef bint id1endswithnumber = b'1' <= header1[id2_length - 1] <= b'3'
+    cdef bint id2endswithnumber = b'1' <= header2[id2_length - 1] <= b'3'
     if id1endswithnumber and id2endswithnumber:
-        # Don't compare the read pair number
-        id1_ends -= 1
+        id2_length -= 1
 
-    # Compare the strings up to the whitespace or up to the read pair number.
-    return memcmp(<void *>header1chars, <void *>header2chars, id1_ends) == 0
+    # Compare the strings up to the ID end position.
+    return memcmp(<void *>header1, <void *>header2, id2_length) == 0
