@@ -409,28 +409,26 @@ cdef bint record_name_bytes_match(char *header1chars, char *header2chars,
     """
     Check whether the ascii-encoded names match. Only header2length is needed.
     """
-    # Only the first part (i.e. the name without the comment) is of interest.
+    # Only the read ID is of interest.
     # Find the first tab or space, if not present, strcspn will return the
     # position of the terminating NULL byte. (I.e. the length).
-    cdef size_t header1_ends = strcspn(header1chars, b' \t')
+    cdef size_t id1_ends = strcspn(header1chars, b' \t')
 
-    if header1_ends > header2length:
+    if id1_ends > header2length:
         return False  # Header2's name is shorter.
 
     # No need to search whitespace in header2. We can check if there is
     # whitespace or a 0-byte at the expected position
-    # Use optimized ordering of and statements. Most likely byte is 0. (No
-    # comments in the header). So that will end the comparison immediately.
-    cdef char end = header2chars[header1_ends]
+    cdef char end = header2chars[id1_ends]
     if end != b'\000' and end != b' ' and end != b'\t':
         return False  # Header2's name is longer.
 
     # check if the names end with 1, 2 or 3. (ASCII 49, 50 , 51)
-    cdef bint name1endswithnumber = b'1' <= header1chars[header1_ends - 1] <= b'3'
-    cdef bint name2endswithnumber = b'1' <= header2chars[header1_ends - 1] <= b'3'
-    if name1endswithnumber and name2endswithnumber:
+    cdef bint id1endswithnumber = b'1' <= header1chars[id1_ends - 1] <= b'3'
+    cdef bint id2endswithnumber = b'1' <= header2chars[id1_ends - 1] <= b'3'
+    if id1endswithnumber and id2endswithnumber:
         # Don't compare the read pair number
-        header1_ends -= 1
+        id1_ends -= 1
 
     # Compare the strings up to the whitespace or up to the read pair number.
-    return memcmp(<void *>header1chars, <void *>header2chars, header1_ends) == 0
+    return memcmp(<void *>header1chars, <void *>header2chars, id1_ends) == 0
