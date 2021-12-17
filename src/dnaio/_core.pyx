@@ -96,6 +96,11 @@ cdef class Sequence:
         return self.qualities.encode('ascii')
 
     def fastq_bytes(self, two_headers = False):
+        """Return the entire FASTQ record as bytes which can be written
+        into a file.
+
+        Optionally the header (after the @) can be repeated on the third line
+        (after the +), when two_headers is enabled."""
         cdef char * name
         cdef char * sequence
         cdef char * qualities
