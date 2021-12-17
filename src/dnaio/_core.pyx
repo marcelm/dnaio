@@ -291,6 +291,13 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             name_end_ptr = <char *>memchr(c_buf + record_start, 10, <size_t>(bufend - record_start))
             if name_end_ptr == NULL:
                 break
+            # The maximum value of name_end_ptr = c_buf + bufend - 1.
+            # c_buf + bufend points at the terminating null byte.
+            # c_buf + bufend - 1 is the last character in the buffer. Therefore
+            # we can always safely increase the pointer with +1 to look for the next
+            # newline. Because in case of the end of buffer, name_end will be
+            # bufend - 1. So sequence_start will be bufend. The search
+            # length will be bufend - bufend == 0 and memchr will return NULL.
             name_end = name_end_ptr - c_buf
             sequence_start = name_end + 1
             sequence_end_ptr = <char *>memchr(c_buf + sequence_start, 10, <size_t>(bufend - sequence_start))
