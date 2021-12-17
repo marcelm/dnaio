@@ -283,7 +283,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 
         # Parse all complete FASTQ records in this chunk
         record_start = 0
-        while True:
+        while record_start < bufend:
             ### Check for a complete record (i.e 4 newlines are present)
             # Use libc memchr, this optimizes looking for characters by
             # using 64-bit integers. See:
@@ -372,8 +372,6 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 yield Sequence.__new__(Sequence, name, sequence, qualities)
 
             ### Advance record to next position
-            if next_record_start >= bufend:
-                break
             n_records += 1
             record_start = next_record_start
         # bufend reached
