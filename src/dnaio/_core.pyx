@@ -255,7 +255,6 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
     while True:
         assert bufstart < len(buf_view)
         bufend = readinto(buf_view[bufstart:]) + bufstart
-        bufend_ptr = c_buf + bufend
         if bufstart == bufend:
             # End of file
             if bufstart > 0 and buf_view[bufstart-1] != b'\n':
@@ -283,24 +282,24 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 
         # Parse all complete FASTQ records in this chunk
         record_start = 0
-        while record_start < bufend:
+        while True:
             ### Check for a complete record (i.e 4 newlines are present)
             # Use libc memchr, this optimizes looking for characters by
             # using 64-bit integers. See:
             # https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=string/memchr.c;hb=HEAD
             # void *memchr(const void *str, int c, size_t n)
             name_end_ptr = <char *>memchr(c_buf + record_start, 10, <size_t>(bufend - record_start))
-            if name_end_ptr == NULL or name_end_ptr == bufend_ptr:
+            if name_end_ptr == NULL:
                 break
             name_end = name_end_ptr - c_buf
             sequence_start = name_end + 1
             sequence_end_ptr = <char *>memchr(c_buf + sequence_start, 10, <size_t>(bufend - sequence_start))
-            if sequence_end_ptr == NULL or sequence_end_ptr == bufend_ptr:
+            if sequence_end_ptr == NULL:
                 break
             sequence_end = sequence_end_ptr - c_buf
             second_header_start = sequence_end + 1
             second_header_end_ptr = <char *>memchr(c_buf + second_header_start, 10, <size_t>(bufend - second_header_start))
-            if second_header_end_ptr == NULL or second_header_end_ptr == bufend_ptr:
+            if second_header_end_ptr == NULL:
                 break
             second_header_end = second_header_end_ptr - c_buf
             qualities_start = second_header_end + 1
