@@ -370,6 +370,8 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 yield Sequence.__new__(Sequence, name, sequence, qualities)
 
             ### Advance record to next position
+            if next_record_start >= bufend:
+                break
             n_records += 1
             record_start = next_record_start
         # bufend reached
