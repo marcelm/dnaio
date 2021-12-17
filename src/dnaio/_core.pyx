@@ -268,6 +268,8 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 extra_newline = True
             elif last_read_position > record_start:  # Incomplete FASTQ records are present.
                 if extra_newline:
+                    # Do not report the linefeed that was added by dnaio but
+                    # was not present in the original input.
                     last_read_position -= 1
                 lines = buf[record_start:last_read_position].count(b'\n')
                 raise FastqFormatError(
