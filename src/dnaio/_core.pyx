@@ -1,6 +1,7 @@
 # cython: language_level=3, emit_code_comments=False
 
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
+from cpython.unicode cimport PyUnicode_DecodeLatin1
 from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
 cimport cython
 
@@ -327,21 +328,20 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 
             name_start = record_start + 1  # Skip @
             second_header_start += 1  # Skip +
-
-            # Check for \r\n line-endings and compensate
-            if c_buf[name_end - 1] == b'\r':
-                name_end -= 1
-            if c_buf[sequence_end - 1] == b'\r':
-                sequence_end -= 1
-            if c_buf[second_header_end - 1] == b'\r':
-                second_header_end -= 1
-            if c_buf[qualities_end - 1] == b'\r':
-                qualities_end -= 1
-
             name_length = name_end - name_start
             sequence_length = sequence_end - sequence_start
             second_header_length = second_header_end - second_header_start
             qualities_length = qualities_end - qualities_start
+
+            # Check for \r\n line-endings and compensate
+            if c_buf[name_end - 1] == b'\r':
+                name_length -= 1
+            if c_buf[sequence_end - 1] == b'\r':
+                sequence_length -= 1
+            if c_buf[second_header_end - 1] == b'\r':
+                second_header_length -= 1
+            if c_buf[qualities_end - 1] == b'\r':
+                qualities_length -= 1
 
             if second_header_length:  # should be 0 when only + is present
                 if (name_length != second_header_length or
@@ -360,15 +360,14 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                     "Length of sequence and qualities differ", line=n_records * 4 + 3)
 
             ### Copy record into python variables
-            # .decode('latin-1') is 50% faster than .decode('ascii')
+            # PyUnicode_DecodeLatin1 is 50% faster than PyUnicode_DecodeASCII.
             # This is because PyUnicode_DecodeLatin1 is an alias for
             # _PyUnicode_FromUCS1. Which directly copies the bytes into a
-            # string object. No operations are taking place. With
-            # PyUnicode_DecodeASCII, all characters are checked whether they
-            # exceed 128.
-            name = c_buf[name_start:name_end].decode('latin-1')
-            sequence = c_buf[sequence_start:sequence_end].decode('latin-1')
-            qualities = c_buf[qualities_start:qualities_end].decode('latin-1')
+            # string object after some checks. With PyUnicode_DecodeASCII,
+            # there is an extra check whether characters exceed 128.
+            name = PyUnicode_DecodeLatin1(c_buf + name_start, name_length, 'strict')
+            sequence = PyUnicode_DecodeLatin1(c_buf + sequence_start, sequence_length, 'strict')
+            qualities = PyUnicode_DecodeLatin1(c_buf + qualities_start, qualities_length, 'strict')
 
             if n_records == 0:
                 yield bool(second_header_length)  # first yielded value is special
@@ -379,7 +378,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
 
             ### Advance record to next position
             n_records += 1
-            record_start = next_record_start
+            record_start = qualities_end + 1
         # bufend reached
         last_read_position = bufend
         if record_start == 0 and bufend == len(buf):
