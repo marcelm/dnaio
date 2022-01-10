@@ -315,7 +315,6 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             if qualities_end_ptr == NULL:
                 break
             qualities_end = qualities_end_ptr - c_buf
-            next_record_start = qualities_end + 1
 
             if c_buf[record_start] != b'@':
                 raise FastqFormatError("Line expected to "
