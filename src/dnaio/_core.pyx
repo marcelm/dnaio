@@ -13,6 +13,9 @@ from .exceptions import FastqFormatError
 from ._util import shorten
 
 
+cdef extern from "_core.h":
+    object new_sequence_object(type SequenceClass, object name, object sequence, object qualities)
+
 cdef class Sequence:
     """
     A sequencing read with read name/id and (optional) qualities
@@ -348,7 +351,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             if custom_class:
                 yield sequence_class(name, sequence, qualities)
             else:
-                yield Sequence.__new__(Sequence, name, sequence, qualities)
+                yield new_sequence_object(Sequence, name, sequence, qualities)
             n_records += 1
             record_start = pos
             if pos == bufend:
