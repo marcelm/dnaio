@@ -1,21 +1,7 @@
-#define PY_SSIZE_T_CLEAN
+#include "_sequence.h"
 #include <Python.h>
 
-// This file contains code for creating a Sequence object fast. This bypasses
-// the python __init__ and __new__ constructors.
-// Given the simplicity of __cinit__ it is simple enough to perform the same
-// initialization in using C code.
-
-// Cython generates exactly the same struct under a different name. Unfortunately
-// that one cannot be accessed from the cython code.
-struct SequenceStruct {
-    PyObject_HEAD
-    PyObject *name;
-    PyObject *sequence;
-    PyObject *qualities;
-};
-
-static PyObject * new_sequence_object(PyTypeObject *SequenceClass, 
+static PyObject * new_sequence_object(PyTypeObject *SequenceClass,
                                       PyObject *name,
                                       PyObject *sequence,
                                       PyObject *qualities)
@@ -25,7 +11,7 @@ static PyObject * new_sequence_object(PyTypeObject *SequenceClass,
     // What happens here is that all the fields of PyObject_HEAD are initialized
     // and that the type pointer is set to point at SequenceClass. Any remaining
     // struct fields not in PyObject_HEAD are not set.
-    struct SequenceStruct *new_obj = PyObject_New(struct SequenceStruct, SequenceClass);
+    SequenceStruct *new_obj = PyObject_New(SequenceStruct, SequenceClass);
     if (new_obj == NULL){
         PyErr_NoMemory();
         return NULL;
