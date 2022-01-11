@@ -82,7 +82,7 @@ static PyType_Slot SequenceBytes_slots[] = {
 };
 
 static PyType_Spec SequenceBytes_type_spec = {
-    "_sequence_bytes.SequenceBytes",
+    "_sequence.SequenceBytes",
     sizeof(SequenceBytes),
     0,
     Py_TPFLAGS_DEFAULT,
@@ -90,9 +90,9 @@ static PyType_Spec SequenceBytes_type_spec = {
 };
 
 
-static struct PyModuleDef _sequence_bytes_module = {
+static struct PyModuleDef _sequence_module = {
     PyModuleDef_HEAD_INIT,
-    "_sequence_bytes",   /* name of module */
+    "_sequence",   /* name of module */
     NULL, /* module documentation, may be NULL */
     -1,
     NULL  /* module methods */
@@ -100,11 +100,11 @@ static struct PyModuleDef _sequence_bytes_module = {
 
 
 PyMODINIT_FUNC
-PyInit__sequence_bytes(void)
+PyInit__sequence(void)
 {
     PyObject *m;
 
-    m = PyModule_Create(&_sequence_bytes_module);
+    m = PyModule_Create(&_sequence_module);
     if (m == NULL)
         return NULL;
 
