@@ -18,11 +18,39 @@ SequenceBytes_dealloc(SequenceBytes *self) {
 }
 
 static PyObject *
+new_sequence_bytes(PyTypeObject *SequenceClass, PyObject *name, PyObject *sequence, PyObject *qualities){
+    SequenceBytes *new_obj = PyObject_New(SequenceBytes, SequenceClass); 
+    if (new_obj == NULL)
+        return PyErr_NoMemory();
+    Py_INCREF(name);
+    Py_INCREF(sequence);
+    Py_INCREF(qualities);
+    new_obj->name = name;
+    new_obj->sequence = sequence;
+    new_obj->qualities = qualities;
+    return (PyObject *)new_obj;
+}
+
+static PyObject *
 SequenceBytes__init__(SequenceBytes *self, PyObject *args, PyObject *kwargs) {
     PyObject *name;
     PyObject *sequence;
     PyObject *qualities;
-
+    static char * _keywords[] = {"name", "sequence", "qualities", NULL};
+    static char * _format = "O!O!O!|:SequenceBytes";
+    if (!PyArg_ParseTupleAndKeywords(
+        args, kwargs, _format, _keywords, 
+        (PyObject *)&PyBytes_Type, name, 
+        (PyObject *)&PyBytes_Type, sequence, 
+        (PyObject *)&PyBytes_Type, qualities))
+        return NULL;
+    Py_INCREF(name);
+    Py_INCREF(sequence);
+    Py_INCREF(qualities);
+    self->name = name; 
+    self->sequence=sequence;
+    self->qualities=qualities;
+    return self;
 };
 
 static PyMemberDef SequenceBytes_members[] = {
@@ -41,6 +69,8 @@ static PyType_Slot SequenceBytes_slots[] = {
     {Py_tp_methods, SequenceBytes_methods},
     {Py_tp_members, SequenceBytes_members},
     {Py_tp_doc, "An object containing name, sequence and qualities as bytes objects."},
+    {Py_tp_init, SequenceBytes__init__},
+    {Py_tp_new, PyType_GenericNew},
     {0, 0},
 };
 
