@@ -31,11 +31,11 @@ new_sequence_bytes(PyTypeObject *SequenceClass, PyObject *name, PyObject *sequen
     return (PyObject *)new_obj;
 }
 
-static PyObject *
+static int
 SequenceBytes__init__(SequenceBytes *self, PyObject *args, PyObject *kwargs) {
-    PyObject *name;
-    PyObject *sequence;
-    PyObject *qualities;
+    PyObject *name = NULL;
+    PyObject *sequence = NULL;
+    PyObject *qualities = NULL;
     static char * _keywords[] = {"name", "sequence", "qualities", NULL};
     static char * _format = "O!O!O!|:SequenceBytes";
     if (!PyArg_ParseTupleAndKeywords(
@@ -43,14 +43,14 @@ SequenceBytes__init__(SequenceBytes *self, PyObject *args, PyObject *kwargs) {
         (PyObject *)&PyBytes_Type, name, 
         (PyObject *)&PyBytes_Type, sequence, 
         (PyObject *)&PyBytes_Type, qualities))
-        return NULL;
+        return -1;
     Py_INCREF(name);
     Py_INCREF(sequence);
     Py_INCREF(qualities);
     self->name = name; 
     self->sequence=sequence;
     self->qualities=qualities;
-    return self;
+    return 0;
 };
 
 static PyMemberDef SequenceBytes_members[] = {
