@@ -53,6 +53,12 @@ SequenceBytes__init__(SequenceBytes *self, PyObject *args, PyObject *kwargs) {
     return 0;
 };
 
+static PyObject * 
+SequenceBytes__repr__(SequenceBytes * self){
+    return PyUnicode_FromFormat("SequenceBytes(%R, %R, %R)", 
+        self->name, self->sequence, self->qualities);
+}
+
 static PyMemberDef SequenceBytes_members[] = {
     {"name", T_OBJECT_EX, offsetof(SequenceBytes, name), 0},
     {"sequence", T_OBJECT_EX, offsetof(SequenceBytes, sequence), 0},
@@ -71,6 +77,7 @@ static PyType_Slot SequenceBytes_slots[] = {
     {Py_tp_doc, "An object containing name, sequence and qualities as bytes objects."},
     {Py_tp_init, SequenceBytes__init__},
     {Py_tp_new, PyType_GenericNew},
+    {Py_tp_repr, SequenceBytes__repr__},
     {0, 0},
 };
 
