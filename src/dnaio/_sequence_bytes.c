@@ -83,7 +83,7 @@ static PyType_Slot SequenceBytes_slots[] = {
 
 static PyType_Spec SequenceBytes_type_spec = {
     "_sequence_bytes.SequenceBytes",
-    sizeof(SequenceBytes_methods),
+    sizeof(SequenceBytes),
     0,
     Py_TPFLAGS_DEFAULT,
     SequenceBytes_slots
