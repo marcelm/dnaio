@@ -60,15 +60,8 @@ SequenceBytes__repr__(SequenceBytes * self){
         self->name, self->sequence, self->qualities);
 }
 
-PyDoc_STRVAR(SequenceBytes_fastq_bytes__doc__,
-"Return the entire FASTQ record as bytes which can be written\n"
-"into a file.");
-
-#define SEQUENCE_BYTES_FASTQ_BYTES_METHODDEF    \
-    {"fastq_bytes", (PyCFunction)(void(*)(void))SequenceBytes_fastq_bytes, METH_NOARGS, SequenceBytes_fastq_bytes__doc__}
-
-static PyObject *
-SequenceBytes_fastq_bytes(SequenceBytes *self, PyObject *NoArgs){
+static PyObject * 
+sequence_bytes_to_fastq_record_impl(SequenceBytes *self, int two_headers){
     char * name = PyBytes_AsString(self->name);
     char * sequence = PyBytes_AsString(self->sequence);
     char * qualities = PyBytes_AsString(self->qualities);
@@ -80,8 +73,19 @@ SequenceBytes_fastq_bytes(SequenceBytes *self, PyObject *NoArgs){
             return NULL;
     return create_fastq_record(name, sequence, qualities,
                                name_length, sequence_length, qualities_length,
-                               0);
+                               two_headers);
+}
 
+PyDoc_STRVAR(SequenceBytes_fastq_bytes__doc__,
+"Return the entire FASTQ record as bytes which can be written\n"
+"into a file.");
+
+#define SEQUENCE_BYTES_FASTQ_BYTES_METHODDEF    \
+    {"fastq_bytes", (PyCFunction)(void(*)(void))SequenceBytes_fastq_bytes, METH_NOARGS, SequenceBytes_fastq_bytes__doc__}
+
+static PyObject *
+SequenceBytes_fastq_bytes(SequenceBytes *self, PyObject *NoArgs){
+    return sequence_bytes_to_fastq_record_impl(self, 0);
 }
 
 PyDoc_STRVAR(SequenceBytes_fastq_bytes_two_headers__doc__,
@@ -93,19 +97,7 @@ PyDoc_STRVAR(SequenceBytes_fastq_bytes_two_headers__doc__,
 
 static PyObject *
 SequenceBytes_fastq_bytes_two_headers(SequenceBytes *self, PyObject *NoArgs){
-    char * name = PyBytes_AsString(self->name);
-    char * sequence = PyBytes_AsString(self->sequence);
-    char * qualities = PyBytes_AsString(self->qualities);
-    Py_ssize_t name_length = PyBytes_Size(self->name);
-    Py_ssize_t sequence_length = PyBytes_Size(self->name);
-    Py_ssize_t qualities_length = PyBytes_Size(self->name);
-    if (name == NULL || sequence == NULL || qualities == NULL ||
-        name_length == -1 || sequence_length == -1 || qualities_length == -1)
-            return NULL;
-    return create_fastq_record(name, sequence, qualities,
-                               name_length, sequence_length, qualities_length,
-                               1);
-
+    return sequence_bytes_to_fastq_record_impl(self, 1);
 }
 
 static PyMemberDef SequenceBytes_members[] = {
