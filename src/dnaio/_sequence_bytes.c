@@ -40,9 +40,9 @@ SequenceBytes__init__(SequenceBytes *self, PyObject *args, PyObject *kwargs) {
     static char * _format = "O!O!O!|:SequenceBytes";
     if (!PyArg_ParseTupleAndKeywords(
         args, kwargs, _format, _keywords, 
-        (PyObject *)&PyBytes_Type, name, 
-        (PyObject *)&PyBytes_Type, sequence, 
-        (PyObject *)&PyBytes_Type, qualities))
+        (PyObject *)&PyBytes_Type, &name, 
+        (PyObject *)&PyBytes_Type, &sequence, 
+        (PyObject *)&PyBytes_Type, &qualities))
         return -1;
     Py_INCREF(name);
     Py_INCREF(sequence);
