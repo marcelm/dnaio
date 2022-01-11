@@ -7,5 +7,7 @@ setup(
         [
             Extension("dnaio._core", sources=["src/dnaio/_core.pyx"]),
         ]
-    ),
+    ) + [
+        Extension("dnaio._sequence_bytes", sources=["src/dnaio/_sequence_bytes.c"])
+    ],
 )

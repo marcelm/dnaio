@@ -74,7 +74,7 @@ static PyType_Slot SequenceBytes_slots[] = {
     {0, 0},
 };
 
-static PyType_Spec Comptype_spec = {
+static PyType_Spec SequenceBytes_type_spec = {
     "_sequence_bytes.SequenceBytes",
     sizeof(SequenceBytes_methods),
     0,
@@ -101,5 +101,13 @@ PyInit__sequence_bytes(void)
     if (m == NULL)
         return NULL;
 
+    PyTypeObject *SequenceBytesType = (PyTypeObject *)PyType_FromSpec(&SequenceBytes_type_spec);
+    if (SequenceBytesType == NULL)
+        return NULL;
+    
+    Py_INCREF(SequenceBytesType);
+    if (PyModule_AddObject(m, "SequenceBytes",  (PyObject *)SequenceBytesType) < 0) {
+        return NULL;
+    }
     return m;
 }
