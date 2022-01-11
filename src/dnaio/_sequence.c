@@ -60,6 +60,13 @@ SequenceBytes__repr__(SequenceBytes * self){
         self->name, self->sequence, self->qualities);
 }
 
+PyDoc_STRVAR(SequenceBytes_fastq_bytes__doc__,
+"Return the entire FASTQ record as bytes which can be written\n"
+"into a file.");
+
+#define SEQUENCE_BYTES_FASTQ_BYTES_METHODDEF    \
+    {"fastq_bytes", (PyCFunction)(void(*)(void))SequenceBytes_fastq_bytes, METH_NOARGS, SequenceBytes_fastq_bytes__doc__}
+
 static PyObject *
 SequenceBytes_fastq_bytes(SequenceBytes *self, PyObject *NoArgs){
     char * name = PyBytes_AsString(self->name);
@@ -77,6 +84,30 @@ SequenceBytes_fastq_bytes(SequenceBytes *self, PyObject *NoArgs){
 
 }
 
+PyDoc_STRVAR(SequenceBytes_fastq_bytes_two_headers__doc__,
+"Return this record in FASTQ format as a bytes object where the header\n"
+"(after the @) is repeated on the third line.");
+
+#define SEQUENCE_BYTES_FASTQ_BYTES_TWO_HEADERS_METHODDEF    \
+    {"fastq_bytes_two_headers", (PyCFunction)(void(*)(void))SequenceBytes_fastq_bytes_two_headers, METH_NOARGS, SequenceBytes_fastq_bytes_two_headers__doc__}
+
+static PyObject *
+SequenceBytes_fastq_bytes_two_headers(SequenceBytes *self, PyObject *NoArgs){
+    char * name = PyBytes_AsString(self->name);
+    char * sequence = PyBytes_AsString(self->sequence);
+    char * qualities = PyBytes_AsString(self->qualities);
+    Py_ssize_t name_length = PyBytes_Size(self->name);
+    Py_ssize_t sequence_length = PyBytes_Size(self->name);
+    Py_ssize_t qualities_length = PyBytes_Size(self->name);
+    if (name == NULL || sequence == NULL || qualities == NULL ||
+        name_length == -1 || sequence_length == -1 || qualities_length == -1)
+            return NULL;
+    return create_fastq_record(name, sequence, qualities,
+                               name_length, sequence_length, qualities_length,
+                               1);
+
+}
+
 static PyMemberDef SequenceBytes_members[] = {
     {"name", T_OBJECT_EX, offsetof(SequenceBytes, name), 0},
     {"sequence", T_OBJECT_EX, offsetof(SequenceBytes, sequence), 0},
@@ -85,6 +116,8 @@ static PyMemberDef SequenceBytes_members[] = {
 };
 
 static PyMethodDef SequenceBytes_methods[] = {
+    SEQUENCE_BYTES_FASTQ_BYTES_METHODDEF,
+    SEQUENCE_BYTES_FASTQ_BYTES_TWO_HEADERS_METHODDEF,
     {NULL}
 };
 
