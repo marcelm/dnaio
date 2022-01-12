@@ -69,15 +69,16 @@ SequenceBytes__repr__(SequenceBytes * self){
 
 static PyObject * 
 sequence_bytes_to_fastq_record_impl(SequenceBytes *self, int two_headers){
-    char * name = PyBytes_AsString(self->name);
-    char * sequence = PyBytes_AsString(self->sequence);
-    char * qualities = PyBytes_AsString(self->qualities);
     Py_ssize_t name_length = PyBytes_Size(self->name);
     Py_ssize_t sequence_length = PyBytes_Size(self->name);
     Py_ssize_t qualities_length = PyBytes_Size(self->name);
-    if (name == NULL || sequence == NULL || qualities == NULL ||
-        name_length == -1 || sequence_length == -1 || qualities_length == -1)
+    if (name_length == -1 || sequence_length == -1 || qualities_length == -1)
+            // Not of type bytes.
             return NULL;
+    // Unsafe macros as type is already checked.
+    char * name = PyBytes_AS_STRING(self->name);
+    char * sequence = PyBytes_AS_STRING(self->sequence);
+    char * qualities = PyBytes_AS_STRING(self->qualities);
     return create_fastq_record(name, sequence, qualities,
                                name_length, sequence_length, qualities_length,
                                two_headers);
