@@ -8,7 +8,7 @@ new_sequence_bytes(PyTypeObject *SequenceClass, PyObject *name, PyObject *sequen
 #define AT_SYMBOL 64  // @
 #define PLUS_SYMBOL 43 // +
 
-static PyObject *
+static inline PyObject *
 create_fastq_record(char * name, char * sequence, char * qualities,
                     Py_ssize_t name_length,
                     Py_ssize_t sequence_length,

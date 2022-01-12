@@ -67,7 +67,7 @@ SequenceBytes__repr__(SequenceBytes * self){
         self->name, self->sequence, self->qualities);
 }
 
-static PyObject * 
+static inline PyObject * 
 sequence_bytes_to_fastq_record_impl(SequenceBytes *self, int two_headers){
     Py_ssize_t name_length = PyBytes_Size(self->name);
     Py_ssize_t sequence_length = PyBytes_Size(self->name);
