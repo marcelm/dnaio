@@ -57,6 +57,24 @@ class TestSequenceBytes:
         assert SequenceBytes(b"name", b"ACGT", b"===="
             ).fastq_bytes_two_headers() == b"@name\nACGT\n+name\n====\n"
 
+    def test_reference_counts(self):
+        # Make sure SequenceBytes is properly implemented so there are no
+        # reference leaks.
+        name = b"name"
+        sequence = b"ACGT"
+        qualities = b"===="
+        name_ref = sys.getrefcount(name)
+        seq_ref = sys.getrefcount(sequence)
+        qual_ref = sys.getrefcount(qualities)
+        seqbytes = SequenceBytes(name, sequence, qualities)
+        assert sys.getrefcount(name) == name_ref + 1
+        assert sys.getrefcount(sequence) == seq_ref + 1
+        assert sys.getrefcount(qualities) == qual_ref + 1
+        del(seqbytes)
+        assert sys.getrefcount(name) == name_ref
+        assert sys.getrefcount(sequence) == seq_ref
+        assert sys.getrefcount(qualities) == qual_ref
+
 
 class TestFastaReader:
     def test_file(self):
