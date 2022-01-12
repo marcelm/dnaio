@@ -15,7 +15,7 @@ from dnaio import (
     FastaWriter, FastqWriter, InterleavedPairedEndWriter,
     TwoFilePairedEndReader,
 )
-from dnaio import record_names_match, Sequence
+from dnaio import record_names_match, Sequence, SequenceBytes
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
@@ -42,6 +42,20 @@ class TestSequence:
     def test_fastq_bytes_two_headers(self):
         assert Sequence("name", "ACGT", "====").fastq_bytes_two_headers() == \
             b"@name\nACGT\n+name\n====\n"
+
+
+class TestSequenceBytes:
+    def test_too_many_qualities(self):
+        with raises(ValueError):
+            SequenceBytes(name=b"name", sequence=b"ACGT", qualities=b"#####")
+
+    def test_fastq_bytes(self):
+        assert SequenceBytes(b"name", b"ACGT", b"====").fastq_bytes() == \
+            b"@name\nACGT\n+\n====\n"
+
+    def test_fastq_bytes_two_headers(self):
+        assert SequenceBytes(b"name", b"ACGT", b"===="
+            ).fastq_bytes_two_headers() == b"@name\nACGT\n+name\n====\n"
 
 
 class TestFastaReader:
