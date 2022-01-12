@@ -5,7 +5,7 @@ Sequence I/O: Read and write FASTA and FASTQ files efficiently
 __all__ = [
     'open',
     'Sequence',
-    'SequenceBytes'
+    'SequenceBytes',
     'SingleEndReader',
     'PairedEndReader',
     'SingleEndWriter',

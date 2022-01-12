@@ -55,7 +55,7 @@ class TestSequenceBytes:
 
     def test_fastq_bytes_two_headers(self):
         assert SequenceBytes(b"name", b"ACGT", b"===="
-            ).fastq_bytes_two_headers() == b"@name\nACGT\n+name\n====\n"
+                             ).fastq_bytes_two_headers() == b"@name\nACGT\n+name\n====\n"
 
     def test_reference_counts(self):
         # Make sure SequenceBytes is properly implemented so there are no
