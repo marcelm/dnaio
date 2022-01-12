@@ -45,6 +45,13 @@ SequenceBytes__init__(SequenceBytes *self, PyObject *args, PyObject *kwargs) {
         (PyObject *)&PyBytes_Type, &sequence, 
         (PyObject *)&PyBytes_Type, &qualities))
         return -1;
+    // Type already checked, can use unsafe macros here.
+    if(PyBytes_GET_SIZE(sequence) != PyBytes_GET_SIZE(qualities)) {
+        PyErr_Format(PyExc_ValueError, 
+            "Size of sequence and qualities do not match: %ld != %ld",
+            PyBytes_GET_SIZE(sequence), PyBytes_GET_SIZE(qualities));
+        return -1;
+    }
     Py_INCREF(name);
     Py_INCREF(sequence);
     Py_INCREF(qualities);
