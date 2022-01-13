@@ -225,10 +225,10 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         Py_ssize_t sequence_start, sequence_end, sequence_length
         Py_ssize_t second_header_start, second_header_end, second_header_length
         Py_ssize_t qualities_start, qualities_end, qualities_length
-        cdef char *name_end_ptr
-        cdef char *sequence_end_ptr
-        cdef char *second_header_end_ptr
-        cdef char *qualities_end_ptr
+        char *name_end_ptr
+        char *sequence_end_ptr
+        char *second_header_end_ptr
+        char *qualities_end_ptr
         bint custom_class = sequence_class is not Sequence
         Py_ssize_t n_records = 0
         bint extra_newline = False
@@ -289,29 +289,25 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             # using 64-bit integers. See:
             # https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=string/memchr.c;hb=HEAD
             # void *memchr(const void *str, int c, size_t n)
-            name_end_ptr = <char *>memchr(c_buf + record_start, 10, <size_t>(bufend - record_start))
+            name_end_ptr = <char *>memchr(c_buf + record_start, b'\n', <size_t>(bufend - record_start))
             if name_end_ptr == NULL:
                 break
-            # The maximum value of name_end_ptr = c_buf + bufend - 1.
-            # c_buf + bufend points at the terminating null byte.
-            # c_buf + bufend - 1 is the last character in the buffer. Therefore
-            # we can always safely increase the pointer with +1 to look for the next
-            # newline. Because in case of the end of buffer, name_end will be
-            # bufend - 1. So sequence_start will be bufend. The search
-            # length will be bufend - bufend == 0 and memchr will return NULL.
+            # bufend - sequence_start is always nonnegative:
+            # - name_end is at most bufend - 1
+            # - thus sequence_start is at most bufend
             name_end = name_end_ptr - c_buf
             sequence_start = name_end + 1
-            sequence_end_ptr = <char *>memchr(c_buf + sequence_start, 10, <size_t>(bufend - sequence_start))
+            sequence_end_ptr = <char *>memchr(c_buf + sequence_start, b'\n', <size_t>(bufend - sequence_start))
             if sequence_end_ptr == NULL:
                 break
             sequence_end = sequence_end_ptr - c_buf
             second_header_start = sequence_end + 1
-            second_header_end_ptr = <char *>memchr(c_buf + second_header_start, 10, <size_t>(bufend - second_header_start))
+            second_header_end_ptr = <char *>memchr(c_buf + second_header_start, b'\n', <size_t>(bufend - second_header_start))
             if second_header_end_ptr == NULL:
                 break
             second_header_end = second_header_end_ptr - c_buf
             qualities_start = second_header_end + 1
-            qualities_end_ptr = <char *>memchr(c_buf + qualities_start, 10, <size_t>(bufend - qualities_start))
+            qualities_end_ptr = <char *>memchr(c_buf + qualities_start, b'\n', <size_t>(bufend - qualities_start))
             if qualities_end_ptr == NULL:
                 break
             qualities_end = qualities_end_ptr - c_buf
