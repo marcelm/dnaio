@@ -555,8 +555,11 @@ def test_read_stdin(path):
     with dnaio.open(path) as f:
         expected = len(list(f))
 
-    # Use 'cat' to simulate that no file name is available for stdin of the subprocess
-    with subprocess.Popen(['cat', path], stdout=subprocess.PIPE) as cat:
+    # Use piping from a separate subprocess to force the input file name to be unavailable
+    cmd = "type" if sys.platform == "win32" else "cat"
+    with subprocess.Popen(
+        [cmd, path], stdout=subprocess.PIPE, shell=sys.platform == "win32"
+    ) as cat:
         with subprocess.Popen(
             [sys.executable, 'tests/read_from_stdin.py'], stdin=cat.stdout, stdout=subprocess.PIPE
         ) as py:
