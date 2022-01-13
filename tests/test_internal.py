@@ -239,7 +239,7 @@ class TestFastqReader:
             list(fq)
 
     def test_second_header_not_equal(self):
-        fastq = BytesIO(b'@r1\nACG\n+xy\n')
+        fastq = BytesIO(b'@r1\nACG\n+xy\nXXX\n')
         with raises(FastqFormatError) as info:
             with FastqReader(fastq) as fq:
                 list(fq)  # pragma: no cover
