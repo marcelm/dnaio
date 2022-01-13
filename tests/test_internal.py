@@ -545,10 +545,10 @@ class TestPairedSequenceReader:
 
 
 @mark.parametrize('path', [
-    'tests/data/simple.fastq',
-    'tests/data/dos.fastq',
-    'tests/data/simple.fasta',
-    'tests/data/with_comment.fasta',
+    os.path.join('tests', 'data', 'simple.fastq'),
+    os.path.join('tests', 'data', 'dos.fastq'),
+    os.path.join('tests', 'data', 'simple.fasta'),
+    os.path.join('tests', 'data', 'with_comment.fasta'),
 ])
 def test_read_stdin(path):
     # Get number of records in the input file
