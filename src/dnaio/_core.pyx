@@ -102,12 +102,14 @@ cdef class Sequence:
 
         Optionally the header (after the @) can be repeated on the third line
         (after the +), when two_headers is enabled."""
-        cdef char * name
-        cdef char * sequence
-        cdef char * qualities
-        cdef Py_ssize_t name_length
-        cdef Py_ssize_t sequence_length
-        cdef Py_ssize_t qualities_length
+        cdef:
+            char * name
+            char * sequence
+            char * qualities
+            Py_ssize_t name_length
+            Py_ssize_t sequence_length
+            Py_ssize_t qualities_length
+
         if PyUnicode_KIND(self.name) == PyUnicode_1BYTE_KIND:
             name = <char *>PyUnicode_1BYTE_DATA(self.name)
             name_length = <size_t>PyUnicode_GET_LENGTH(self.name)
