@@ -32,8 +32,6 @@ class TwoFilePairedEndReader(PairedEndReader):
         fileformat: Optional[str] = None,
         opener=xopen,
     ):
-        if mode not in ("r", "rb"):
-            raise ValueError("Mode must be one of: 'r', 'rb'")
         with ExitStack() as stack:
             self.reader1 = stack.enter_context(
                 _open_single(file1, opener=opener, fileformat=fileformat,
