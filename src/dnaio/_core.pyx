@@ -103,61 +103,90 @@ cdef class Sequence:
         This is a faster version of qualities.encode('ascii')."""
         return self.qualities.encode('ascii')
 
-    def fastq_bytes(self):
+    def fastq_bytes(self, two_headers = False):
         """Return the entire FASTQ record as bytes which can be written
-        into a file."""
-        # Convert to ASCII bytes sequences first as these have a one-to-one
-        # relation between size and number of bytes
-        # Unlike decoding, ascii is not slower than latin-1. This is because
-        # CPython performs a call to PyUnicodeCheck on both occassions. This
-        # determines the type of the Unicode object. In fact, the ascii encode
-        # is slightly faster because the check for PyASCIIObject is performed
-        # first.
-        cdef bytes name = self.name.encode('ascii')
-        cdef bytes sequence = self.sequence.encode('ascii')
-        cdef bytes qualities = self.qualities.encode('ascii')
-        cdef Py_ssize_t name_length = len(name)
-        cdef Py_ssize_t sequence_length = len(sequence)
-        cdef Py_ssize_t qualities_length = len(qualities)
+        into a file.
 
-        # Since Cython will generate code above that is a 100% sure to generate
-        # bytes objects, we can call Python C-API functions that don't perform
-        # checks on the object.
-        cdef char * name_ptr = PyBytes_AS_STRING(name)
-        cdef char * sequence_ptr = PyBytes_AS_STRING(sequence)
-        cdef char * qualities_ptr = PyBytes_AS_STRING(qualities)
+        Optionally the header (after the @) can be repeated on the third line
+        (after the +), when two_headers is enabled."""
+        cdef:
+            char * name
+            char * sequence
+            char * qualities
+            Py_ssize_t name_length
+            Py_ssize_t sequence_length
+            Py_ssize_t qualities_length
 
-        # Total size is name + sequence + qualities + 4 newlines + '+' and an
-        # '@' to be put in front of the name.
-        cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
-
-        # This is the canonical way to create an uninitialized bytestring of given size
-        cdef bytes retval = PyBytes_FromStringAndSize(NULL, total_size)
-        cdef char * retval_ptr = PyBytes_AS_STRING(retval)
-
-        # Write the sequences into the bytestring at the correct positions.
-        cdef Py_ssize_t cursor
-        retval_ptr[0] = b"@"
-        memcpy(retval_ptr + 1, name_ptr, name_length)
-        cursor = name_length + 1
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        memcpy(retval_ptr + cursor, sequence_ptr, sequence_length)
-        cursor += sequence_length
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        retval_ptr[cursor] = b"+"; cursor += 1
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        memcpy(retval_ptr + cursor, qualities_ptr, qualities_length)
-        cursor += qualities_length
-        retval_ptr[cursor] = b"\n"
-        return retval
+        if PyUnicode_KIND(self.name) == PyUnicode_1BYTE_KIND:
+            name = <char *>PyUnicode_1BYTE_DATA(self.name)
+            name_length = <size_t>PyUnicode_GET_LENGTH(self.name)
+        else:
+            # Allow non-ASCII in name
+            name_bytes = self.name.encode('latin-1')
+            name = PyBytes_AS_STRING(name_bytes)
+            name_length = PyBytes_GET_SIZE(name_bytes)
+        if PyUnicode_KIND(self.sequence) == PyUnicode_1BYTE_KIND:
+            sequence = <char *>PyUnicode_1BYTE_DATA(self.sequence)
+            sequence_length = <size_t>PyUnicode_GET_LENGTH(self.sequence)
+        else:
+            # Don't allow non-ASCII in sequence and qualities
+            sequence_bytes = self.sequence.encode('ascii')
+            sequence = PyBytes_AS_STRING(sequence_bytes)
+            sequence_length = PyBytes_GET_SIZE(sequence_bytes)
+        if PyUnicode_KIND(self.qualities) == PyUnicode_1BYTE_KIND:
+            qualities = <char *>PyUnicode_1BYTE_DATA(self.qualities)
+            qualities_length = <size_t>PyUnicode_GET_LENGTH(self.qualities)
+        else:
+            qualities_bytes = self.qualities.encode('ascii')
+            qualities = PyBytes_AS_STRING(qualities_bytes)
+            qualities_length = PyBytes_GET_SIZE(qualities_bytes)
+        return create_fastq_record(name, sequence, qualities,
+                                   name_length, sequence_length, qualities_length,
+                                   two_headers)
 
     def fastq_bytes_two_headers(self):
         """
         Return this record in FASTQ format as a bytes object where the header (after the @) is
         repeated on the third line.
         """
-        return f"@{self.name}\n{self.sequence}\n+{self.name}\n{self.qualities}\n".encode("ascii")
+        return self.fastq_bytes(two_headers=True)
 
+
+cdef bytes create_fastq_record(char * name, char * sequence, char * qualities,
+                               Py_ssize_t name_length,
+                               Py_ssize_t sequence_length,
+                               Py_ssize_t qualities_length,
+                               bint two_headers = False):
+        # Total size is name + sequence + qualities + 4 newlines + '+' and an
+        # '@' to be put in front of the name.
+        cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
+
+        if two_headers:
+            # We need space for the name after the +.
+            total_size += name_length
+
+        # This is the canonical way to create an uninitialized bytestring of given size
+        cdef bytes retval = PyBytes_FromStringAndSize(NULL, total_size)
+        cdef char * retval_ptr = PyBytes_AS_STRING(retval)
+
+        # Write the sequences into the bytestring at the correct positions.
+        cdef size_t cursor
+        retval_ptr[0] = b"@"
+        memcpy(retval_ptr + 1, name, name_length)
+        cursor = name_length + 1
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        memcpy(retval_ptr + cursor, sequence, sequence_length)
+        cursor += sequence_length
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        retval_ptr[cursor] = b"+"; cursor += 1
+        if two_headers:
+            memcpy(retval_ptr + cursor, name, name_length)
+            cursor += name_length
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        memcpy(retval_ptr + cursor, qualities, qualities_length)
+        cursor += qualities_length
+        retval_ptr[cursor] = b"\n"
+        return retval
 
 # It would be nice to be able to have the first parameter be an
 # unsigned char[:] (memory view), but this fails with a BufferError
