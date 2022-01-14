@@ -1,8 +1,26 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+typedef struct {
+    PyObject_HEAD
+    PyObject * name;
+    PyObject * sequence;
+    PyObject * qualities;
+} SequenceBytes;
+
 static PyObject *
-new_sequence_bytes(PyTypeObject *SequenceClass, PyObject *name, PyObject *sequence, PyObject *qualities);
+new_sequence_bytes(PyTypeObject *SequenceClass, PyObject *name, PyObject *sequence, PyObject *qualities){
+    SequenceBytes *new_obj = PyObject_New(SequenceBytes, SequenceClass);
+    if (new_obj == NULL)
+        return PyErr_NoMemory();
+    Py_INCREF(name);
+    Py_INCREF(sequence);
+    Py_INCREF(qualities);
+    new_obj->name = name;
+    new_obj->sequence = sequence;
+    new_obj->qualities = qualities;
+    return (PyObject *)new_obj;
+}
 
 #define LINEFEED 10  // \n
 #define AT_SYMBOL 64  // @

@@ -3,33 +3,12 @@
 #include "structmember.h"         // PyMemberDef
 #include "_sequence.h"
 
-typedef struct {
-    PyObject_HEAD
-    PyObject * name;
-    PyObject * sequence;
-    PyObject * qualities;
-} SequenceBytes;
-
 static void 
 SequenceBytes_dealloc(SequenceBytes *self) {
     Py_CLEAR(self->name);
     Py_CLEAR(self->sequence);
     Py_CLEAR(self->qualities);
     Py_TYPE(self)->tp_free((PyObject *)self);
-}
-
-static PyObject *
-new_sequence_bytes(PyTypeObject *SequenceClass, PyObject *name, PyObject *sequence, PyObject *qualities){
-    SequenceBytes *new_obj = PyObject_New(SequenceBytes, SequenceClass); 
-    if (new_obj == NULL)
-        return PyErr_NoMemory();
-    Py_INCREF(name);
-    Py_INCREF(sequence);
-    Py_INCREF(qualities);
-    new_obj->name = name;
-    new_obj->sequence = sequence;
-    new_obj->qualities = qualities;
-    return (PyObject *)new_obj;
 }
 
 static int

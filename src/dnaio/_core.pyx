@@ -6,11 +6,16 @@ from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
 from cpython.unicode cimport PyUnicode_GET_LENGTH
 cimport cython
 
-cdef extern from *:
+cdef extern from "Python.h":
     unsigned char * PyUnicode_1BYTE_DATA(object o)
     int PyUnicode_KIND(object o)
     int PyUnicode_1BYTE_KIND
+
+cdef extern from "_sequence.h":
+    object new_sequence_bytes(type SequenceClass, object name, object sequence, object qualities)
+
 from .exceptions import FastqFormatError
+from ._sequence import SequenceBytes
 from ._util import shorten
 
 
@@ -217,9 +222,9 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         bytearray buf = bytearray(buffer_size)
         char[:] buf_view = buf
         char* c_buf = buf
-        str name
-        str sequence
-        str qualities
+        object name
+        object sequence
+        object qualities
         Py_ssize_t last_read_position = 0
         Py_ssize_t record_start = 0
         Py_ssize_t bufstart, bufend, name_start, name_end, name_length
@@ -230,7 +235,9 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         char *sequence_end_ptr
         char *second_header_end_ptr
         char *qualities_end_ptr
-        bint custom_class = sequence_class is not Sequence
+        bint save_as_bytes = sequence_class is SequenceBytes
+        bint custom_class = (sequence_class is not Sequence and
+                             sequence_class is not SequenceBytes)
         Py_ssize_t n_records = 0
         bint extra_newline = False
 
@@ -355,22 +362,28 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 raise FastqFormatError(
                     "Length of sequence and qualities differ", line=n_records * 4 + 3)
 
-            ### Copy record into python variables
-            # PyUnicode_DecodeLatin1 is 50% faster than PyUnicode_DecodeASCII.
-            # This is because PyUnicode_DecodeLatin1 is an alias for
-            # _PyUnicode_FromUCS1. Which directly copies the bytes into a
-            # string object after some checks. With PyUnicode_DecodeASCII,
-            # there is an extra check whether characters exceed 128.
-            name = PyUnicode_DecodeLatin1(c_buf + name_start, name_length, 'strict')
-            sequence = PyUnicode_DecodeLatin1(c_buf + sequence_start, sequence_length, 'strict')
-            qualities = PyUnicode_DecodeLatin1(c_buf + qualities_start, qualities_length, 'strict')
-
             if n_records == 0:
                 yield bool(second_header_length)  # first yielded value is special
-            if custom_class:
-                yield sequence_class(name, sequence, qualities)
+
+            if save_as_bytes:
+                name = PyBytes_FromStringAndSize(c_buf + name_start, name_length)
+                sequence = PyBytes_FromStringAndSize(c_buf + sequence_start, sequence_length)
+                qualities = PyBytes_FromStringAndSize(c_buf + qualities_start, qualities_length)
+                yield new_sequence_bytes(SequenceBytes, name, sequence, qualities)
             else:
-                yield Sequence.__new__(Sequence, name, sequence, qualities)
+                ### Copy record into python variables
+                # PyUnicode_DecodeLatin1 is 50% faster than PyUnicode_DecodeASCII.
+                # This is because PyUnicode_DecodeLatin1 is an alias for
+                # _PyUnicode_FromUCS1. Which directly copies the bytes into a
+                # string object after some checks. With PyUnicode_DecodeASCII,
+                # there is an extra check whether characters exceed 128.
+                name = PyUnicode_DecodeLatin1(c_buf + name_start, name_length, 'strict')
+                sequence = PyUnicode_DecodeLatin1(c_buf + sequence_start, sequence_length, 'strict')
+                qualities = PyUnicode_DecodeLatin1(c_buf + qualities_start, qualities_length, 'strict')
+                if custom_class:
+                    yield sequence_class(name, sequence, qualities)
+                else:
+                    yield Sequence.__new__(Sequence, name, sequence, qualities)
 
             ### Advance record to next position
             n_records += 1
