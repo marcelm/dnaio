@@ -13,6 +13,11 @@ cdef extern from "Python.h":
 
 cdef extern from "_sequence.h":
     object new_sequence_bytes(type SequenceClass, object name, object sequence, object qualities)
+    object create_fastq_record(char * name, char * sequence, char * qualities,
+                               Py_ssize_t name_length,
+                               Py_ssize_t sequence_length,
+                               Py_ssize_t qualities_length,
+                               bint two_headers)
 
 from typing import Union
 
@@ -151,42 +156,6 @@ cdef class Sequence:
         """
         return self.fastq_bytes(two_headers=True)
 
-
-cdef bytes create_fastq_record(char * name, char * sequence, char * qualities,
-                               Py_ssize_t name_length,
-                               Py_ssize_t sequence_length,
-                               Py_ssize_t qualities_length,
-                               bint two_headers = False):
-        # Total size is name + sequence + qualities + 4 newlines + '+' and an
-        # '@' to be put in front of the name.
-        cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
-
-        if two_headers:
-            # We need space for the name after the +.
-            total_size += name_length
-
-        # This is the canonical way to create an uninitialized bytestring of given size
-        cdef bytes retval = PyBytes_FromStringAndSize(NULL, total_size)
-        cdef char * retval_ptr = PyBytes_AS_STRING(retval)
-
-        # Write the sequences into the bytestring at the correct positions.
-        cdef size_t cursor
-        retval_ptr[0] = b"@"
-        memcpy(retval_ptr + 1, name, name_length)
-        cursor = name_length + 1
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        memcpy(retval_ptr + cursor, sequence, sequence_length)
-        cursor += sequence_length
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        retval_ptr[cursor] = b"+"; cursor += 1
-        if two_headers:
-            memcpy(retval_ptr + cursor, name, name_length)
-            cursor += name_length
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        memcpy(retval_ptr + cursor, qualities, qualities_length)
-        cursor += qualities_length
-        retval_ptr[cursor] = b"\n"
-        return retval
 
 # It would be nice to be able to have the first parameter be an
 # unsigned char[:] (memory view), but this fails with a BufferError
