@@ -69,21 +69,29 @@ def _open_single(
         )
 
     if fileformat == "fasta":
-        if 'r' in mode:
-            if 'b' in mode:
-                raise ValueError("'rb' mode only available for fastq files.")
-            return FastaReader(file, _close_file=close_file)
-        return FastaWriter(file, _close_file=close_file)
+        return _open_fasta(file, mode, close_file)
     elif fileformat == "fastq":
-        if 'r' in mode:
-            sequence_class = SequenceBytes if 'b' in mode else Sequence
-            return FastqReader(file, sequence_class=sequence_class,
-                               _close_file=close_file)
-        return FastqWriter(file, _close_file=close_file)
+        return _open_fastq(file, mode, close_file)
 
     raise UnknownFileFormat(
         f"File format '{fileformat}' is unknown (expected 'fasta' or 'fastq')."
     )
+
+
+def _open_fasta(file, mode, close_file):
+    if 'r' in mode:
+        if 'b' in mode:
+            raise ValueError("'rb' mode only available for fastq files.")
+        return FastaReader(file, _close_file=close_file)
+    return FastaWriter(file, _close_file=close_file)
+
+
+def _open_fastq(file, mode, close_file):
+    if 'r' in mode:
+        sequence_class = SequenceBytes if 'b' in mode else Sequence
+        return FastqReader(file, sequence_class=sequence_class,
+                           _close_file=close_file)
+    return FastqWriter(file, _close_file=close_file)
 
 
 def _detect_format_from_name(name: str) -> Optional[str]:
