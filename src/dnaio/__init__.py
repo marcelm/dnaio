@@ -75,7 +75,11 @@ def open(
         objects (as str or as pathlib.Path). Use only file1 if data is single-end.
         If sequences are paired, use also file2.
       mode:
-        Either ``'r'`` for reading, ``'w'`` for writing or ``'a'`` for appending.
+        Either ``'r'`` or ``'rb'`` for reading, ``'w'`` for writing
+        or ``'a'`` for appending.
+
+        With mode ``'r'`` the returned Reader iterates over Sequence objects.
+        With mode ``'rb'`` the returned Reader iterates over SequenceBytes objects.
       interleaved:
         If True, then file1 contains interleaved paired-end data.
         file2 must be None in this case.
