@@ -116,6 +116,7 @@ def _detect_format_from_content(file: BinaryIO) -> Optional[str]:
         first_char = file.read(1)
         file.seek(original_position)
     else:
+        # We cannot always use peek() because BytesIO objects do not suppert it
         first_char = file.peek(1)[0:1]  # type: ignore
     formats = {
         b"@": "fastq",
