@@ -28,15 +28,20 @@ class TwoFilePairedEndReader(PairedEndReader):
         file1: Union[str, PathLike, BinaryIO],
         file2: Union[str, PathLike, BinaryIO],
         *,
+        mode="r",
         fileformat: Optional[str] = None,
         opener=xopen,
     ):
+        if mode not in ("r", "rb"):
+            raise ValueError("Mode must be one of: 'r', 'rb'")
         with ExitStack() as stack:
             self.reader1 = stack.enter_context(
-                _open_single(file1, opener=opener, fileformat=fileformat)
+                _open_single(file1, opener=opener, fileformat=fileformat,
+                             mode=mode)
             )
             self.reader2 = stack.enter_context(
-                _open_single(file2, opener=opener, fileformat=fileformat)
+                _open_single(file2, opener=opener, fileformat=fileformat,
+                             mode=mode)
             )
             self._close = stack.pop_all().close
         self.delivers_qualities = self.reader1.delivers_qualities

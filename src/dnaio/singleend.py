@@ -1,4 +1,3 @@
-import functools
 import os
 from typing import Optional, Union, BinaryIO
 
@@ -6,6 +5,8 @@ from .exceptions import UnknownFileFormat
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from ._util import _is_path
+from ._core import Sequence
+from ._sequence import SequenceBytes
 
 
 def _open_single(
@@ -19,8 +20,8 @@ def _open_single(
     """
     Open a single sequence file. See description of open() above.
     """
-    if mode not in ("r", "w", "a"):
-        raise ValueError("Mode must be 'r', 'w' or 'a'")
+    if mode not in ("r", "rb", "w", "a"):
+        raise ValueError("Mode must be 'r', 'rb', 'w' or 'a'")
 
     path: Optional[str]
     if _is_path(file_or_path):
@@ -28,7 +29,7 @@ def _open_single(
         file = opener(path, mode + "b")
         close_file = True
     else:
-        if mode == "r" and not hasattr(file_or_path, "readinto"):
+        if 'r' in mode and not hasattr(file_or_path, "readinto"):
             raise ValueError(
                 "When passing in an open file-like object, it must have been opened in binary mode"
             )
@@ -38,29 +39,13 @@ def _open_single(
         else:
             path = None
         close_file = False
-    fastq_handler = FastqReader if mode == "r" else FastqWriter
-    fasta_handler = FastaReader if mode == "r" else FastaWriter
-    handlers = {
-        "fastq": functools.partial(fastq_handler, _close_file=close_file),
-        "fasta": functools.partial(fasta_handler, _close_file=close_file),
-    }
-    if fileformat:
-        try:
-            handler = handlers[fileformat.lower()]
-        except KeyError:
-            file.close()
-            raise UnknownFileFormat(
-                f"File format '{fileformat}' is unknown (expected 'fasta' or 'fastq')."
-            )
-        return handler(file)
 
-    if path is not None:
+    if path is not None and fileformat is None:
         fileformat = _detect_format_from_name(path)
     if fileformat is None and mode == "w" and qualities is not None:
         # Format not recognized, but we know whether to use a format with or without qualities
         fileformat = "fastq" if qualities else "fasta"
-
-    if mode == "r" and fileformat is None:
+    if 'r' in mode and fileformat is None:
         fileformat = _detect_format_from_content(file)
         if fileformat is None:
             name = getattr(file, "name", repr(file))
@@ -70,7 +55,6 @@ def _open_single(
                 "is not available or not recognized, and the first character in the file is "
                 "unexpected."
             )
-
     if fileformat is None:
         assert mode == "w"
         extra = " because the output file name is not available" if path is None else ""
@@ -78,14 +62,28 @@ def _open_single(
         raise UnknownFileFormat(
             "Auto-detection of the output file format (FASTA/FASTQ) failed" + extra
         )
-
     if fileformat == "fastq" and mode in "wa" and qualities is False:
         file.close()
         raise ValueError(
             "Output format cannot be FASTQ since no quality values are available."
         )
 
-    return handlers[fileformat](file)
+    if fileformat == "fasta":
+        if 'r' in mode:
+            if 'b' in mode:
+                raise ValueError("'rb' mode only available for fastq files.")
+            return FastaReader(file, _close_file=close_file)
+        return FastaWriter(file, _close_file=close_file)
+    elif fileformat == "fastq":
+        if 'r' in mode:
+            sequence_class = SequenceBytes if 'b' in mode else Sequence
+            return FastqReader(file, sequence_class=sequence_class,
+                               _close_file=close_file)
+        return FastqWriter(file, _close_file=close_file)
+
+    raise UnknownFileFormat(
+        f"File format '{fileformat}' is unknown (expected 'fasta' or 'fastq')."
+    )
 
 
 def _detect_format_from_name(name: str) -> Optional[str]:
