@@ -26,7 +26,7 @@ def _open_single(
     path: Optional[str]
     if _is_path(file_or_path):
         path = os.fspath(file_or_path)  # type: ignore
-        file = opener(path, mode + "b")
+        file = opener(path, mode[0] + "b")
         close_file = True
     else:
         if 'r' in mode and not hasattr(file_or_path, "readinto"):

@@ -100,22 +100,22 @@ def open(
     Return:
        An instance of one of the ...Reader or ...Writer classes
     """
-    if mode not in ("r", "w", "a"):
-        raise ValueError("Mode must be 'r', 'w' or 'a'")
+    if mode not in ("r", "rb", "w", "a"):
+        raise ValueError("Mode must be 'r', 'rb', 'w' or 'a'")
     if interleaved and file2 is not None:
         raise ValueError("When interleaved is set, file2 must be None")
 
     if file2 is not None:
         if mode in "wa" and file1 == file2:
             raise ValueError("The paired-end output files are identical")
-        if mode == "r":
+        if "r" in mode:
             return TwoFilePairedEndReader(file1, file2, fileformat=fileformat, opener=opener)
         append = mode == "a"
         return TwoFilePairedEndWriter(
             file1, file2, fileformat=fileformat, qualities=qualities, opener=opener, append=append
         )
     if interleaved:
-        if mode == "r":
+        if "r" in mode:
             return InterleavedPairedEndReader(file1, fileformat=fileformat, opener=opener)
         append = mode == "a"
         return InterleavedPairedEndWriter(
