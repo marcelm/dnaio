@@ -49,8 +49,8 @@ SequenceBytes__repr__(SequenceBytes * self){
 static inline PyObject * 
 sequence_bytes_to_fastq_record_impl(SequenceBytes *self, int two_headers){
     Py_ssize_t name_length = PyBytes_Size(self->name);
-    Py_ssize_t sequence_length = PyBytes_Size(self->name);
-    Py_ssize_t qualities_length = PyBytes_Size(self->name);
+    Py_ssize_t sequence_length = PyBytes_Size(self->sequence);
+    Py_ssize_t qualities_length = PyBytes_Size(self->qualities);
     if (name_length == -1 || sequence_length == -1 || qualities_length == -1)
             // Not of type bytes.
             return NULL;
