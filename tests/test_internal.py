@@ -545,18 +545,21 @@ class TestPairedSequenceReader:
 
 
 @mark.parametrize('path', [
-    'tests/data/simple.fastq',
-    'tests/data/dos.fastq',
-    'tests/data/simple.fasta',
-    'tests/data/with_comment.fasta',
+    os.path.join('tests', 'data', 'simple.fastq'),
+    os.path.join('tests', 'data', 'dos.fastq'),
+    os.path.join('tests', 'data', 'simple.fasta'),
+    os.path.join('tests', 'data', 'with_comment.fasta'),
 ])
 def test_read_stdin(path):
     # Get number of records in the input file
     with dnaio.open(path) as f:
         expected = len(list(f))
 
-    # Use 'cat' to simulate that no file name is available for stdin of the subprocess
-    with subprocess.Popen(['cat', path], stdout=subprocess.PIPE) as cat:
+    # Use piping from a separate subprocess to force the input file name to be unavailable
+    cmd = "type" if sys.platform == "win32" else "cat"
+    with subprocess.Popen(
+        [cmd, path], stdout=subprocess.PIPE, shell=sys.platform == "win32"
+    ) as cat:
         with subprocess.Popen(
             [sys.executable, 'tests/read_from_stdin.py'], stdin=cat.stdout, stdout=subprocess.PIPE
         ) as py:

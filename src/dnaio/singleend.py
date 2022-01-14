@@ -112,10 +112,11 @@ def _detect_format_from_content(file: BinaryIO) -> Optional[str]:
     Return 'fasta', 'fastq' or None
     """
     if file.seekable():
+        original_position = file.tell()
         first_char = file.read(1)
-        if file.tell() > 0:
-            file.seek(-1, 1)
+        file.seek(original_position)
     else:
+        # We cannot always use peek() because BytesIO objects do not suppert it
         first_char = file.peek(1)[0:1]  # type: ignore
     formats = {
         b"@": "fastq",
