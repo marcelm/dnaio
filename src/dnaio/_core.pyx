@@ -1,7 +1,7 @@
 # cython: language_level=3, emit_code_comments=False
 
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING
-from cpython.unicode cimport PyUnicode_DecodeLatin1
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE
+from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check
 from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
 from cpython.unicode cimport PyUnicode_GET_LENGTH
 cimport cython
@@ -13,6 +13,8 @@ cdef extern from "Python.h":
 
 cdef extern from "_sequence.h":
     object new_sequence_bytes(type SequenceClass, object name, object sequence, object qualities)
+
+from typing import Union
 
 from .exceptions import FastqFormatError
 from ._sequence import SequenceBytes
@@ -405,7 +407,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             buf[0:bufstart] = buf[record_start:bufend]
 
 
-def record_names_match(header1: str, header2: str):
+def record_names_match(header1: Union[str, bytes], header2: Union[str, bytes]):
     """
     Check whether the sequence record ids id1 and id2 are compatible, ignoring a
     suffix of '1', '2' or '3'. This exception allows to check some old
@@ -413,22 +415,34 @@ def record_names_match(header1: str, header2: str):
     fastq-dump tool (used for converting SRA files to FASTQ) appends '.1', '.2'
     and sometimes '.3' to paired-end reads if option -I is used.
     """
-    if (
-        PyUnicode_KIND(header1) != PyUnicode_1BYTE_KIND or
-        PyUnicode_KIND(header2) != PyUnicode_1BYTE_KIND
-    ):
-        # Fall back to slower code path.
-        name1 = header1.split(maxsplit=1)[0]
-        name2 = header2.split(maxsplit=1)[0]
-        if name1 and name2 and name1[-1] in '123' and name2[-1] in '123':
-            return name1[:-1] == name2[:-1]
-        return name1 == name2
-    # Do not call .encode functions but use the unicode pointer inside the
-    # python object directly, provided it is in 1-byte encoding, so we can
-    # find the spaces and tabs easily.
-    cdef char * header1_chars = <char *>PyUnicode_1BYTE_DATA(header1)
-    cdef char * header2_chars = <char *>PyUnicode_1BYTE_DATA(header2)
-    cdef size_t header1_length = <size_t>PyUnicode_GET_LENGTH(header1)
+    cdef:
+        char * header1_chars = NULL
+        char * header2_chars = NULL
+        size_t header1_length
+    if PyUnicode_Check(header1):
+        if PyUnicode_KIND(header1) == PyUnicode_1BYTE_KIND:
+            header1_chars = <char *>PyUnicode_1BYTE_DATA(header1)
+            header1_length = <size_t> PyUnicode_GET_LENGTH(header1)
+        else:
+            header1 = header1.encode('latin1')
+    if PyBytes_Check(header1):
+        header1_chars = PyBytes_AS_STRING(header1)
+        header1_length = PyBytes_GET_SIZE(header1)
+    if header1_chars == NULL:
+        raise TypeError(f"Header 1 is the wrong type. Expected bytes or string, "
+                        f"got: {type(header1)}")
+
+    if PyUnicode_Check(header2):
+        if PyUnicode_KIND(header2) == PyUnicode_1BYTE_KIND:
+            header2_chars = <char *>PyUnicode_1BYTE_DATA(header2)
+        else:
+            header2 = header2.encode('latin1')
+    if PyBytes_Check(header2):
+        header2_chars = PyBytes_AS_STRING(header2)
+    if header2_chars == NULL:
+        raise TypeError(f"Header 2 is the wrong type. Expected bytes or string, "
+                        f"got: {type(header2)}")
+
     return record_ids_match(header1_chars, header2_chars, header1_length)
 
 
