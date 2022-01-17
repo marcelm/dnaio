@@ -56,7 +56,7 @@ static Py_hash_t SequenceBytes__hash__(SequenceBytes *self){
 static PyObject *
 SequenceBytes__richcompare__(PyObject *self, PyObject *other, int op){
     // This function is extremely generic to allow subtyping, reuse etc.
-    if(!Py_IS_TYPE(self, Py_TYPE(other))) {
+    if(Py_TYPE(self) != Py_TYPE(other)) {
         PyErr_Format(PyExc_TypeError, 
             "Can only compare objects of %R to objects of the same type. Got: %R.",
             Py_TYPE(self), Py_TYPE(other));
