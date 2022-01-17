@@ -46,6 +46,13 @@ SequenceBytes__repr__(SequenceBytes * self){
         self->name, self->sequence, self->qualities);
 }
 
+static Py_hash_t SequenceBytes__hash__(SequenceBytes *self){
+    Py_hash_t name_hash = PyObject_Hash(self->name);
+    Py_hash_t sequence_hash = PyObject_Hash(self->sequence);
+    Py_hash_t qualities_hash = PyObject_Hash(self->qualities);
+    return name_hash ^ sequence_hash ^ qualities_hash;
+}
+
 static inline PyObject * 
 sequence_bytes_to_fastq_record_impl(SequenceBytes *self, int two_headers){
     Py_ssize_t name_length = PyBytes_Size(self->name);
@@ -108,6 +115,7 @@ static PyType_Slot SequenceBytes_slots[] = {
     {Py_tp_init, SequenceBytes__init__},
     {Py_tp_new, PyType_GenericNew},
     {Py_tp_repr, SequenceBytes__repr__},
+    {Py_tp_hash, SequenceBytes__hash__},
     {0, 0},
 };
 
