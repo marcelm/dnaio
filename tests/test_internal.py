@@ -63,8 +63,14 @@ class TestSequenceBytes:
             b"@name\nACGT\n+\n====\n"
 
     def test_fastq_bytes_two_headers(self):
-        assert SequenceBytes(b"name", b"ACGT", b"===="
-                             ).fastq_bytes_two_headers() == b"@name\nACGT\n+name\n====\n"
+        seq = SequenceBytes(b"", b"", b"")
+        # Below creates an invalid sequence, but this is done to see if the
+        # underlying function properly takes into account lengths of the
+        # attributes.
+        seq.name = b"name"
+        seq.sequence = b"ACGTA"
+        seq.qualities = b"=="
+        assert seq.fastq_bytes_two_headers() == b"@name\nACGTA\n+name\n==\n"
 
     def test_reference_counts(self):
         # Make sure SequenceBytes is properly implemented so there are no
