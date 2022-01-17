@@ -53,6 +53,27 @@ static Py_hash_t SequenceBytes__hash__(SequenceBytes *self){
     return name_hash ^ sequence_hash ^ qualities_hash;
 }
 
+static PyObject *
+SequenceBytes__richcompare__(PyObject *self, PyObject *other, int op){
+    // This function is extremely generic to allow subtyping, reuse etc.
+    if(!Py_IS_TYPE(self, Py_TYPE(other))) {
+        PyErr_Format(PyExc_TypeError, 
+            "Can only compare objects of %R to objects of the same type. Got: %R.",
+            Py_TYPE(self), Py_TYPE(other));
+        return NULL;
+    }
+    if (op == 2){
+        return PyBool_FromLong(PyObject_Hash(self) == PyObject_Hash(other));
+    }
+    else if (op == 3){
+        return PyBool_FromLong(PyObject_Hash(self) != PyObject_Hash(other));
+    }
+    else {
+        PyErr_Format(PyExc_NotImplementedError, "Only equals and not equals are implemented for %R.", Py_TYPE(self));
+        return NULL;
+    }
+}
+
 static inline PyObject * 
 sequence_bytes_to_fastq_record_impl(SequenceBytes *self, int two_headers){
     Py_ssize_t name_length = PyBytes_Size(self->name);
@@ -116,6 +137,7 @@ static PyType_Slot SequenceBytes_slots[] = {
     {Py_tp_new, PyType_GenericNew},
     {Py_tp_repr, SequenceBytes__repr__},
     {Py_tp_hash, SequenceBytes__hash__},
+    {Py_tp_richcompare, SequenceBytes__richcompare__},
     {0, 0},
 };
 
