@@ -3,9 +3,11 @@ import shutil
 import subprocess
 import sys
 from io import BytesIO
+from pathlib import Path
 from tempfile import mkdtemp
 from textwrap import dedent
 
+import pytest
 from pytest import raises, mark
 
 import dnaio
@@ -19,11 +21,18 @@ from dnaio import record_names_match, Sequence, SequenceBytes
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
+TEST_DATA = Path(__file__).parent / "data"
+SIMPLE_FASTQ = str(TEST_DATA / "simple.fastq")
 # files tests/data/simple.fast{q,a}
 simple_fastq = [
     Sequence("first_sequence", "SEQUENCE1", ":6;;8<=:<"),
     Sequence("second_sequence", "SEQUENCE2", "83<??:(61")
 ]
+
+simple_fastq_bytes = [
+    SequenceBytes(s.name.encode('ascii'),
+                  s.sequence.encode('ascii'),
+                  s.qualities.encode('ascii')) for s in simple_fastq]
 
 simple_fasta = [Sequence(x.name, x.sequence, None) for x in simple_fastq]
 
@@ -140,10 +149,13 @@ class TestFastaReader:
 
 
 class TestFastqReader:
-    def test_fastqreader(self):
-        with FastqReader("tests/data/simple.fastq") as f:
+    @pytest.mark.parametrize(["sequence_class", "result"],
+                             [(Sequence, simple_fastq),
+                              (SequenceBytes, simple_fastq_bytes)])
+    def test_fastqreader(self, sequence_class, result):
+        with FastqReader(SIMPLE_FASTQ, sequence_class=sequence_class) as f:
             reads = list(f)
-        assert reads == simple_fastq
+        assert reads == result
 
     @mark.parametrize("buffer_size", [1, 2, 3, 5, 7, 10, 20])
     def test_fastqreader_buffersize(self, buffer_size):
