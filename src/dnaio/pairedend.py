@@ -103,10 +103,11 @@ class InterleavedPairedEndReader(PairedEndReader):
         self,
         file: Union[str, PathLike, BinaryIO],
         *,
+        mode="r",
         fileformat: Optional[str] = None,
         opener=xopen,
     ):
-        reader = _open_single(file, opener=opener, fileformat=fileformat)
+        reader = _open_single(file, opener=opener, mode=mode, fileformat=fileformat)
         assert isinstance(reader, (FastaReader, FastqReader))  # for Mypy
         self.reader = reader
         self.delivers_qualities = self.reader.delivers_qualities

@@ -113,14 +113,14 @@ def open(
         if mode in "wa" and file1 == file2:
             raise ValueError("The paired-end output files are identical")
         if "r" in mode:
-            return TwoFilePairedEndReader(file1, file2, fileformat=fileformat, opener=opener)
+            return TwoFilePairedEndReader(file1, file2, fileformat=fileformat, opener=opener, mode=mode)
         append = mode == "a"
         return TwoFilePairedEndWriter(
             file1, file2, fileformat=fileformat, qualities=qualities, opener=opener, append=append
         )
     if interleaved:
         if "r" in mode:
-            return InterleavedPairedEndReader(file1, fileformat=fileformat, opener=opener)
+            return InterleavedPairedEndReader(file1, fileformat=fileformat, opener=opener, mode=mode)
         append = mode == "a"
         return InterleavedPairedEndWriter(
             file1, fileformat=fileformat, qualities=qualities, opener=opener, append=append)
