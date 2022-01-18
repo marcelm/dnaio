@@ -92,6 +92,19 @@ def test_read_opener(fileformat, extension):
     assert records[0].sequence == "ACG"
 
 
+def test_read_opener_binary():
+    def my_opener(path, mode):
+        import io
+        data = b"@read\nACG\n+\nHHH\n"
+        return io.BytesIO(data)
+
+    with dnaio.open("totally-ignored-filename.fastq", opener=my_opener, mode="rb") as f:
+        records = list(f)
+    assert len(records) == 1
+    assert records[0].name == b"read"
+    assert records[0].sequence == b"ACG"
+
+
 @pytest.mark.parametrize("interleaved", [False, True])
 def test_paired_opener(fileformat, extension, interleaved):
     def my_opener(_path, _mode):
@@ -117,6 +130,30 @@ def test_paired_opener(fileformat, extension, interleaved):
     assert records[0][0].sequence == "ACG"
     assert records[0][1].name == "read"
     assert records[0][1].sequence == "ACG"
+
+
+@pytest.mark.parametrize("interleaved", [False, True])
+def test_paired_opener_binary(interleaved):
+    def my_opener(_path, _mode):
+        import io
+        data = b"@read\nACG\n+\nHHH\n"
+        return io.BytesIO(data + data)
+
+    path1 = "ignored-filename.fastq"
+    path2 = "also-ignored-filename.fastq"
+    if interleaved:
+        with dnaio.open(path1, file2=path2, opener=my_opener, mode="rb") as f:
+            records = list(f)
+        expected = 2
+    else:
+        with dnaio.open(path1, interleaved=True, opener=my_opener, mode="rb") as f:
+            records = list(f)
+        expected = 1
+    assert len(records) == expected
+    assert records[0][0].name == b"read"
+    assert records[0][0].sequence == b"ACG"
+    assert records[0][1].name == b"read"
+    assert records[0][1].sequence == b"ACG"
 
 
 def test_detect_fastq_from_content():
