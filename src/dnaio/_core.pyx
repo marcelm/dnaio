@@ -1,5 +1,6 @@
 # cython: language_level=3, emit_code_comments=False
 
+from cpython.ref cimport PyObject
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE
 from cpython.unicode cimport PyUnicode_DecodeLatin1
 from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
@@ -388,10 +389,12 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             # Constructing objects with PyUnicode_New and memcpy bypasses some of
             # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
             name = PyUnicode_New(name_length, 255)
-            memcpy(PyUnicode_1BYTE_DATA(name), c_buf + name_start, name_length)
             sequence = PyUnicode_New(sequence_length, 255)
-            memcpy(PyUnicode_1BYTE_DATA(sequence), c_buf + sequence_start, sequence_length)
             qualities = PyUnicode_New(qualities_length, 255)
+            if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
+                raise MemoryError()
+            memcpy(PyUnicode_1BYTE_DATA(name), c_buf + name_start, name_length)
+            memcpy(PyUnicode_1BYTE_DATA(sequence), c_buf + sequence_start, sequence_length)
             memcpy(PyUnicode_1BYTE_DATA(qualities), c_buf + qualities_start, qualities_length)
 
             if n_records == 0:
