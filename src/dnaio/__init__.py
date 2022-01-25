@@ -33,8 +33,7 @@ from typing import Optional, Union, BinaryIO
 
 from xopen import xopen
 
-from ._core import Sequence, record_names_match
-from ._sequence import SequenceBytes
+from ._core import Sequence, SequenceBytes, record_names_match
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .singleend import _open_single

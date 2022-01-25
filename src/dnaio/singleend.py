@@ -5,8 +5,7 @@ from .exceptions import UnknownFileFormat
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from ._util import _is_path
-from ._core import Sequence
-from ._sequence import SequenceBytes
+from ._core import Sequence, SequenceBytes
 
 
 def _open_single(
