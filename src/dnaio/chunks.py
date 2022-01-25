@@ -16,7 +16,7 @@ def _fasta_head(buf: bytes, end: Optional[int] = None) -> int:
     pos = buf.rfind(b'\n>', 0, end)
     if pos != -1:
         return pos + 1
-    if buf[0:1] == b'>':
+    if buf[0:1] == b'>' or buf[0:1] == b'#':
         return 0
     if len(buf) == 0:
         return 0

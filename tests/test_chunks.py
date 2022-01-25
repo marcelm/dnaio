@@ -2,7 +2,33 @@ from pytest import raises
 from io import BytesIO
 
 from dnaio._core import paired_fastq_heads
-from dnaio.chunks import _fastq_head, read_chunks, read_paired_chunks
+from dnaio.chunks import _fastq_head, _fasta_head, read_chunks, read_paired_chunks
+
+
+def test_fasta_head():
+    assert _fasta_head(b'') == 0
+    assert _fasta_head(b'>1\n') == 0
+    assert _fasta_head(b'>1\n3') == 0
+    assert _fasta_head(b'>1\n3\n') == 0
+    assert _fasta_head(b'>1\n3\n>') == 5
+    assert _fasta_head(b'>1\n3\n>6') == 5
+    assert _fasta_head(b'>1\n3\n>6\n') == 5
+    assert _fasta_head(b'>1\n3\n>6\n8') == 5
+    assert _fasta_head(b'>1\n3\n>6\n8\n') == 5
+    assert _fasta_head(b'>1\n3\n>6\n8\n0') == 5
+    assert _fasta_head(b'>1\n3\n>6\n8\n0\n') == 5
+    assert _fasta_head(b'>1\n3\n>6\n8\n0\n>') == 12
+
+
+def test_fasta_head_with_comment():
+    assert _fasta_head(b'#') == 0
+    assert _fasta_head(b'#\n') == 0
+    assert _fasta_head(b'#\n>') == 2
+    assert _fasta_head(b'#\n>3') == 2
+    assert _fasta_head(b'#\n>3\n') == 2
+    assert _fasta_head(b'#\n>3\n5') == 2
+    assert _fasta_head(b'#\n>3\n5\n') == 2
+    assert _fasta_head(b'#\n>3\n5\n>') == 7
 
 
 def test_paired_fastq_heads():
