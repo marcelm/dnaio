@@ -58,15 +58,19 @@ def read_chunks(f: RawIOBase, buffer_size: int = 4 * 1024**2) -> Iterator[memory
     # Read one byte to determine file format.
     # If there is a comment char, we assume FASTA!
     start = f.readinto(memoryview(buf)[0:1])
-    if start == 1 and buf[0:1] == b'@':
-        head = _fastq_head
-    elif start == 1 and (buf[0:1] == b'#' or buf[0:1] == b'>'):
-        head = _fasta_head
-    elif start == 0:
+    if start == 0:
         # Empty file
         return
+    assert start == 1
+    if buf[0:1] == b'@':
+        head = _fastq_head
+    elif buf[0:1] == b'#' or buf[0:1] == b'>':
+        head = _fasta_head
     else:
-        raise UnknownFileFormat('Input file format unknown')
+        raise UnknownFileFormat(
+            f"Cannnot determine input file format: First character expected to be '>' or '@', "
+            f"but found {repr(chr(buf[0]))}"
+        )
 
     # Layout of buf
     #
