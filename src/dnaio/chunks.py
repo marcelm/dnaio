@@ -18,7 +18,11 @@ def _fasta_head(buf: bytes, end: Optional[int] = None) -> int:
         return pos + 1
     if buf[0:1] == b'>':
         return 0
-    raise FastaFormatError('File does not start with ">"', line=None)
+    c = chr(buf[0])
+    raise FastaFormatError(
+        f"FASTA file expected to start with '>', but found {repr(c)}",
+        line=None,
+    )
 
 
 def _fastq_head(buf: bytes, end: Optional[int] = None) -> int:
