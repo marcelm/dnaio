@@ -2,7 +2,6 @@
 
 from cpython.ref cimport PyObject
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE
-from cpython.unicode cimport PyUnicode_DecodeLatin1
 from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
 from cpython.unicode cimport PyUnicode_GET_LENGTH
 cimport cython
