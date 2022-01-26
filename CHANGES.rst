@@ -2,6 +2,11 @@
 Changelog
 =========
 
+v0.7.1 (2022-01-26)
+-------------------
+
+* PR #34: Fix parsing of FASTA files that just contain a comment and no reads
+
 v0.7.0 (2022-01-17)
 -------------------
 
