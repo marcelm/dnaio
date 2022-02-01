@@ -35,11 +35,11 @@ cdef class Sequence:
       qualities (str):
     """
     cdef:
-        public object name
-        public object sequence
-        public object qualities
+        public str name
+        public str sequence
+        public str qualities
 
-    def __cinit__(self, object name, object sequence, object qualities=None):
+    def __cinit__(self, str name, str sequence, str qualities=None):
         """Set qualities to None if there are no quality values"""
         self.name = name
         self.sequence = sequence
@@ -150,14 +150,48 @@ cdef class Sequence:
         return self.fastq_bytes(two_headers=True)
 
 
-cdef class BytesSequence(Sequence):
-    def __init__(self, bytes name, bytes sequence, bytes qualities = None):
+cdef class BytesSequence:
+    cdef:
+        public bytes name
+        public bytes sequence
+        public bytes qualities
+
+    def __cinit__(self, bytes name, bytes sequence, bytes qualities):
+        """Set qualities to None if there are no quality values"""
+        self.name = name
+        self.sequence = sequence
+        self.qualities = qualities
+
+    def __init__(self, bytes name, bytes sequence, bytes qualities):
         # __cinit__ is called first and sets all the variables.
-        if qualities is not None and len(qualities) != len(sequence):
+        if len(qualities) != len(sequence):
             rname = shorten(name)
             raise ValueError("In read named {!r}: length of quality sequence "
                              "({}) and length of read ({}) do not match".format(
                 rname, len(qualities), len(sequence)))
+    
+    def __repr__(self):
+        return '<BytesSequence(name={!r}, sequence={!r}, qualities={!r})>'.format(
+            shorten(self.name), shorten(self.sequence), shorten(self.qualities))
+
+    def __len__(self):
+        """
+        Returns:
+           The number of characters in this sequence
+        """
+        return len(self.sequence)
+
+    def __richcmp__(self, other, int op):
+        if 2 <= op <= 3:
+            eq = self.name == other.name and \
+                self.sequence == other.sequence and \
+                self.qualities == other.qualities
+            if op == 2:
+                return eq
+            else:
+                return not eq
+        else:
+            raise NotImplementedError()
 
     def fastq_bytes(self, two_headers=False):
         name = PyBytes_AS_STRING(self.name)
@@ -169,6 +203,13 @@ cdef class BytesSequence(Sequence):
         return create_fastq_record(name, sequence, qualities,
                                    name_length, sequence_length, qualities_length,
                                    two_headers)
+
+    def fastq_bytes_two_headers(self):
+        """
+        Return this record in FASTQ format as a bytes object where the header (after the @) is
+        repeated on the third line.
+        """
+        return self.fastq_bytes(two_headers=True)
 
 
 cdef bytes create_fastq_record(char * name, char * sequence, char * qualities,
