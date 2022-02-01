@@ -1,7 +1,7 @@
 import itertools
 from contextlib import ExitStack
 from os import PathLike
-from typing import Union, BinaryIO, Optional, Iterator, Tuple
+from typing import Union, BinaryIO, Optional, Iterator, Tuple, Callable, Any
 
 from xopen import xopen
 
@@ -65,7 +65,7 @@ class TwoFilePairedEndReader(PairedEndReader):
         if "b" in self.mode:
             name_matcher = record_names_match_bytes
         else:
-            name_matcher = record_names_match
+            name_matcher = record_names_match  # type: ignore
         for r1, r2 in itertools.zip_longest(self.reader1, self.reader2):
             if r1 is None:
                 raise FileFormatError(
@@ -125,7 +125,7 @@ class InterleavedPairedEndReader(PairedEndReader):
         if "b" in self.mode:
             name_matcher = record_names_match_bytes
         else:
-            name_matcher = record_names_match
+            name_matcher = record_names_match  # type: ignore
         it = iter(self.reader)
         for r1 in it:
             try:
@@ -136,7 +136,7 @@ class InterleavedPairedEndReader(PairedEndReader):
                     f"'{r1.name}' has no partner.",
                     line=None,
                 ) from None
-            if not name_matcher(r1.name, r2.name):
+            if not name_matcher(r1.name, r2.name):  # type: ignore
                 raise FileFormatError(
                     f"Reads are improperly paired. Name '{r1.name}' "
                     f"(first) does not match '{r2.name}' (second).",
