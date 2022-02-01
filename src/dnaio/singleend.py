@@ -28,7 +28,7 @@ def _open_single(
         file = opener(path, mode[0] + "b")
         close_file = True
     else:
-        if 'r' in mode and not hasattr(file_or_path, "readinto"):
+        if "r" in mode and not hasattr(file_or_path, "readinto"):
             raise ValueError(
                 "When passing in an open file-like object, it must have been opened in binary mode"
             )
@@ -44,7 +44,7 @@ def _open_single(
     if fileformat is None and mode == "w" and qualities is not None:
         # Format not recognized, but we know whether to use a format with or without qualities
         fileformat = "fastq" if qualities else "fasta"
-    if 'r' in mode and fileformat is None:
+    if "r" in mode and fileformat is None:
         fileformat = _detect_format_from_content(file)
         if fileformat is None:
             name = getattr(file, "name", repr(file))
@@ -78,16 +78,16 @@ def _open_single(
 
 
 def _open_fasta(file, mode, close_file):
-    if 'r' in mode:
-        if 'b' in mode:
+    if "r" in mode:
+        if "b" in mode:
             raise ValueError("'rb' mode only available for fastq files.")
         return FastaReader(file, _close_file=close_file)
     return FastaWriter(file, _close_file=close_file)
 
 
 def _open_fastq(file, mode, close_file):
-    if 'r' in mode:
-        sequence_class = BytesSequence if 'b' in mode else Sequence
+    if "r" in mode:
+        sequence_class = BytesSequence if "b" in mode else Sequence
         return FastqReader(file, sequence_class=sequence_class,
                            _close_file=close_file)
     return FastqWriter(file, _close_file=close_file)
