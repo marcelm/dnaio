@@ -2,6 +2,7 @@
 
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE
 from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check
+from cpython.ref cimport PyObject
 from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
 from cpython.unicode cimport PyUnicode_GET_LENGTH
 cimport cython
@@ -10,6 +11,7 @@ cdef extern from "Python.h":
     unsigned char * PyUnicode_1BYTE_DATA(object o)
     int PyUnicode_KIND(object o)
     int PyUnicode_1BYTE_KIND
+    object PyUnicode_New(Py_ssize_t size, Py_UCS4 maxchar)
 
 from typing import Union
 
@@ -419,15 +421,17 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 qualities = PyBytes_FromStringAndSize(c_buf + qualities_start, qualities_length)
                 yield SequenceBytes.__new__(SequenceBytes, name, sequence, qualities)
             else:
-                ### Copy record into python variables
-                # PyUnicode_DecodeLatin1 is 50% faster than PyUnicode_DecodeASCII.
-                # This is because PyUnicode_DecodeLatin1 is an alias for
-                # _PyUnicode_FromUCS1. Which directly copies the bytes into a
-                # string object after some checks. With PyUnicode_DecodeASCII,
-                # there is an extra check whether characters exceed 128.
-                name = PyUnicode_DecodeLatin1(c_buf + name_start, name_length, 'strict')
-                sequence = PyUnicode_DecodeLatin1(c_buf + sequence_start, sequence_length, 'strict')
-                qualities = PyUnicode_DecodeLatin1(c_buf + qualities_start, qualities_length, 'strict')
+                # Constructing objects with PyUnicode_New and memcpy bypasses some of
+                # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
+                name = PyUnicode_New(name_length, 255)
+                sequence = PyUnicode_New(sequence_length, 255)
+                qualities = PyUnicode_New(qualities_length, 255)
+                if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
+                    raise MemoryError()
+                memcpy(PyUnicode_1BYTE_DATA(name), c_buf + name_start, name_length)
+                memcpy(PyUnicode_1BYTE_DATA(sequence), c_buf + sequence_start, sequence_length)
+                memcpy(PyUnicode_1BYTE_DATA(qualities), c_buf + qualities_start, qualities_length)
+                
                 if custom_class:
                     yield sequence_class(name, sequence, qualities)
                 else:

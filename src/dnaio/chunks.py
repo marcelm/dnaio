@@ -16,9 +16,15 @@ def _fasta_head(buf: bytes, end: Optional[int] = None) -> int:
     pos = buf.rfind(b'\n>', 0, end)
     if pos != -1:
         return pos + 1
-    if buf[0:1] == b'>':
+    if buf[0:1] == b'>' or buf[0:1] == b'#':
         return 0
-    raise FastaFormatError('File does not start with ">"', line=None)
+    if len(buf) == 0:
+        return 0
+    c = chr(buf[0])
+    raise FastaFormatError(
+        f"FASTA file expected to start with '>', but found {repr(c)}",
+        line=None,
+    )
 
 
 def _fastq_head(buf: bytes, end: Optional[int] = None) -> int:
@@ -52,15 +58,19 @@ def read_chunks(f: RawIOBase, buffer_size: int = 4 * 1024**2) -> Iterator[memory
     # Read one byte to determine file format.
     # If there is a comment char, we assume FASTA!
     start = f.readinto(memoryview(buf)[0:1])
-    if start == 1 and buf[0:1] == b'@':
-        head = _fastq_head
-    elif start == 1 and (buf[0:1] == b'#' or buf[0:1] == b'>'):
-        head = _fasta_head
-    elif start == 0:
+    if start == 0:
         # Empty file
         return
+    assert start == 1
+    if buf[0:1] == b'@':
+        head = _fastq_head
+    elif buf[0:1] == b'#' or buf[0:1] == b'>':
+        head = _fasta_head
     else:
-        raise UnknownFileFormat('Input file format unknown')
+        raise UnknownFileFormat(
+            f"Cannnot determine input file format: First character expected to be '>' or '@', "
+            f"but found {repr(chr(buf[0]))}"
+        )
 
     # Layout of buf
     #
