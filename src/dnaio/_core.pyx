@@ -498,7 +498,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             buf[0:bufstart] = buf[record_start:bufend]
 
 
-def record_names_match(header1: Union[str, bytes], header2: Union[str, bytes]):
+def record_names_match(header1: str, header2: str):
     """
     Check whether the sequence record ids id1 and id2 are compatible, ignoring a
     suffix of '1', '2' or '3'. This exception allows to check some old
@@ -516,10 +516,9 @@ def record_names_match(header1: Union[str, bytes], header2: Union[str, bytes]):
             header1_length = <size_t> PyUnicode_GET_LENGTH(header1)
         else:
             header1 = header1.encode('latin1')
-    if PyBytes_Check(header1):
-        header1_chars = PyBytes_AS_STRING(header1)
-        header1_length = PyBytes_GET_SIZE(header1)
-    if header1_chars == NULL:
+            header1_chars = PyBytes_AS_STRING(header1)
+            header1_length = PyBytes_GET_SIZE(header1)
+    else:
         raise TypeError(f"Header 1 is the wrong type. Expected bytes or string, "
                         f"got: {type(header1)}")
 
@@ -528,14 +527,21 @@ def record_names_match(header1: Union[str, bytes], header2: Union[str, bytes]):
             header2_chars = <char *>PyUnicode_1BYTE_DATA(header2)
         else:
             header2 = header2.encode('latin1')
-    if PyBytes_Check(header2):
-        header2_chars = PyBytes_AS_STRING(header2)
-    if header2_chars == NULL:
+            header2_chars = PyBytes_AS_STRING(header2)
+    else:
         raise TypeError(f"Header 2 is the wrong type. Expected bytes or string, "
                         f"got: {type(header2)}")
 
     return record_ids_match(header1_chars, header2_chars, header1_length)
 
+
+def record_names_match_bytes(header1: bytes, header2: bytes):
+    if not (PyBytes_Check(header1) and PyBytes_Check(header2)):
+        raise TypeError("Header1 and header2 should both be bytes objects. "
+                        "Got {} and {}".format(type(header1), type(header2)))
+    return record_ids_match(PyBytes_AS_STRING(header1),
+                            PyBytes_AS_STRING(header2),
+                            PyBytes_GET_SIZE(header1))
 
 cdef bint record_ids_match(char *header1, char *header2, size_t header1_length):
     """
