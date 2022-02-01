@@ -17,7 +17,7 @@ from dnaio import (
     FastaWriter, FastqWriter, InterleavedPairedEndWriter,
     TwoFilePairedEndReader,
 )
-from dnaio import record_names_match, Sequence, SequenceBytes
+from dnaio import record_names_match, Sequence, BytesSequence
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
@@ -30,7 +30,7 @@ simple_fastq = [
 ]
 
 simple_fastq_bytes = [
-    SequenceBytes(s.name.encode('ascii'),
+    BytesSequence(s.name.encode('ascii'),
                   s.sequence.encode('ascii'),
                   s.qualities.encode('ascii')) for s in simple_fastq]
 
@@ -56,14 +56,14 @@ class TestSequence:
 class TestSequenceBytes:
     def test_too_many_qualities(self):
         with raises(ValueError):
-            SequenceBytes(name=b"name", sequence=b"ACGT", qualities=b"#####")
+            BytesSequence(name=b"name", sequence=b"ACGT", qualities=b"#####")
 
     def test_fastq_bytes(self):
-        assert SequenceBytes(b"name", b"ACGT", b"====").fastq_bytes() == \
+        assert BytesSequence(b"name", b"ACGT", b"====").fastq_bytes() == \
             b"@name\nACGT\n+\n====\n"
 
     def test_fastq_bytes_two_headers(self):
-        seq = SequenceBytes(b"", b"", b"")
+        seq = BytesSequence(b"", b"", b"")
         # Below creates an invalid sequence, but this is done to see if the
         # underlying function properly takes into account lengths of the
         # attributes.
@@ -81,7 +81,7 @@ class TestSequenceBytes:
         name_ref = sys.getrefcount(name)
         seq_ref = sys.getrefcount(sequence)
         qual_ref = sys.getrefcount(qualities)
-        seqbytes = SequenceBytes(name, sequence, qualities)
+        seqbytes = BytesSequence(name, sequence, qualities)
         assert sys.getrefcount(name) == name_ref + 1
         assert sys.getrefcount(sequence) == seq_ref + 1
         assert sys.getrefcount(qualities) == qual_ref + 1
@@ -157,7 +157,7 @@ class TestFastaReader:
 class TestFastqReader:
     @pytest.mark.parametrize(["sequence_class", "result"],
                              [(Sequence, simple_fastq),
-                              (SequenceBytes, simple_fastq_bytes)])
+                              (BytesSequence, simple_fastq_bytes)])
     def test_fastqreader(self, sequence_class, result):
         with FastqReader(SIMPLE_FASTQ, sequence_class=sequence_class) as f:
             reads = list(f)

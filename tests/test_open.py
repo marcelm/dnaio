@@ -176,7 +176,7 @@ def test_detect_compressed_fastq_from_content():
 
 
 @pytest.mark.parametrize("s", [dnaio.Sequence('name', 'ACGT', 'HHHH'),
-                               dnaio.SequenceBytes(b'name', b'ACGT', b'HHHH')])
+                               dnaio.BytesSequence(b'name', b'ACGT', b'HHHH')])
 def test_write(s, tmpdir, extension):
     out_fastq = tmpdir.join("out.fastq" + extension)
     with dnaio.open(str(out_fastq), mode='w') as f:
@@ -243,12 +243,12 @@ def test_write_paired(tmpdir, fileformat, extension):
 
 def test_write_paired_binary(tmpdir, extension):
     r1 = [
-        dnaio.SequenceBytes(b"s1", b"ACGT", b"HHHH"),
-        dnaio.SequenceBytes(b"s2", b"CGCA", b"8383"),
+        dnaio.BytesSequence(b"s1", b"ACGT", b"HHHH"),
+        dnaio.BytesSequence(b"s2", b"CGCA", b"8383"),
     ]
     r2 = [
-        dnaio.SequenceBytes(b"t1", b"TCGT", b"5HHH"),
-        dnaio.SequenceBytes(b"t2", b"TGCA", b"5383"),
+        dnaio.BytesSequence(b"t1", b"TCGT", b"5HHH"),
+        dnaio.BytesSequence(b"t2", b"TGCA", b"5383"),
     ]
     path1 = str(tmpdir / ("out.1.fastq" + extension))
     path2 = str(tmpdir / ("out.2.fastq" + extension))

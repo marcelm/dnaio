@@ -5,7 +5,7 @@ from .exceptions import UnknownFileFormat
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from ._util import _is_path
-from ._core import Sequence, SequenceBytes
+from ._core import Sequence, BytesSequence
 
 
 def _open_single(
@@ -87,7 +87,7 @@ def _open_fasta(file, mode, close_file):
 
 def _open_fastq(file, mode, close_file):
     if 'r' in mode:
-        sequence_class = SequenceBytes if 'b' in mode else Sequence
+        sequence_class = BytesSequence if 'b' in mode else Sequence
         return FastqReader(file, sequence_class=sequence_class,
                            _close_file=close_file)
     return FastqWriter(file, _close_file=close_file)

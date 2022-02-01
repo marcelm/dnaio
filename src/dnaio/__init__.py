@@ -5,7 +5,7 @@ Sequence I/O: Read and write FASTA and FASTQ files efficiently
 __all__ = [
     'open',
     'Sequence',
-    'SequenceBytes',
+    'BytesSequence',
     'SingleEndReader',
     'PairedEndReader',
     'SingleEndWriter',
@@ -33,7 +33,7 @@ from typing import Optional, Union, BinaryIO
 
 from xopen import xopen
 
-from ._core import Sequence, SequenceBytes, record_names_match
+from ._core import Sequence, BytesSequence, record_names_match
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .singleend import _open_single

@@ -150,7 +150,7 @@ cdef class Sequence:
         return self.fastq_bytes(two_headers=True)
 
 
-cdef class SequenceBytes(Sequence):
+cdef class BytesSequence(Sequence):
     def __init__(self, bytes name, bytes sequence, bytes qualities = None):
         # __cinit__ is called first and sets all the variables.
         if qualities is not None and len(qualities) != len(sequence):
@@ -285,9 +285,9 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         char *sequence_end_ptr
         char *second_header_end_ptr
         char *qualities_end_ptr
-        bint save_as_bytes = sequence_class is SequenceBytes
+        bint save_as_bytes = sequence_class is BytesSequence
         bint custom_class = (sequence_class is not Sequence and
-                             sequence_class is not SequenceBytes)
+                             sequence_class is not BytesSequence)
         Py_ssize_t n_records = 0
         bint extra_newline = False
 
@@ -419,7 +419,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 name = PyBytes_FromStringAndSize(c_buf + name_start, name_length)
                 sequence = PyBytes_FromStringAndSize(c_buf + sequence_start, sequence_length)
                 qualities = PyBytes_FromStringAndSize(c_buf + qualities_start, qualities_length)
-                yield SequenceBytes.__new__(SequenceBytes, name, sequence, qualities)
+                yield BytesSequence.__new__(BytesSequence, name, sequence, qualities)
             else:
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
