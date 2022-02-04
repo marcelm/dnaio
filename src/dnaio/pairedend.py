@@ -1,7 +1,7 @@
 import itertools
 from contextlib import ExitStack
 from os import PathLike
-from typing import Union, BinaryIO, Optional, Iterator, Tuple, Callable, Any
+from typing import Union, BinaryIO, Optional, Iterator, Tuple
 
 from xopen import xopen
 

@@ -85,7 +85,7 @@ class TestBytesSequence:
         assert sys.getrefcount(name) == name_ref + 1
         assert sys.getrefcount(sequence) == seq_ref + 1
         assert sys.getrefcount(qualities) == qual_ref + 1
-        del(seqbytes)
+        del seqbytes
         assert sys.getrefcount(name) == name_ref
         assert sys.getrefcount(sequence) == seq_ref
         assert sys.getrefcount(qualities) == qual_ref
