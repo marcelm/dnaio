@@ -1,4 +1,4 @@
-class SequenceBytes:
+class SequenceRecord:
     name: bytes
     sequence: bytes
     qualities: bytes
@@ -6,3 +6,5 @@ class SequenceBytes:
     def __repr__(self) -> str: ...
     def fastq_bytes(self) -> bytes: ...
     def fastq_bytes_two_headers(self) -> bytes: ...
+
+

@@ -6,11 +6,11 @@ typedef struct {
     PyObject * name;
     PyObject * sequence;
     PyObject * qualities;
-} SequenceBytes;
+} SequenceRecord;
 
 static PyObject *
-new_sequence_bytes(PyTypeObject *SequenceClass, PyObject *name, PyObject *sequence, PyObject *qualities){
-    SequenceBytes *new_obj = PyObject_New(SequenceBytes, SequenceClass);
+new_sequence_record(PyTypeObject *SequenceClass, PyObject *name, PyObject *sequence, PyObject *qualities){
+    SequenceRecord *new_obj = PyObject_New(SequenceRecord, SequenceClass);
     if (new_obj == NULL)
         return PyErr_NoMemory();
     Py_INCREF(name);
@@ -21,10 +21,6 @@ new_sequence_bytes(PyTypeObject *SequenceClass, PyObject *name, PyObject *sequen
     new_obj->qualities = qualities;
     return (PyObject *)new_obj;
 }
-
-#define LINEFEED 10  // \n
-#define AT_SYMBOL 64  // @
-#define PLUS_SYMBOL 43 // +
 
 static inline PyObject *
 create_fastq_record(char * name, char * sequence, char * qualities,
@@ -49,21 +45,21 @@ create_fastq_record(char * name, char * sequence, char * qualities,
 
     // Write the sequences into the bytestring at the correct positions.
     size_t cursor;
-    retval_ptr[0] = AT_SYMBOL;
+    retval_ptr[0] = '@';
     memcpy(retval_ptr + 1, name, name_length);
     cursor = name_length + 1;
-    retval_ptr[cursor] = LINEFEED; cursor += 1;
+    retval_ptr[cursor] = '\n'; cursor += 1;
     memcpy(retval_ptr + cursor, sequence, sequence_length);
     cursor += sequence_length;
-    retval_ptr[cursor] = LINEFEED; cursor += 1;
-    retval_ptr[cursor] = PLUS_SYMBOL; cursor += 1;
+    retval_ptr[cursor] = '\n'; cursor += 1;
+    retval_ptr[cursor] = '+'; cursor += 1;
     if (two_headers){
         memcpy(retval_ptr + cursor, name, name_length);
         cursor += name_length;
     }
-    retval_ptr[cursor] = LINEFEED; cursor += 1;
+    retval_ptr[cursor] = '\n'; cursor += 1;
     memcpy(retval_ptr + cursor, qualities, qualities_length);
     cursor += qualities_length;
-    retval_ptr[cursor] = LINEFEED;
+    retval_ptr[cursor] = '\n';
     return retval;
 }
