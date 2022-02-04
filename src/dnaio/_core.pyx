@@ -1,10 +1,9 @@
 # cython: language_level=3, emit_code_comments=False
 
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE
-from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check
+from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check, PyUnicode_GET_LENGTH
 from cpython.ref cimport PyObject
 from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
-from cpython.unicode cimport PyUnicode_GET_LENGTH
 cimport cython
 
 cdef extern from "Python.h":
