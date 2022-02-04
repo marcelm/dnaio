@@ -29,7 +29,8 @@ PyDoc_STRVAR(SequenceRecord__init____doc__,
 );
 
 static int
-SequenceRecord__init__(SequenceRecord *self, PyObject *args, PyObject *kwargs) {
+SequenceRecord__init__(SequenceRecord *self, PyObject *args, PyObject *kwargs) 
+{
     PyObject *name = NULL;
     PyObject *sequence = NULL;
     PyObject *qualities = NULL;
@@ -47,9 +48,12 @@ SequenceRecord__init__(SequenceRecord *self, PyObject *args, PyObject *kwargs) {
     if (qualities != NULL) {
         
         if (!PyUnicode_CheckExact(qualities)) {
-            PyErr_Format(PyExc_TypeError, "qualities must be of type str, got: %s", Py_TYPE(qualities)->tp_name);
+            PyErr_Format(
+                PyExc_TypeError, 
+                "qualities must be of type str, got: %s", 
+                Py_TYPE(qualities)->tp_name);
         }
-            // Type already checked, can use unsafe macros here.
+        // Type already checked, can use unsafe macros here.
         if(PyUnicode_GET_LENGTH(sequence) != PyUnicode_GET_LENGTH(qualities)) {
             PyErr_Format(PyExc_ValueError,
                 "Size of sequence and qualities do not match: %ld != %ld",
@@ -83,8 +87,11 @@ PyDoc_STRVAR(BytesSequenceRecord__init____doc__,
 "  qualities\n"
 "\n"
 );
+
 static int
-BytesSequenceRecord__init__(SequenceRecord *self, PyObject *args, PyObject *kwargs) {
+BytesSequenceRecord__init__(SequenceRecord *self, PyObject *args, 
+                            PyObject *kwargs) 
+{
     PyObject *name = NULL;
     PyObject *sequence = NULL;
     PyObject *qualities = NULL;
@@ -141,15 +148,17 @@ SequenceRecord__richcompare__(PyObject *self, PyObject *other, int op){
     if (op == 2){
         return PyBool_FromLong(
             calculate_sequence_record_hash((SequenceRecord *)self) == 
-            calculate_sequence_record_hash((SequenceRecord *) other));
+            calculate_sequence_record_hash((SequenceRecord *)other));
     }
     else if (op == 3){
         return PyBool_FromLong(
             calculate_sequence_record_hash((SequenceRecord *)self) != 
-            calculate_sequence_record_hash((SequenceRecord *) other));
+            calculate_sequence_record_hash((SequenceRecord *)other));
     }
     else {
-        PyErr_Format(PyExc_NotImplementedError, "Only equals and not equals are implemented for %R.", Py_TYPE(self));
+        PyErr_Format(PyExc_NotImplementedError, 
+                     "Only equals and not equals are implemented for %R.", 
+                     Py_TYPE(self));
         return NULL;
     }
 }
@@ -187,7 +196,10 @@ sequence_to_fastq_record_impl(SequenceRecord *self, int two_headers){
         (PyUnicode_KIND(self->name) == PyUnicode_1BYTE_KIND) && 
         (PyUnicode_KIND(self->sequence)== PyUnicode_1BYTE_KIND) &&
         (PyUnicode_KIND(self->qualities) == PyUnicode_1BYTE_KIND))) {
-        PyErr_SetString(PyExc_ValueError, "Name, sequence and qualities must all be valid ASCII strings.");
+            PyErr_SetString(
+                PyExc_ValueError, 
+                "Name, sequence and qualities must all be valid ASCII strings."
+            );
     }
     // Unsafe macros as type is already checked.
     char * name = (char *)PyUnicode_1BYTE_DATA(self->name);
@@ -203,7 +215,8 @@ PyDoc_STRVAR(SequenceRecord_fastq_bytes__doc__,
 "into a file.");
 
 #define SEQUENCE_FASTQ_BYTES_METHODDEF    \
-    {"fastq_bytes", (PyCFunction)(void(*)(void))SequenceRecord_fastq_bytes, METH_NOARGS, SequenceRecord_fastq_bytes__doc__}
+    {"fastq_bytes", (PyCFunction)(void(*)(void))SequenceRecord_fastq_bytes, \
+     METH_NOARGS, SequenceRecord_fastq_bytes__doc__}
 
 static PyObject *
 SequenceRecord_fastq_bytes(SequenceRecord *self, PyObject *NoArgs){
@@ -211,10 +224,12 @@ SequenceRecord_fastq_bytes(SequenceRecord *self, PyObject *NoArgs){
 }
 
 #define BYTES_SEQUENCE_FASTQ_BYTES_METHODDEF    \
-    {"fastq_bytes", (PyCFunction)(void(*)(void))BytesSequenceRecord_fastq_bytes, METH_NOARGS, SequenceRecord_fastq_bytes__doc__}
+    {"fastq_bytes", (PyCFunction)(void(*)(void))BytesSequenceRecord_fastq_bytes, \
+    METH_NOARGS, SequenceRecord_fastq_bytes__doc__}
 
 static PyObject *
-BytesSequenceRecord_fastq_bytes(SequenceRecord *self, PyObject *NoArgs){
+BytesSequenceRecord_fastq_bytes(SequenceRecord *self, PyObject *NoArgs)
+{
     return bytes_sequence_to_fastq_record_impl(self, 0);
 }
 PyDoc_STRVAR(SequenceRecord_fastq_bytes_two_headers__doc__,
@@ -222,18 +237,24 @@ PyDoc_STRVAR(SequenceRecord_fastq_bytes_two_headers__doc__,
 "(after the @) is repeated on the third line.");
 
 #define SEQUENCE_FASTQ_BYTES_TWO_HEADERS_METHODDEF    \
-    {"fastq_bytes_two_headers", (PyCFunction)(void(*)(void))SequenceRecord_fastq_bytes_two_headers, METH_NOARGS, SequenceRecord_fastq_bytes_two_headers__doc__}
+    {"fastq_bytes_two_headers", \
+     (PyCFunction)(void(*)(void))SequenceRecord_fastq_bytes_two_headers, \
+     METH_NOARGS, SequenceRecord_fastq_bytes_two_headers__doc__}
 
 static PyObject *
-SequenceRecord_fastq_bytes_two_headers(SequenceRecord *self, PyObject *NoArgs){
+SequenceRecord_fastq_bytes_two_headers(SequenceRecord *self, PyObject *NoArgs)
+{
     return sequence_to_fastq_record_impl(self, 1);
 }
 
 #define BYTES_SEQUENCE_FASTQ_BYTES_TWO_HEADERS_METHODDEF    \
-    {"fastq_bytes_two_headers", (PyCFunction)(void(*)(void))BytesSequenceRecord_fastq_bytes_two_headers, METH_NOARGS, SequenceRecord_fastq_bytes_two_headers__doc__}
+    {"fastq_bytes_two_headers", \
+     (PyCFunction)(void(*)(void))BytesSequenceRecord_fastq_bytes_two_headers, \
+     METH_NOARGS, SequenceRecord_fastq_bytes_two_headers__doc__}
 
 static PyObject *
-BytesSequenceRecord_fastq_bytes_two_headers(SequenceRecord *self, PyObject *NoArgs){
+BytesSequenceRecord_fastq_bytes_two_headers(SequenceRecord *self, PyObject *NoArgs)
+{
     return bytes_sequence_to_fastq_record_impl(self, 1);
 }
 
