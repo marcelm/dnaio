@@ -34,7 +34,7 @@ SequenceRecord__init__(SequenceRecord *self, PyObject *args, PyObject *kwargs) {
     PyObject *sequence = NULL;
     PyObject *qualities = NULL;
     static char * _keywords[] = {"name", "sequence", "qualities", NULL};
-    static char * _format = "O!O!O|:SequenceRecord";
+    static char * _format = "O!O!|O:SequenceRecord";
     if (!PyArg_ParseTupleAndKeywords(
         args, kwargs, _format, _keywords,
         (PyObject *)&PyUnicode_Type, &name,
