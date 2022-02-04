@@ -53,7 +53,7 @@ class TestSequence:
             b"@name\nACGT\n+name\n====\n"
 
 
-class TestSequenceBytes:
+class TestBytesSequence:
     def test_too_many_qualities(self):
         with raises(ValueError):
             BytesSequence(name=b"name", sequence=b"ACGT", qualities=b"#####")
@@ -73,7 +73,7 @@ class TestSequenceBytes:
         assert seq.fastq_bytes_two_headers() == b"@name\nACGTA\n+name\n==\n"
 
     def test_reference_counts(self):
-        # Make sure SequenceBytes is properly implemented so there are no
+        # Make sure BytesSequence is properly implemented so there are no
         # reference leaks.
         name = b"name"
         sequence = b"ACGT"

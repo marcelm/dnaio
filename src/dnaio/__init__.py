@@ -78,7 +78,7 @@ def open(
         or ``'a'`` for appending.
 
         With mode ``'r'`` the returned Reader iterates over Sequence objects.
-        With mode ``'rb'`` the returned Reader iterates over SequenceBytes objects.
+        With mode ``'rb'`` the returned Reader iterates over BytesSequence objects.
       interleaved:
         If True, then file1 contains interleaved paired-end data.
         file2 must be None in this case.
