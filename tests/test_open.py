@@ -31,12 +31,17 @@ SIMPLE_RECORDS = {
 def formatted_sequence(record, fileformat):
     if fileformat == "fastq":
         return "@{}\n{}\n+\n{}\n".format(record.name, record.sequence, record.qualities)
+    elif fileformat == "fastq_bytes":
+        return b"@%b\n%b\n+\n%b\n" % (record.name, record.sequence, record.qualities)
     else:
         return ">{}\n{}\n".format(record.name, record.sequence)
 
 
 def formatted_sequences(records, fileformat):
-    return "".join(formatted_sequence(record, fileformat) for record in records)
+    record_iter = (formatted_sequence(record, fileformat) for record in records)
+    if fileformat == "fastq_bytes":
+        return b"".join(record_iter)
+    return "".join(record_iter)
 
 
 def test_formatted_sequence():
@@ -92,6 +97,19 @@ def test_read_opener(fileformat, extension):
     assert records[0].sequence == "ACG"
 
 
+def test_read_opener_binary():
+    def my_opener(path, mode):
+        import io
+        data = b"@read\nACG\n+\nHHH\n"
+        return io.BytesIO(data)
+
+    with dnaio.open("totally-ignored-filename.fastq", opener=my_opener, mode="rb") as f:
+        records = list(f)
+    assert len(records) == 1
+    assert records[0].name == b"read"
+    assert records[0].sequence == b"ACG"
+
+
 @pytest.mark.parametrize("interleaved", [False, True])
 def test_paired_opener(fileformat, extension, interleaved):
     def my_opener(_path, _mode):
@@ -119,6 +137,30 @@ def test_paired_opener(fileformat, extension, interleaved):
     assert records[0][1].sequence == "ACG"
 
 
+@pytest.mark.parametrize("interleaved", [False, True])
+def test_paired_opener_binary(interleaved):
+    def my_opener(_path, _mode):
+        import io
+        data = b"@read\nACG\n+\nHHH\n"
+        return io.BytesIO(data + data)
+
+    path1 = "ignored-filename.fastq"
+    path2 = "also-ignored-filename.fastq"
+    if interleaved:
+        with dnaio.open(path1, file2=path2, opener=my_opener, mode="rb") as f:
+            records = list(f)
+        expected = 2
+    else:
+        with dnaio.open(path1, interleaved=True, opener=my_opener, mode="rb") as f:
+            records = list(f)
+        expected = 1
+    assert len(records) == expected
+    assert records[0][0].name == b"read"
+    assert records[0][0].sequence == b"ACG"
+    assert records[0][1].name == b"read"
+    assert records[0][1].sequence == b"ACG"
+
+
 def test_detect_fastq_from_content():
     """FASTQ file that is not named .fastq"""
     with dnaio.open('tests/data/missingextension') as f:
@@ -133,8 +175,9 @@ def test_detect_compressed_fastq_from_content():
     assert record.name == 'prefix:1_13_573/1'
 
 
-def test_write(tmpdir, extension):
-    s = dnaio.Sequence('name', 'ACGT', 'HHHH')
+@pytest.mark.parametrize("s", [dnaio.Sequence('name', 'ACGT', 'HHHH'),
+                               dnaio.BytesSequence(b'name', b'ACGT', b'HHHH')])
+def test_write(s, tmpdir, extension):
     out_fastq = tmpdir.join("out.fastq" + extension)
     with dnaio.open(str(out_fastq), mode='w') as f:
         f.write(s)
@@ -196,6 +239,27 @@ def test_write_paired(tmpdir, fileformat, extension):
         assert formatted_sequences(r1, fileformat) == f.read()
     with xopen(path2) as f:
         assert formatted_sequences(r2, fileformat) == f.read()
+
+
+def test_write_paired_binary(tmpdir, extension):
+    r1 = [
+        dnaio.BytesSequence(b"s1", b"ACGT", b"HHHH"),
+        dnaio.BytesSequence(b"s2", b"CGCA", b"8383"),
+    ]
+    r2 = [
+        dnaio.BytesSequence(b"t1", b"TCGT", b"5HHH"),
+        dnaio.BytesSequence(b"t2", b"TGCA", b"5383"),
+    ]
+    path1 = str(tmpdir / ("out.1.fastq" + extension))
+    path2 = str(tmpdir / ("out.2.fastq" + extension))
+
+    with dnaio.open(path1, file2=path2, fileformat="fastq", mode="w") as f:
+        f.write(r1[0], r2[0])
+        f.write(r1[1], r2[1])
+    with xopen(path1, "rb") as f:
+        assert formatted_sequences(r1, "fastq_bytes") == f.read()
+    with xopen(path2, "rb") as f:
+        assert formatted_sequences(r2, "fastq_bytes") == f.read()
 
 
 def test_write_interleaved(tmpdir, fileformat, extension):

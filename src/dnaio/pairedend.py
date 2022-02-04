@@ -5,7 +5,7 @@ from typing import Union, BinaryIO, Optional, Iterator, Tuple
 
 from xopen import xopen
 
-from ._core import Sequence, record_names_match
+from ._core import Sequence, record_names_match, record_names_match_bytes
 from .exceptions import FileFormatError
 from .interfaces import PairedEndReader, PairedEndWriter
 from .readers import FastaReader, FastqReader
@@ -28,15 +28,19 @@ class TwoFilePairedEndReader(PairedEndReader):
         file1: Union[str, PathLike, BinaryIO],
         file2: Union[str, PathLike, BinaryIO],
         *,
+        mode="r",
         fileformat: Optional[str] = None,
         opener=xopen,
     ):
+        self.mode = mode
         with ExitStack() as stack:
             self.reader1 = stack.enter_context(
-                _open_single(file1, opener=opener, fileformat=fileformat)
+                _open_single(file1, opener=opener, fileformat=fileformat,
+                             mode=mode)
             )
             self.reader2 = stack.enter_context(
-                _open_single(file2, opener=opener, fileformat=fileformat)
+                _open_single(file2, opener=opener, fileformat=fileformat,
+                             mode=mode)
             )
             self._close = stack.pop_all().close
         self.delivers_qualities = self.reader1.delivers_qualities
@@ -58,6 +62,10 @@ class TwoFilePairedEndReader(PairedEndReader):
         # So we can quickly check if the iterator is still yielding.
         # This is faster than implementing a while loop with next calls,
         # which requires expensive function lookups.
+        if "b" in self.mode:
+            name_matcher = record_names_match_bytes
+        else:
+            name_matcher = record_names_match  # type: ignore
         for r1, r2 in itertools.zip_longest(self.reader1, self.reader2):
             if r1 is None:
                 raise FileFormatError(
@@ -71,7 +79,7 @@ class TwoFilePairedEndReader(PairedEndReader):
                     "file 1 than in file 2.",
                     line=None,
                 ) from None
-            if not record_names_match(r1.name, r2.name):
+            if not name_matcher(r1.name, r2.name):
                 raise FileFormatError(
                     f"Reads are improperly paired. Read name '{r1.name}' "
                     f"in file 1 does not match '{r2.name}' in file 2.",
@@ -100,10 +108,12 @@ class InterleavedPairedEndReader(PairedEndReader):
         self,
         file: Union[str, PathLike, BinaryIO],
         *,
+        mode="r",
         fileformat: Optional[str] = None,
         opener=xopen,
     ):
-        reader = _open_single(file, opener=opener, fileformat=fileformat)
+        self.mode = mode
+        reader = _open_single(file, opener=opener, mode=mode, fileformat=fileformat)
         assert isinstance(reader, (FastaReader, FastqReader))  # for Mypy
         self.reader = reader
         self.delivers_qualities = self.reader.delivers_qualities
@@ -112,6 +122,10 @@ class InterleavedPairedEndReader(PairedEndReader):
         return f"{self.__class__.__name__}({self.reader})"
 
     def __iter__(self) -> Iterator[Tuple[Sequence, Sequence]]:
+        if "b" in self.mode:
+            name_matcher = record_names_match_bytes
+        else:
+            name_matcher = record_names_match  # type: ignore
         it = iter(self.reader)
         for r1 in it:
             try:
@@ -122,7 +136,7 @@ class InterleavedPairedEndReader(PairedEndReader):
                     f"'{r1.name}' has no partner.",
                     line=None,
                 ) from None
-            if not record_names_match(r1.name, r2.name):
+            if not name_matcher(r1.name, r2.name):  # type: ignore
                 raise FileFormatError(
                     f"Reads are improperly paired. Name '{r1.name}' "
                     f"(first) does not match '{r2.name}' (second).",

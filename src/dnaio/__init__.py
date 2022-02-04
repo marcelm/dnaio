@@ -5,6 +5,7 @@ Sequence I/O: Read and write FASTA and FASTQ files efficiently
 __all__ = [
     'open',
     'Sequence',
+    'BytesSequence',
     'SingleEndReader',
     'PairedEndReader',
     'SingleEndWriter',
@@ -32,7 +33,7 @@ from typing import Optional, Union, BinaryIO
 
 from xopen import xopen
 
-from ._core import Sequence, record_names_match
+from ._core import Sequence, BytesSequence, record_names_match
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .singleend import _open_single
@@ -73,7 +74,11 @@ def open(
         objects (as str or as pathlib.Path). Use only file1 if data is single-end.
         If sequences are paired, use also file2.
       mode:
-        Either ``'r'`` for reading, ``'w'`` for writing or ``'a'`` for appending.
+        Either ``'r'`` or ``'rb'`` for reading, ``'w'`` for writing
+        or ``'a'`` for appending.
+
+        With mode ``'r'`` the returned Reader iterates over Sequence objects.
+        With mode ``'rb'`` the returned Reader iterates over BytesSequence objects.
       interleaved:
         If True, then file1 contains interleaved paired-end data.
         file2 must be None in this case.
@@ -98,23 +103,23 @@ def open(
     Return:
        An instance of one of the ...Reader or ...Writer classes
     """
-    if mode not in ("r", "w", "a"):
-        raise ValueError("Mode must be 'r', 'w' or 'a'")
+    if mode not in ("r", "rb", "w", "a"):
+        raise ValueError("Mode must be 'r', 'rb', 'w' or 'a'")
     if interleaved and file2 is not None:
         raise ValueError("When interleaved is set, file2 must be None")
 
     if file2 is not None:
         if mode in "wa" and file1 == file2:
             raise ValueError("The paired-end output files are identical")
-        if mode == "r":
-            return TwoFilePairedEndReader(file1, file2, fileformat=fileformat, opener=opener)
+        if "r" in mode:
+            return TwoFilePairedEndReader(file1, file2, fileformat=fileformat, opener=opener, mode=mode)
         append = mode == "a"
         return TwoFilePairedEndWriter(
             file1, file2, fileformat=fileformat, qualities=qualities, opener=opener, append=append
         )
     if interleaved:
-        if mode == "r":
-            return InterleavedPairedEndReader(file1, fileformat=fileformat, opener=opener)
+        if "r" in mode:
+            return InterleavedPairedEndReader(file1, fileformat=fileformat, opener=opener, mode=mode)
         append = mode == "a"
         return InterleavedPairedEndWriter(
             file1, fileformat=fileformat, qualities=qualities, opener=opener, append=append)

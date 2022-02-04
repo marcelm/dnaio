@@ -3,9 +3,11 @@ import shutil
 import subprocess
 import sys
 from io import BytesIO
+from pathlib import Path
 from tempfile import mkdtemp
 from textwrap import dedent
 
+import pytest
 from pytest import raises, mark
 
 import dnaio
@@ -15,15 +17,22 @@ from dnaio import (
     FastaWriter, FastqWriter, InterleavedPairedEndWriter,
     TwoFilePairedEndReader,
 )
-from dnaio import record_names_match, Sequence
+from dnaio import record_names_match, Sequence, BytesSequence
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
+TEST_DATA = Path(__file__).parent / "data"
+SIMPLE_FASTQ = str(TEST_DATA / "simple.fastq")
 # files tests/data/simple.fast{q,a}
 simple_fastq = [
     Sequence("first_sequence", "SEQUENCE1", ":6;;8<=:<"),
     Sequence("second_sequence", "SEQUENCE2", "83<??:(61")
 ]
+
+simple_fastq_bytes = [
+    BytesSequence(s.name.encode('ascii'),
+                  s.sequence.encode('ascii'),
+                  s.qualities.encode('ascii')) for s in simple_fastq]
 
 simple_fasta = [Sequence(x.name, x.sequence, None) for x in simple_fastq]
 
@@ -42,6 +51,44 @@ class TestSequence:
     def test_fastq_bytes_two_headers(self):
         assert Sequence("name", "ACGT", "====").fastq_bytes_two_headers() == \
             b"@name\nACGT\n+name\n====\n"
+
+
+class TestBytesSequence:
+    def test_too_many_qualities(self):
+        with raises(ValueError):
+            BytesSequence(name=b"name", sequence=b"ACGT", qualities=b"#####")
+
+    def test_fastq_bytes(self):
+        assert BytesSequence(b"name", b"ACGT", b"====").fastq_bytes() == \
+            b"@name\nACGT\n+\n====\n"
+
+    def test_fastq_bytes_two_headers(self):
+        seq = BytesSequence(b"", b"", b"")
+        # Below creates an invalid sequence, but this is done to see if the
+        # underlying function properly takes into account lengths of the
+        # attributes.
+        seq.name = b"name"
+        seq.sequence = b"ACGTA"
+        seq.qualities = b"=="
+        assert seq.fastq_bytes_two_headers() == b"@name\nACGTA\n+name\n==\n"
+
+    def test_reference_counts(self):
+        # Make sure BytesSequence is properly implemented so there are no
+        # reference leaks.
+        name = b"name"
+        sequence = b"ACGT"
+        qualities = b"===="
+        name_ref = sys.getrefcount(name)
+        seq_ref = sys.getrefcount(sequence)
+        qual_ref = sys.getrefcount(qualities)
+        seqbytes = BytesSequence(name, sequence, qualities)
+        assert sys.getrefcount(name) == name_ref + 1
+        assert sys.getrefcount(sequence) == seq_ref + 1
+        assert sys.getrefcount(qualities) == qual_ref + 1
+        del seqbytes
+        assert sys.getrefcount(name) == name_ref
+        assert sys.getrefcount(sequence) == seq_ref
+        assert sys.getrefcount(qualities) == qual_ref
 
 
 class TestFastaReader:
@@ -108,10 +155,13 @@ class TestFastaReader:
 
 
 class TestFastqReader:
-    def test_fastqreader(self):
-        with FastqReader("tests/data/simple.fastq") as f:
+    @pytest.mark.parametrize(["sequence_class", "result"],
+                             [(Sequence, simple_fastq),
+                              (BytesSequence, simple_fastq_bytes)])
+    def test_fastqreader(self, sequence_class, result):
+        with FastqReader(SIMPLE_FASTQ, sequence_class=sequence_class) as f:
             reads = list(f)
-        assert reads == simple_fastq
+        assert reads == result
 
     @mark.parametrize("buffer_size", [1, 2, 3, 5, 7, 10, 20])
     def test_fastqreader_buffersize(self, buffer_size):
