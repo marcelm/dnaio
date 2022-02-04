@@ -6,6 +6,11 @@ from cpython.ref cimport PyObject
 from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
 cimport cython
 
+from ._sequence import Sequence, BytesSequence
+
+cdef extern from "_sequence.h":
+    object new_sequence_record(type SequenceClass, object name, object sequence, object qualities)
+
 cdef extern from "Python.h":
     unsigned char * PyUnicode_1BYTE_DATA(object o)
     int PyUnicode_KIND(object o)
@@ -16,236 +21,6 @@ from typing import Union
 
 from .exceptions import FastqFormatError
 from ._util import shorten
-
-
-cdef class Sequence:
-    """
-    A sequencing read with read name/id and (optional) qualities
-
-    If qualities are available, they are as
-    For a Sequence a FASTA file
-    record containing a read in a FASTA or FASTQ file. For FASTA, the qualities attribute
-    is None. For FASTQ, qualities is a string and it contains the qualities
-    encoded as ASCII(qual+33).
-
-    Attributes:
-      name (str): The read description
-      sequence (str):
-      qualities (str):
-    """
-    cdef:
-        public str name
-        public str sequence
-        public str qualities
-
-    def __cinit__(self, str name, str sequence, str qualities=None):
-        """Set qualities to None if there are no quality values"""
-        self.name = name
-        self.sequence = sequence
-        self.qualities = qualities
-
-    def __init__(self, str name, str sequence, str qualities = None):
-        # __cinit__ is called first and sets all the variables.
-        if qualities is not None and len(qualities) != len(sequence):
-            rname = shorten(name)
-            raise ValueError("In read named {!r}: length of quality sequence "
-                             "({}) and length of read ({}) do not match".format(
-                rname, len(qualities), len(sequence)))
-
-    def __getitem__(self, key):
-        """
-        Slice this Sequence. If the qualities attribute is not None, it is
-        sliced accordingly. The read name is copied unchanged.
-
-        Returns:
-          A new Sequence object with a sliced sequence.
-        """
-        return self.__class__(
-            self.name,
-            self.sequence[key],
-            self.qualities[key] if self.qualities is not None else None)
-
-    def __repr__(self):
-        qstr = ''
-        if self.qualities is not None:
-            qstr = ', qualities={!r}'.format(shorten(self.qualities))
-        return '<Sequence(name={!r}, sequence={!r}{})>'.format(
-            shorten(self.name), shorten(self.sequence), qstr)
-
-    def __len__(self):
-        """
-        Returns:
-           The number of characters in this sequence
-        """
-        return len(self.sequence)
-
-    def __richcmp__(self, other, int op):
-        if 2 <= op <= 3:
-            eq = self.name == other.name and \
-                self.sequence == other.sequence and \
-                self.qualities == other.qualities
-            if op == 2:
-                return eq
-            else:
-                return not eq
-        else:
-            raise NotImplementedError()
-
-    def __reduce__(self):
-        return (Sequence, (self.name, self.sequence, self.qualities))
-
-    def qualities_as_bytes(self):
-        """Return the qualities as a bytes object.
-
-        This is a faster version of qualities.encode('ascii')."""
-        return self.qualities.encode('ascii')
-
-    def fastq_bytes(self, two_headers = False):
-        """Return the entire FASTQ record as bytes which can be written
-        into a file.
-
-        Optionally the header (after the @) can be repeated on the third line
-        (after the +), when two_headers is enabled."""
-        cdef:
-            char * name
-            char * sequence
-            char * qualities
-            Py_ssize_t name_length
-            Py_ssize_t sequence_length
-            Py_ssize_t qualities_length
-
-        if PyUnicode_KIND(self.name) == PyUnicode_1BYTE_KIND:
-            name = <char *>PyUnicode_1BYTE_DATA(self.name)
-            name_length = <size_t>PyUnicode_GET_LENGTH(self.name)
-        else:
-            # Allow non-ASCII in name
-            name_bytes = self.name.encode('latin-1')
-            name = PyBytes_AS_STRING(name_bytes)
-            name_length = PyBytes_GET_SIZE(name_bytes)
-        if PyUnicode_KIND(self.sequence) == PyUnicode_1BYTE_KIND:
-            sequence = <char *>PyUnicode_1BYTE_DATA(self.sequence)
-            sequence_length = <size_t>PyUnicode_GET_LENGTH(self.sequence)
-        else:
-            # Don't allow non-ASCII in sequence and qualities
-            sequence_bytes = self.sequence.encode('ascii')
-            sequence = PyBytes_AS_STRING(sequence_bytes)
-            sequence_length = PyBytes_GET_SIZE(sequence_bytes)
-        if PyUnicode_KIND(self.qualities) == PyUnicode_1BYTE_KIND:
-            qualities = <char *>PyUnicode_1BYTE_DATA(self.qualities)
-            qualities_length = <size_t>PyUnicode_GET_LENGTH(self.qualities)
-        else:
-            qualities_bytes = self.qualities.encode('ascii')
-            qualities = PyBytes_AS_STRING(qualities_bytes)
-            qualities_length = PyBytes_GET_SIZE(qualities_bytes)
-        return create_fastq_record(name, sequence, qualities,
-                                   name_length, sequence_length, qualities_length,
-                                   two_headers)
-
-    def fastq_bytes_two_headers(self):
-        """
-        Return this record in FASTQ format as a bytes object where the header (after the @) is
-        repeated on the third line.
-        """
-        return self.fastq_bytes(two_headers=True)
-
-
-cdef class BytesSequence:
-    cdef:
-        public bytes name
-        public bytes sequence
-        public bytes qualities
-
-    def __cinit__(self, bytes name, bytes sequence, bytes qualities):
-        """Set qualities to None if there are no quality values"""
-        self.name = name
-        self.sequence = sequence
-        self.qualities = qualities
-
-    def __init__(self, bytes name, bytes sequence, bytes qualities):
-        # __cinit__ is called first and sets all the variables.
-        if len(qualities) != len(sequence):
-            rname = shorten(name)
-            raise ValueError("In read named {!r}: length of quality sequence "
-                             "({}) and length of read ({}) do not match".format(
-                rname, len(qualities), len(sequence)))
-    
-    def __repr__(self):
-        return '<BytesSequence(name={!r}, sequence={!r}, qualities={!r})>'.format(
-            shorten(self.name), shorten(self.sequence), shorten(self.qualities))
-
-    def __len__(self):
-        """
-        Returns:
-           The number of characters in this sequence
-        """
-        return len(self.sequence)
-
-    def __richcmp__(self, other, int op):
-        if 2 <= op <= 3:
-            eq = self.name == other.name and \
-                self.sequence == other.sequence and \
-                self.qualities == other.qualities
-            if op == 2:
-                return eq
-            else:
-                return not eq
-        else:
-            raise NotImplementedError()
-
-    def fastq_bytes(self, two_headers=False):
-        name = PyBytes_AS_STRING(self.name)
-        name_length = PyBytes_GET_SIZE(self.name)
-        sequence = PyBytes_AS_STRING(self.sequence)
-        sequence_length = PyBytes_GET_SIZE(self.sequence)
-        qualities = PyBytes_AS_STRING(self.qualities)
-        qualities_length = PyBytes_GET_SIZE(self.qualities)
-        return create_fastq_record(name, sequence, qualities,
-                                   name_length, sequence_length, qualities_length,
-                                   two_headers)
-
-    def fastq_bytes_two_headers(self):
-        """
-        Return this record in FASTQ format as a bytes object where the header (after the @) is
-        repeated on the third line.
-        """
-        return self.fastq_bytes(two_headers=True)
-
-
-cdef bytes create_fastq_record(char * name, char * sequence, char * qualities,
-                               Py_ssize_t name_length,
-                               Py_ssize_t sequence_length,
-                               Py_ssize_t qualities_length,
-                               bint two_headers = False):
-        # Total size is name + sequence + qualities + 4 newlines + '+' and an
-        # '@' to be put in front of the name.
-        cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
-
-        if two_headers:
-            # We need space for the name after the +.
-            total_size += name_length
-
-        # This is the canonical way to create an uninitialized bytestring of given size
-        cdef bytes retval = PyBytes_FromStringAndSize(NULL, total_size)
-        cdef char * retval_ptr = PyBytes_AS_STRING(retval)
-
-        # Write the sequences into the bytestring at the correct positions.
-        cdef size_t cursor
-        retval_ptr[0] = b"@"
-        memcpy(retval_ptr + 1, name, name_length)
-        cursor = name_length + 1
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        memcpy(retval_ptr + cursor, sequence, sequence_length)
-        cursor += sequence_length
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        retval_ptr[cursor] = b"+"; cursor += 1
-        if two_headers:
-            memcpy(retval_ptr + cursor, name, name_length)
-            cursor += name_length
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        memcpy(retval_ptr + cursor, qualities, qualities_length)
-        cursor += qualities_length
-        retval_ptr[cursor] = b"\n"
-        return retval
 
 # It would be nice to be able to have the first parameter be an
 # unsigned char[:] (memory view), but this fails with a BufferError
@@ -459,7 +234,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 name = PyBytes_FromStringAndSize(c_buf + name_start, name_length)
                 sequence = PyBytes_FromStringAndSize(c_buf + sequence_start, sequence_length)
                 qualities = PyBytes_FromStringAndSize(c_buf + qualities_start, qualities_length)
-                yield BytesSequence.__new__(BytesSequence, name, sequence, qualities)
+                yield new_sequence_record(BytesSequence, name, sequence, qualities)
             else:
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
@@ -475,7 +250,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 if custom_class:
                     yield sequence_class(name, sequence, qualities)
                 else:
-                    yield Sequence.__new__(Sequence, name, sequence, qualities)
+                    yield new_sequence_record(Sequence, name, sequence, qualities)
 
             ### Advance record to next position
             n_records += 1

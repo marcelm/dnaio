@@ -314,7 +314,10 @@ PyInit__sequence(void)
         return NULL;
     PyTypeObject * SequenceRecordType = &SequenceRecord_type;
     PyTypeObject * BytesSequenceRecordType = &BytesSequenceRecord_type;
-    if (!PyType_Ready(SequenceRecordType) || !PyType_Ready(BytesSequenceRecordType)){
+    if (PyType_Ready(SequenceRecordType) != 0) { 
+        return NULL;
+    }
+    if (PyType_Ready(BytesSequenceRecordType) != 0){
         return NULL;
     }
     Py_INCREF((PyObject *)SequenceRecordType);
