@@ -119,6 +119,21 @@ BytesSequenceRecord__init__(SequenceRecord *self, PyObject *args,
     return 0;
 };
 
+static PyMemberDef SequenceRecord_members[] = {
+    {"name", T_OBJECT_EX, offsetof(SequenceRecord, name), 0},
+    {"sequence", T_OBJECT_EX, offsetof(SequenceRecord, sequence), 0},
+    {"qualities", T_OBJECT, offsetof(SequenceRecord, qualities), 0},  // May be None
+    {NULL}
+};
+
+static PyMemberDef BytesSequenceRecord_members[] = {
+    {"name", T_OBJECT_EX, offsetof(SequenceRecord, name), 0},
+    {"sequence", T_OBJECT_EX, offsetof(SequenceRecord, sequence), 0},
+    {"qualities", T_OBJECT_EX, offsetof(SequenceRecord, qualities), 0},
+    {NULL}
+};
+
+
 static PyObject * 
 SequenceRecord__repr__(SequenceRecord * self){
     return PyUnicode_FromFormat("SequenceRecord(%R, %R, %R)", 
@@ -272,22 +287,6 @@ SequenceRecord_qualities_as_bytes(SequenceRecord *self, PyObject *NoArgs)
 {
     return PyUnicode_AsASCIIString(self->qualities);
 }
-
-
-static PyMemberDef SequenceRecord_members[] = {
-    {"name", T_OBJECT_EX, offsetof(SequenceRecord, name), 0},
-    {"sequence", T_OBJECT_EX, offsetof(SequenceRecord, sequence), 0},
-    {"qualities", T_OBJECT, offsetof(SequenceRecord, qualities), 0},  // May be None
-    {NULL}
-};
-
-static PyMemberDef BytesSequenceRecord_members[] = {
-    {"name", T_OBJECT_EX, offsetof(SequenceRecord, name), 0},
-    {"sequence", T_OBJECT_EX, offsetof(SequenceRecord, sequence), 0},
-    {"qualities", T_OBJECT_EX, offsetof(SequenceRecord, qualities), 0},
-    {NULL}
-};
-
 
 static PyMethodDef SequenceRecord_methods[] = {
     SEQUENCE_FASTQ_BYTES_METHODDEF,
