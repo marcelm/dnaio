@@ -234,7 +234,7 @@ PyDoc_STRVAR(SequenceRecord_fastq_bytes__doc__,
      METH_NOARGS, SequenceRecord_fastq_bytes__doc__}
 
 static PyObject *
-SequenceRecord_fastq_bytes(SequenceRecord *self, PyObject *NoArgs){
+SequenceRecord_fastq_bytes(SequenceRecord *self, PyObject *Py_UNUSED(ignore)){
     return sequence_to_fastq_record_impl(self, 0);
 }
 
@@ -243,7 +243,7 @@ SequenceRecord_fastq_bytes(SequenceRecord *self, PyObject *NoArgs){
     METH_NOARGS, SequenceRecord_fastq_bytes__doc__}
 
 static PyObject *
-BytesSequenceRecord_fastq_bytes(SequenceRecord *self, PyObject *NoArgs)
+BytesSequenceRecord_fastq_bytes(SequenceRecord *self, PyObject *Py_UNUSED(ignore))
 {
     return bytes_sequence_to_fastq_record_impl(self, 0);
 }
@@ -257,7 +257,7 @@ PyDoc_STRVAR(SequenceRecord_fastq_bytes_two_headers__doc__,
      METH_NOARGS, SequenceRecord_fastq_bytes_two_headers__doc__}
 
 static PyObject *
-SequenceRecord_fastq_bytes_two_headers(SequenceRecord *self, PyObject *NoArgs)
+SequenceRecord_fastq_bytes_two_headers(SequenceRecord *self, PyObject *Py_UNUSED(ignore))
 {
     return sequence_to_fastq_record_impl(self, 1);
 }
@@ -268,7 +268,7 @@ SequenceRecord_fastq_bytes_two_headers(SequenceRecord *self, PyObject *NoArgs)
      METH_NOARGS, SequenceRecord_fastq_bytes_two_headers__doc__}
 
 static PyObject *
-BytesSequenceRecord_fastq_bytes_two_headers(SequenceRecord *self, PyObject *NoArgs)
+BytesSequenceRecord_fastq_bytes_two_headers(SequenceRecord *self, PyObject *Py_UNUSED(ignore))
 {
     return bytes_sequence_to_fastq_record_impl(self, 1);
 }
@@ -283,7 +283,7 @@ PyDoc_STRVAR(SequenceRecord_qualities_as_bytes__doc__,
      METH_NOARGS, SequenceRecord_qualities_as_bytes__doc__}
 
 static PyObject *
-SequenceRecord_qualities_as_bytes(SequenceRecord *self, PyObject *NoArgs)
+SequenceRecord_qualities_as_bytes(SequenceRecord *self, PyObject *Py_UNUSED(ignore))
 {
     return PyUnicode_AsASCIIString(self->qualities);
 }
