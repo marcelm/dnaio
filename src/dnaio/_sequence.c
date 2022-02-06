@@ -258,6 +258,22 @@ BytesSequenceRecord_fastq_bytes_two_headers(SequenceRecord *self, PyObject *NoAr
     return bytes_sequence_to_fastq_record_impl(self, 1);
 }
 
+PyDoc_STRVAR(SequenceRecord_qualities_as_bytes__doc__,
+"Return the qualities as a bytes object.\n\n"
+"This is a faster version of qualities.encode('ascii').");
+
+#define SEQUENCE_QUALITIES_AS_BYTES_METHODDEF    \
+    {"qualities_as_bytes", \
+     (PyCFunction)(void(*)(void))SequenceRecord_qualities_as_bytes, \
+     METH_NOARGS, SequenceRecord_qualities_as_bytes__doc__}
+
+static PyObject *
+SequenceRecord_qualities_as_bytes(SequenceRecord *self, PyObject *NoArgs)
+{
+    return PyUnicode_AsASCIIString(self->qualities);
+}
+
+
 static PyMemberDef SequenceRecord_members[] = {
     {"name", T_OBJECT_EX, offsetof(SequenceRecord, name), 0},
     {"sequence", T_OBJECT_EX, offsetof(SequenceRecord, sequence), 0},
@@ -276,6 +292,7 @@ static PyMemberDef BytesSequenceRecord_members[] = {
 static PyMethodDef SequenceRecord_methods[] = {
     SEQUENCE_FASTQ_BYTES_METHODDEF,
     SEQUENCE_FASTQ_BYTES_TWO_HEADERS_METHODDEF,
+    SEQUENCE_QUALITIES_AS_BYTES_METHODDEF,
     {NULL}
 };
 
