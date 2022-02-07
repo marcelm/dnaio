@@ -310,6 +310,7 @@ cdef class fastq_iter:
         bytearray buf
         char[:] buf_view
         char *c_buf
+        type sequence_class
         bint save_as_bytes
         bint custom_class
         bint extra_newline
@@ -325,6 +326,7 @@ cdef class fastq_iter:
         self.buf = bytearray(buffer_size)
         self.buf_view = self.buf
         self.c_buf = self.buf
+        self.sequence_class = sequence_class
         self.save_as_bytes = sequence_class is BytesSequence
         self.custom_class = (sequence_class is not Sequence and
                              sequence_class is not BytesSequence)
