@@ -234,7 +234,6 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 name = PyBytes_FromStringAndSize(c_buf + name_start, name_length)
                 sequence = PyBytes_FromStringAndSize(c_buf + sequence_start, sequence_length)
                 qualities = PyBytes_FromStringAndSize(c_buf + qualities_start, qualities_length)
-                yield new_sequence_record(BytesSequence, name, sequence, qualities)
             else:
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
@@ -247,10 +246,10 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 memcpy(PyUnicode_1BYTE_DATA(sequence), c_buf + sequence_start, sequence_length)
                 memcpy(PyUnicode_1BYTE_DATA(qualities), c_buf + qualities_start, qualities_length)
                 
-                if custom_class:
-                    yield sequence_class(name, sequence, qualities)
-                else:
-                    yield new_sequence_record(Sequence, name, sequence, qualities)
+            if custom_class:
+                yield sequence_class(name, sequence, qualities)
+            else:
+                yield new_sequence_record(sequence_class, name, sequence, qualities)
 
             ### Advance record to next position
             n_records += 1
