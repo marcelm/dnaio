@@ -338,7 +338,8 @@ cdef class fastq_iter:
         if buffer_size < 1:
             raise ValueError("Starting buffer size too small")
 
-        # buf is a byte buffer that is re-used in each iteration. Its layout is:
+    cdef _update_buffer(self):
+        # self.buf is a byte buffer that is re-used in each iteration. Its layout is:
         #
         # |-- complete records --|
         # +---+------------------+---------+-------+
@@ -351,7 +352,6 @@ cdef class fastq_iter:
         # in the previous iteration because it contained an incomplete
         # FASTQ record.
 
-    cdef _update_buffer(self):
         cdef Py_ssize_t last_read_position = self.bufend
         cdef Py_ssize_t bufstart
         if self.record_start == 0 and self.bufend == len(self.buf):
