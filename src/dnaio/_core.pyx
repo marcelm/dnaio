@@ -325,7 +325,6 @@ cdef class fastq_iter:
         self.file = file
         if buffer_size < 1:
             raise ValueError("Starting buffer size too small")
-        self._update_buffer()
 
         # buf is a byte buffer that is re-used in each iteration. Its layout is:
         #
@@ -382,6 +381,7 @@ cdef class fastq_iter:
                     line=self.n_records * 4 + lines)
             else:  # EOF Reached. Stop iterating.
                 raise StopIteration()
+        self.record_start = 0
 
     def __iter__(self):
         return self
