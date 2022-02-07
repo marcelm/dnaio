@@ -303,6 +303,7 @@ cdef class fastq_iter:
         bint save_as_bytes
         bint custom_class
         bint extra_newline
+        bint yielded_two_headers
         object file
         Py_ssize_t bufend
         Py_ssize_t record_start
@@ -318,6 +319,7 @@ cdef class fastq_iter:
                              sequence_class is not BytesSequence)
         self.n_records = 0
         self.extra_newline = False
+        self.yielded_two_headers = False
         self.bufend = 0
         self.record_start = 0
         self.file = file
@@ -470,7 +472,8 @@ cdef class fastq_iter:
                 raise FastqFormatError(
                     "Length of sequence and qualities differ", line=self.n_records * 4 + 3)
 
-            if self.n_records == 0:
+            if self.n_records == 0 and not self.yielded_two_headers:
+                self.yielded_two_headers = True
                 return bool(second_header_length)  # first yielded value is special
 
             if self.save_as_bytes:
