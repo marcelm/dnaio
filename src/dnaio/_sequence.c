@@ -301,37 +301,37 @@ static PyMethodDef BytesSequenceRecord_methods[] = {
     {NULL}
 };
 
-// SEQUENCE METHODS
+// MAPPING METHODS
 
 static Py_ssize_t 
 SequenceRecord__len__(SequenceRecord *self) {
-    return PySequence_Length(self->sequence);
+    return PyObject_Size(self->sequence);
 }
 
 static PyObject * 
-SequenceRecord_get_item(SequenceRecord *self, Py_ssize_t i) 
+SequenceRecord_get_item(SequenceRecord *self, PyObject *key) 
 {
-    PyObject * name;
-    PyObject * sequence;
     PyObject * qualities;
     
-    sequence = PySequence_GetItem(self->sequence, i);
+    PyObject * sequence = PyObject_GetItem(self->sequence, key);
     if (sequence == NULL) {
         return NULL;
     }
     if (self->qualities == NULL) {
-        qualities == NULL;
+        qualities = NULL;
     } else {
-        qualities = PySequence_GetItem(self->qualities, i);
+        qualities = PyObject_GetItem(self->qualities, key);
         if (qualities == NULL) {
             return NULL;
         }
     }
     Py_INCREF(self->name);
-    return new_sequence_record(Py_TYPE(self), name, sequence, qualities);
+    return new_sequence_record(Py_TYPE(self), self->name, sequence, qualities);
 }
 
-static PySequenceMethods SequenceRecordSequenceMethods = {
+static PyMappingMethods SequenceRecordMappingMethods = {
+    .mp_length = (lenfunc)SequenceRecord__len__,
+    .mp_subscript = (binaryfunc)SequenceRecord_get_item,
 };
 
 static PyTypeObject SequenceRecord_type = {
@@ -347,6 +347,7 @@ static PyTypeObject SequenceRecord_type = {
     .tp_methods = SequenceRecord_methods,
     .tp_repr = (reprfunc)SequenceRecord__repr__,
     .tp_richcompare = SequenceRecord__richcompare__,
+    .tp_as_mapping = &SequenceRecordMappingMethods,
 };
 
 static PyTypeObject BytesSequenceRecord_type = {
@@ -362,6 +363,7 @@ static PyTypeObject BytesSequenceRecord_type = {
     .tp_methods = BytesSequenceRecord_methods,
     .tp_repr = (reprfunc)SequenceRecord__repr__,
     .tp_richcompare = SequenceRecord__richcompare__,
+    .tp_as_mapping = &SequenceRecordMappingMethods,
 };
 
 
