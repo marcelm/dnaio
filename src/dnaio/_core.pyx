@@ -312,6 +312,7 @@ cdef class fastq_iter:
         self.buffer_size = buffer_size
         self.buf = bytearray(buffer_size)
         self.buf_view = self.buf
+        self.c_buf = self.buf
         self.save_as_bytes = sequence_class is BytesSequence
         self.custom_class = (sequence_class is not Sequence and
                              sequence_class is not BytesSequence)
