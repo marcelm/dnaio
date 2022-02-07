@@ -304,6 +304,7 @@ cdef class fastq_iter:
         bint custom_class
         bint extra_newline
         bint yielded_two_headers
+        bint eof
         object file
         Py_ssize_t bufend
         Py_ssize_t record_start
@@ -320,6 +321,7 @@ cdef class fastq_iter:
         self.n_records = 0
         self.extra_newline = False
         self.yielded_two_headers = False
+        self.eof = False
         self.bufend = 0
         self.record_start = 0
         self.file = file
@@ -380,7 +382,7 @@ cdef class fastq_iter:
                                 500)),
                     line=self.n_records * 4 + lines)
             else:  # EOF Reached. Stop iterating.
-                raise StopIteration()
+                self.eof = True
         self.record_start = 0
 
     def __iter__(self):
@@ -398,6 +400,8 @@ cdef class fastq_iter:
             char *second_header_end_ptr
             char *qualities_end_ptr
         while True:
+            if self.eof:
+                raise StopIteration()
             ### Check for a complete record (i.e 4 newlines are present)
             # Use libc memchr, this optimizes looking for characters by
             # using 64-bit integers. See:

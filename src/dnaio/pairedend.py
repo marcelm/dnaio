@@ -5,7 +5,7 @@ from typing import Union, BinaryIO, Optional, Iterator, Tuple
 
 from xopen import xopen
 
-from ._core import Sequence, record_names_match, record_names_match_bytes
+from ._core import Sequence, fastq_iter, record_names_match, record_names_match_bytes
 from .exceptions import FileFormatError
 from .interfaces import PairedEndReader, PairedEndWriter
 from .readers import FastaReader, FastqReader
@@ -66,19 +66,7 @@ class TwoFilePairedEndReader(PairedEndReader):
             name_matcher = record_names_match_bytes
         else:
             name_matcher = record_names_match  # type: ignore
-        for r1, r2 in itertools.zip_longest(self.reader1, self.reader2):
-            if r1 is None:
-                raise FileFormatError(
-                    "Reads are improperly paired. There are more reads in "
-                    "file 2 than in file 1.",
-                    line=None,
-                ) from None
-            if r2 is None:
-                raise FileFormatError(
-                    "Reads are improperly paired. There are more reads in "
-                    "file 1 than in file 2.",
-                    line=None,
-                ) from None
+        for r1, r2 in zip(self.reader1, self.reader2):
             if not name_matcher(r1.name, r2.name):
                 raise FileFormatError(
                     f"Reads are improperly paired. Read name '{r1.name}' "
@@ -86,6 +74,28 @@ class TwoFilePairedEndReader(PairedEndReader):
                     line=None,
                 ) from None
             yield (r1, r2)
+
+        # Force consumption of another read to test if iterators are out of sync.
+        try:
+            next(iter(self.reader1))
+        except StopIteration:
+            pass
+        try:
+            next(iter(self.reader2))
+        except StopIteration:
+            pass
+        if self.reader1.n_records < self.reader2.n_records:
+            raise FileFormatError(
+                "Reads are improperly paired. There are more reads in "
+                "file 2 than in file 1.",
+                line=None,
+            ) from None
+        if self.reader1.n_records > self.reader2.n_records:
+            raise FileFormatError(
+                "Reads are improperly paired. There are more reads in "
+                "file 1 than in file 2.",
+                line=None,
+            ) from None
 
     def close(self) -> None:
         self._close()
