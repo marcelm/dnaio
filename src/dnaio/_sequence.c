@@ -136,8 +136,15 @@ static PyMemberDef BytesSequenceRecord_members[] = {
 
 static PyObject * 
 SequenceRecord__repr__(SequenceRecord * self){
-    return PyUnicode_FromFormat("SequenceRecord(%R, %R, %R)", 
-        self->name, self->sequence, self->qualities);
+    char * type_name = Py_TYPE(self)->tp_name;
+    // Strip off module name from type name.
+    char * type_name_after_dot = strchr(type_name, '.') + 1;
+    if (self->qualities == NULL) {
+        return PyUnicode_FromFormat("%s(%R, %R)", 
+            type_name_after_dot, self->name, self->sequence);
+    }
+    return PyUnicode_FromFormat("%s(%R, %R, %R)", 
+        type_name_after_dot, self->name, self->sequence, self->qualities);
 }
 
 static int 
