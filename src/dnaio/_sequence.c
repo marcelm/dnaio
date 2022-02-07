@@ -301,6 +301,39 @@ static PyMethodDef BytesSequenceRecord_methods[] = {
     {NULL}
 };
 
+// SEQUENCE METHODS
+
+static Py_ssize_t 
+SequenceRecord__len__(SequenceRecord *self) {
+    return PySequence_Length(self->sequence);
+}
+
+static PyObject * 
+SequenceRecord_get_item(SequenceRecord *self, Py_ssize_t i) 
+{
+    PyObject * name;
+    PyObject * sequence;
+    PyObject * qualities;
+    
+    sequence = PySequence_GetItem(self->sequence, i);
+    if (sequence == NULL) {
+        return NULL;
+    }
+    if (self->qualities == NULL) {
+        qualities == NULL;
+    } else {
+        qualities = PySequence_GetItem(self->qualities, i);
+        if (qualities == NULL) {
+            return NULL;
+        }
+    }
+    Py_INCREF(self->name);
+    return new_sequence_record(Py_TYPE(self), name, sequence, qualities);
+}
+
+static PySequenceMethods SequenceRecordSequenceMethods = {
+};
+
 static PyTypeObject SequenceRecord_type = {
     .tp_name = "_sequence.SequenceRecord",
     .tp_flags = Py_TPFLAGS_DEFAULT,
