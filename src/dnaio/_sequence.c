@@ -119,20 +119,181 @@ BytesSequenceRecord__init__(SequenceRecord *self, PyObject *args,
     return 0;
 };
 
-static PyMemberDef SequenceRecord_members[] = {
-    {"name", T_OBJECT_EX, offsetof(SequenceRecord, name), 0},
-    {"sequence", T_OBJECT_EX, offsetof(SequenceRecord, sequence), 0},
-    {"qualities", T_OBJECT, offsetof(SequenceRecord, qualities), 0},  // May be None
+// GETTERS AND SETTERS
+static PyObject *
+SequenceRecord_get_name(SequenceRecord *self, void *closure) 
+{
+    Py_INCREF(self->name);
+    return self->name;
+}
+
+static PyObject *
+SequenceRecord_get_sequence(SequenceRecord *self, void *closure) 
+{
+    Py_INCREF(self->sequence);
+    return self->sequence;
+}
+
+static PyObject *
+SequenceRecord_get_qualities(SequenceRecord *self, void *closure)
+{
+    if (self->qualities == NULL) {
+        Py_RETURN_NONE;
+    }
+    Py_INCREF(self->qualities);
+    return self->qualities;
+}
+
+static PyObject *
+BytesSequenceRecord_get_qualities(SequenceRecord *self, void *closure)
+{
+    Py_INCREF(self->qualities);
+    return self->qualities;
+}
+
+static int
+SequenceRecord_set_name(SequenceRecord *self, PyObject *value, void *closure)
+{
+    if (value == NULL){
+        PyErr_SetString(PyExc_AttributeError, "name attribute cannot be deleted.");
+        return -1;
+    }
+    if (!PyUnicode_CheckExact(value)) {
+        PyErr_Format(PyExc_TypeError, 
+                     "name must be of type str. Got %s", 
+                     Py_TYPE(value)->tp_name);
+        return -1;
+    }
+    PyObject * tmp = self->name;
+    Py_INCREF(value);
+    self->name = value;
+    Py_DECREF(tmp);
+    return 0;
+}
+
+static int
+SequenceRecord_set_sequence(SequenceRecord *self, PyObject *value, void *closure)
+{
+    if (value == NULL){
+        PyErr_SetString(PyExc_AttributeError, "sequence attribute cannot be deleted.");
+        return -1;
+    }
+    if (!PyUnicode_CheckExact(value)) {
+        PyErr_Format(PyExc_TypeError, 
+                     "sequence must be of type str. Got %s", 
+                     Py_TYPE(value)->tp_name);
+        return -1;
+    }
+    PyObject * tmp = self->sequence;
+    Py_INCREF(value);
+    self->sequence = value;
+    Py_DECREF(tmp);
+    return 0;
+}
+
+static int
+SequenceRecord_set_qualities(SequenceRecord *self, PyObject *value, void *closure)
+{
+    PyObject * tmp;
+    if (value == NULL){
+        PyErr_SetString(PyExc_AttributeError, "qualities attribute cannot be deleted.");
+        return -1;
+    }
+    if (value == Py_None) {
+        tmp = self->qualities;
+        self->qualities = NULL;
+        Py_DECREF(tmp);
+        return 0;
+    }
+    if (!PyUnicode_CheckExact(value)) {
+        PyErr_Format(PyExc_TypeError, 
+                     "sequence must be of type str. Got %s", 
+                     Py_TYPE(value)->tp_name);
+        return -1;
+    }
+    tmp = self->qualities;
+    Py_INCREF(value);
+    self->qualities = value;
+    Py_DECREF(tmp);
+    return 0;
+}
+
+static int
+BytesSequenceRecord_set_name(SequenceRecord *self, PyObject *value, void *closure)
+{
+    if (value == NULL){
+        PyErr_SetString(PyExc_AttributeError, "name attribute cannot be deleted.");
+        return -1;
+    }
+    if (!PyBytes_CheckExact(value)) {
+        PyErr_Format(PyExc_TypeError, 
+                     "name must be of type bytes. Got %s", 
+                     Py_TYPE(value)->tp_name);
+        return -1;
+    }
+    PyObject * tmp = self->name;
+    Py_INCREF(value);
+    self->name = value;
+    Py_DECREF(tmp);
+    return 0;
+}
+
+static int
+BytesSequenceRecord_set_sequence(SequenceRecord *self, PyObject *value, void *closure)
+{
+    if (value == NULL){
+        PyErr_SetString(PyExc_AttributeError, "sequence attribute cannot be deleted.");
+        return -1;
+    }
+    if (!PyBytes_CheckExact(value)) {
+        PyErr_Format(PyExc_TypeError, 
+                     "sequence must be of type bytes. Got %s", 
+                     Py_TYPE(value)->tp_name);
+        return -1;
+    }
+    PyObject * tmp = self->sequence;
+    Py_INCREF(value);
+    self->sequence = value;
+    Py_DECREF(tmp);
+    return 0;
+}
+
+static int
+BytesSequenceRecord_set_qualities(SequenceRecord *self, PyObject *value, void *closure)
+{
+    if (value == NULL){
+        PyErr_SetString(PyExc_AttributeError, "qualities attribute cannot be deleted.");
+        return -1;
+    }
+    if (!PyBytes_CheckExact(value)) {
+        PyErr_Format(PyExc_TypeError, 
+                     "qualities must be of type bytes. Got %s", 
+                     Py_TYPE(value)->tp_name);
+        return -1;
+    }
+    PyObject * tmp = self->qualities;
+    Py_INCREF(value);
+    self->qualities = value;
+    Py_DECREF(tmp);
+    return 0;
+}
+
+
+static PyGetSetDef SequenceRecord_properties[] = {
+    {"name", (getter)SequenceRecord_get_name, (setter)SequenceRecord_set_name},
+    {"sequence", (getter)SequenceRecord_get_sequence, (setter)SequenceRecord_set_sequence},
+    {"qualities", (getter)SequenceRecord_get_qualities, (setter)SequenceRecord_set_qualities},
     {NULL}
 };
 
-static PyMemberDef BytesSequenceRecord_members[] = {
-    {"name", T_OBJECT_EX, offsetof(SequenceRecord, name), 0},
-    {"sequence", T_OBJECT_EX, offsetof(SequenceRecord, sequence), 0},
-    {"qualities", T_OBJECT_EX, offsetof(SequenceRecord, qualities), 0},
+static PyGetSetDef BytesSequenceRecord_properties[] = {
+    {"name", (getter)SequenceRecord_get_name, (setter)BytesSequenceRecord_set_name},
+    {"sequence", (getter)SequenceRecord_get_sequence, (setter)BytesSequenceRecord_set_sequence},
+    {"qualities", (getter)BytesSequenceRecord_get_qualities, (setter)BytesSequenceRecord_set_qualities},
     {NULL}
 };
 
+// METHODS
 
 static PyObject * 
 SequenceRecord__repr__(SequenceRecord * self){
@@ -347,7 +508,7 @@ static PyTypeObject SequenceRecord_type = {
     .tp_doc = SequenceRecord__init____doc__,
     .tp_init = (initproc)SequenceRecord__init__,
     .tp_new = PyType_GenericNew,
-    .tp_members = SequenceRecord_members,
+    .tp_getset = SequenceRecord_properties,
     .tp_methods = SequenceRecord_methods,
     .tp_repr = (reprfunc)SequenceRecord__repr__,
     .tp_richcompare = SequenceRecord__richcompare__,
@@ -363,7 +524,7 @@ static PyTypeObject BytesSequenceRecord_type = {
     .tp_doc = BytesSequenceRecord__init____doc__,
     .tp_init = (initproc)BytesSequenceRecord__init__,
     .tp_new = PyType_GenericNew,
-    .tp_members = BytesSequenceRecord_members,
+    .tp_getset = BytesSequenceRecord_properties,
     .tp_methods = BytesSequenceRecord_methods,
     .tp_repr = (reprfunc)SequenceRecord__repr__,
     .tp_richcompare = SequenceRecord__richcompare__,
