@@ -140,19 +140,24 @@ SequenceRecord__repr__(SequenceRecord * self){
         self->name, self->sequence, self->qualities);
 }
 
-static Py_hash_t 
-calculate_sequence_record_hash(SequenceRecord *self){
-    Py_hash_t name_hash = PyObject_Hash(self->name);
-    Py_hash_t sequence_hash = PyObject_Hash(self->sequence);
-    Py_hash_t qualities_hash;
-    if (self->qualities != NULL) {
-        qualities_hash = PyObject_Hash(self->qualities);
-    } else qualities_hash = 0;
-    return name_hash ^ sequence_hash ^ qualities_hash;
+static int 
+SequenceRecord_equals(SequenceRecord * self, SequenceRecord * other)
+{
+    if (self->qualities == NULL) {
+        if (other->qualities != NULL) {
+            return 0;
+        }
+    return (PyObject_RichCompareBool(self->name, other->name, Py_EQ) && 
+            PyObject_RichCompareBool(self->sequence, other->sequence, Py_EQ));
+    }
+    return (PyObject_RichCompareBool(self->name, other->name, Py_EQ) && 
+            PyObject_RichCompareBool(self->sequence, other->sequence, Py_EQ) &&
+            PyObject_RichCompareBool(self->qualities, other->qualities, Py_EQ)
+            );
 }
-
 static PyObject *
-SequenceRecord__richcompare__(PyObject *self, PyObject *other, int op){
+SequenceRecord__richcompare__(SequenceRecord *self, SequenceRecord *other, int op)
+{
     // This function is extremely generic to allow subtyping, reuse etc.
     if(Py_TYPE(self) != Py_TYPE(other)) {
         PyErr_Format(PyExc_TypeError, 
@@ -160,21 +165,13 @@ SequenceRecord__richcompare__(PyObject *self, PyObject *other, int op){
             Py_TYPE(self), Py_TYPE(other));
         return NULL;
     }
-    if (op == 2){
-        return PyBool_FromLong(
-            calculate_sequence_record_hash((SequenceRecord *)self) == 
-            calculate_sequence_record_hash((SequenceRecord *)other));
-    }
-    else if (op == 3){
-        return PyBool_FromLong(
-            calculate_sequence_record_hash((SequenceRecord *)self) != 
-            calculate_sequence_record_hash((SequenceRecord *)other));
+    if (op == Py_EQ){
+        return PyBool_FromLong(SequenceRecord_equals(self, other));
+    } else if (op == Py_NE) {
+        return PyBool_FromLong(!SequenceRecord_equals(self, other));
     }
     else {
-        PyErr_Format(PyExc_NotImplementedError, 
-                     "Only equals and not equals are implemented for %R.", 
-                     Py_TYPE(self));
-        return NULL;
+        return Py_NotImplemented;
     }
 }
 
