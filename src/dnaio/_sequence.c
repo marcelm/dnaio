@@ -297,7 +297,7 @@ static PyGetSetDef BytesSequenceRecord_properties[] = {
 
 static PyObject * 
 SequenceRecord__repr__(SequenceRecord * self){
-    char * type_name = Py_TYPE(self)->tp_name;
+    const char * type_name = Py_TYPE(self)->tp_name;
     // Strip off module name from type name.
     char * type_name_after_dot = strchr(type_name, '.') + 1;
     if (self->qualities == NULL) {
@@ -511,7 +511,7 @@ static PyTypeObject SequenceRecord_type = {
     .tp_getset = SequenceRecord_properties,
     .tp_methods = SequenceRecord_methods,
     .tp_repr = (reprfunc)SequenceRecord__repr__,
-    .tp_richcompare = SequenceRecord__richcompare__,
+    .tp_richcompare = (richcmpfunc)SequenceRecord__richcompare__,
     .tp_as_mapping = &SequenceRecordMappingMethods,
 };
 
@@ -527,7 +527,7 @@ static PyTypeObject BytesSequenceRecord_type = {
     .tp_getset = BytesSequenceRecord_properties,
     .tp_methods = BytesSequenceRecord_methods,
     .tp_repr = (reprfunc)SequenceRecord__repr__,
-    .tp_richcompare = SequenceRecord__richcompare__,
+    .tp_richcompare = (richcmpfunc)SequenceRecord__richcompare__,
     .tp_as_mapping = &SequenceRecordMappingMethods,
 };
 
