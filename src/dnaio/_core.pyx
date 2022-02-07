@@ -318,7 +318,7 @@ cdef class fastq_iter:
         object file
         Py_ssize_t bufend
         Py_ssize_t record_start
-    cdef public Py_ssize_t n_records
+    cdef readonly Py_ssize_t n_records
 
     def __cinit__(self, file, sequence_class, Py_ssize_t buffer_size):
         self.buffer_size = buffer_size
