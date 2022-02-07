@@ -2,7 +2,7 @@
 
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE
 from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check, PyUnicode_GET_LENGTH
-from cpython.ref cimport PyObject
+from cpython.ref cimport PyObject, Py_INCREF
 from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
 cimport cython
 
@@ -249,6 +249,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             if custom_class:
                 yield sequence_class(name, sequence, qualities)
             else:
+                Py_INCREF(name); Py_INCREF(sequence); Py_INCREF(qualities)
                 yield new_sequence_record(sequence_class, name, sequence, qualities)
 
             ### Advance record to next position

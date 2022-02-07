@@ -8,14 +8,16 @@ typedef struct {
     PyObject * qualities;
 } SequenceRecord;
 
+// NOTE: This function steals references. This is also how CPython tuples work.
+// This means that when we create new name, sequence and qualities objects which
+// will have their refcount automatically set to 1, we don't need to worry
+// about incref or decref. There will be only one reference, and that will be
+// owned by the sequence record object.
 static PyObject *
 new_sequence_record(PyTypeObject *SequenceClass, PyObject *name, PyObject *sequence, PyObject *qualities){
     SequenceRecord *new_obj = PyObject_New(SequenceRecord, SequenceClass);
     if (new_obj == NULL)
         return PyErr_NoMemory();
-    Py_INCREF(name);
-    Py_INCREF(sequence);
-    Py_INCREF(qualities);
     new_obj->name = name;
     new_obj->sequence = sequence;
     new_obj->qualities = qualities;
