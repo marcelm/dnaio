@@ -1,11 +1,10 @@
-import itertools
 from contextlib import ExitStack
 from os import PathLike
 from typing import Union, BinaryIO, Optional, Iterator, Tuple
 
 from xopen import xopen
 
-from ._core import Sequence, fastq_iter, record_names_match, record_names_match_bytes
+from ._core import Sequence, record_names_match, record_names_match_bytes
 from .exceptions import FileFormatError
 from .interfaces import PairedEndReader, PairedEndWriter
 from .readers import FastaReader, FastqReader
