@@ -648,3 +648,25 @@ def test_fasta_writer_repr(tmp_path):
 def test_fastq_writer_repr(tmp_path):
     with FastqWriter(tmp_path / "out.fastq") as fw:
         repr(fw)
+
+
+class TestAsciiCheck:
+    from dnaio._core import bytes_ascii_check
+
+    ASCII_STRING = "In het Nederlands komen bijzondere leestekens niet vaak voor.".encode('UTF-8')
+    # NON-ASCII from the German wikipedia.
+    NON_ASCII_STRING = "In späterer Zeit trat Umlaut sehr häufig analogisch ein.".encode('UTF-8')
+
+    def test_ascii(self):
+        assert self.bytes_ascii_check(self.ASCII_STRING)
+
+    def test_non_ascii(self):
+        assert not self.bytes_ascii_check((self.NON_ASCII_STRING))
+
+    def test_ascii_lenghts(self):
+        # Make sure that the function finds the non-ascii byte correctly for
+        # all lengths.
+        non_ascii_char = "é".encode("latin-1")
+        for i in range(len(self.ASCII_STRING)):
+            test_string = self.ASCII_STRING[:i] + non_ascii_char
+            assert not self.bytes_ascii_check(test_string)

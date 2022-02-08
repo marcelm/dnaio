@@ -21,7 +21,7 @@ from .exceptions import FastqFormatError
 from ._util import shorten
 
 
-def test_bytes_ascii(bytes string):
+def bytes_ascii_check(bytes string):
     cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), PyBytes_GET_SIZE(string))
     return ascii 
 
