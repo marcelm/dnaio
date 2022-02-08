@@ -12,11 +12,18 @@ cdef extern from "Python.h":
     int PyUnicode_1BYTE_KIND
     object PyUnicode_New(Py_ssize_t size, Py_UCS4 maxchar)
 
+cdef extern from "ascii_check.h":
+    int string_is_ascii(char * string, size_t length)
+
 from typing import Union
 
 from .exceptions import FastqFormatError
 from ._util import shorten
 
+
+def test_bytes_ascii(bytes string):
+    cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), PyBytes_GET_SIZE(string))
+    return ascii 
 
 cdef class Sequence:
     """
@@ -463,9 +470,13 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             else:
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
-                name = PyUnicode_New(name_length, 255)
-                sequence = PyUnicode_New(sequence_length, 255)
-                qualities = PyUnicode_New(qualities_length, 255)
+                # Run ASCII check on entire record as that is faster
+                if not string_is_ascii(c_buf + record_start, qualities_end - record_start):
+                    raise FastqFormatError("Non-ASCII characters found in record.", 
+                                           line=n_records * 4)
+                name = PyUnicode_New(name_length, 127)
+                sequence = PyUnicode_New(sequence_length, 127)
+                qualities = PyUnicode_New(qualities_length, 127)
                 if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
                     raise MemoryError()
                 memcpy(PyUnicode_1BYTE_DATA(name), c_buf + name_start, name_length)
