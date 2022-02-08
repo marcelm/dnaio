@@ -470,7 +470,7 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             else:
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
-                # Run ASCII check on entire record as that is faster
+                # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
                 if not string_is_ascii(c_buf + record_start, qualities_end - record_start):
                     raise FastqFormatError("Non-ASCII characters found in record.", 
                                            line=n_records * 4)
