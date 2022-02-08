@@ -256,6 +256,14 @@ class TestFastqReader:
             records = list(f)
         assert records == [Sequence('r1', 'A', 'H')]
 
+    def test_non_ascii_in_record(self):
+        # \xc4 -> Ä
+        fastq = BytesIO(b'@r1\n\xc4\n+\nH')
+        with dnaio.open(fastq) as f:
+            with pytest.raises(FastqFormatError) as e:
+                records = list(f)
+            e.match("Non-ASCII")
+
     def test_not_opened_as_binary(self):
         filename = 'tests/data/simple.fastq'
         with open(filename, 'rt') as f:
