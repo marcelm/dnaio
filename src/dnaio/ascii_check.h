@@ -5,8 +5,7 @@
 #include <stdint.h>
 
 static inline int 
-string_is_ascii(char * string, size_t length) {
-    size_t pos = 0;
+string_is_ascii(char * string, ssize_t length) {
     uint64_t *longword_ptr = (uint64_t *)string;
     while (((char *)longword_ptr - string) < length) {
         if (*longword_ptr & ASCII_MASK_8BYTE){
