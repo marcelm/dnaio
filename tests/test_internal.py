@@ -261,7 +261,7 @@ class TestFastqReader:
         fastq = BytesIO(b'@r1\n\xc4\n+\nH')
         with dnaio.open(fastq) as f:
             with pytest.raises(FastqFormatError) as e:
-                records = list(f)
+                list(f)
             e.match("Non-ASCII")
 
     def test_not_opened_as_binary(self):
