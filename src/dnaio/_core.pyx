@@ -21,9 +21,13 @@ from .exceptions import FastqFormatError
 from ._util import shorten
 
 
-def bytes_ascii_check(bytes string):
-    cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), PyBytes_GET_SIZE(string))
-    return ascii 
+def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
+    if length == -1:
+        length = PyBytes_GET_SIZE(string)
+    else:
+        length = min(length, PyBytes_GET_SIZE(string))
+    cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
+    return ascii
 
 cdef class Sequence:
     """

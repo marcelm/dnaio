@@ -675,10 +675,20 @@ class TestAsciiCheck:
     def test_non_ascii(self):
         assert not self.bytes_ascii_check(self.NON_ASCII_STRING)
 
-    def test_ascii_lenghts(self):
+    def test_non_ascii_lengths(self):
         # Make sure that the function finds the non-ascii byte correctly for
         # all lengths.
         non_ascii_char = "é".encode("latin-1")
         for i in range(len(self.ASCII_STRING)):
             test_string = self.ASCII_STRING[:i] + non_ascii_char
             assert not self.bytes_ascii_check(test_string)
+
+    def test_ascii_lengths(self):
+        # Make sure the ascii check is correct even though there are non-ASCII
+        # bytes directly behind the search space.
+        # This ensures there is no overshoot where the algorithm checks bytes
+        # after the search space.
+        non_ascii_char = "é".encode("latin-1")
+        for i in range(1, len(self.ASCII_STRING) + 1):
+            test_string = self.ASCII_STRING[:i] + (non_ascii_char * 8)
+            assert self.bytes_ascii_check(test_string, i - 1)
