@@ -228,6 +228,12 @@ cdef class BytesSequence:
         """
         return self.fastq_bytes(two_headers=True)
 
+    def is_mate(self, BytesSequence other):
+        # No need to check if type is bytes as it is guaranteed by the type.
+        return record_ids_match(PyBytes_AS_STRING(self.name),
+                                PyBytes_AS_STRING(other.name),
+                                PyBytes_GET_SIZE(self.name))
+
 
 cdef bytes create_fastq_record(char * name, char * sequence, char * qualities,
                                Py_ssize_t name_length,
