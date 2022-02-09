@@ -62,10 +62,6 @@ class TwoFilePairedEndReader(PairedEndReader):
         # So we can quickly check if the iterator is still yielding.
         # This is faster than implementing a while loop with next calls,
         # which requires expensive function lookups.
-        if "b" in self.mode:
-            name_matcher = record_names_match_bytes
-        else:
-            name_matcher = record_names_match  # type: ignore
         for r1, r2 in itertools.zip_longest(self.reader1, self.reader2):
             if r1 is None:
                 raise FileFormatError(
@@ -79,7 +75,7 @@ class TwoFilePairedEndReader(PairedEndReader):
                     "file 1 than in file 2.",
                     line=None,
                 ) from None
-            if not name_matcher(r1.name, r2.name):
+            if not r1.is_mate(r2):
                 raise FileFormatError(
                     f"Reads are improperly paired. Read name '{r1.name}' "
                     f"in file 1 does not match '{r2.name}' in file 2.",
