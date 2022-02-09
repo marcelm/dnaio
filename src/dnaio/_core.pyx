@@ -148,6 +148,24 @@ cdef class Sequence:
         """
         return self.fastq_bytes(two_headers=True)
 
+    def is_mate(self, Sequence other):
+        cdef:
+            char * header1_chars = NULL
+            char * header2_chars = NULL
+            size_t header1_length
+        # No need to check if type is unicode as it is guaranteed by the type.
+        if PyUnicode_KIND(self.name) == PyUnicode_1BYTE_KIND:
+            header1_chars = <char *>PyUnicode_1BYTE_DATA(self.name)
+            header1_length = <size_t> PyUnicode_GET_LENGTH(self.name)
+        else:
+            raise ValueError(f"name should be ASCII-only. Got {self.name:R}.")
+
+        if PyUnicode_KIND(other.name) == PyUnicode_1BYTE_KIND:
+            header2_chars = <char *>PyUnicode_1BYTE_DATA(other.name)
+        else:
+            raise ValueError(f"name should be ASCII-only. Got {other.name:R}.")
+        return record_ids_match(header1_chars, header2_chars, header1_length)
+
 
 cdef class BytesSequence:
     cdef:
