@@ -51,16 +51,6 @@ class TwoFilePairedEndReader(PairedEndReader):
         """
         Iterate over the paired reads. Each item is a pair of Sequence objects.
         """
-        # Avoid usage of zip() below since it will consume one item too many,
-        # when one of the iterators is exhausted. zip in python 3.10 has a
-        # 'strict' keyword that can be used to prevent this and throw an error,
-        # but it will take a long time for 3.10 or higher to be available on
-        # everyone's machine.
-        # Instead use zip_longest from itertools. This yields None if one of
-        # the iterators is exhausted. Checking for None identity is fast.
-        # So we can quickly check if the iterator is still yielding.
-        # This is faster than implementing a while loop with next calls,
-        # which requires expensive function lookups.
         if "b" in self.mode:
             name_matcher = record_names_match_bytes
         else:
