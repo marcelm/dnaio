@@ -14,8 +14,6 @@ cdef extern from "Python.h":
 
 from typing import Union
 
-import warnings
-
 from .exceptions import FastqFormatError
 from ._util import shorten
 
