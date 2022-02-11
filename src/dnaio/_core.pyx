@@ -466,6 +466,11 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             if n_records == 0:
                 yield bool(second_header_length)  # first yielded value is special
 
+            # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
+            if not string_is_ascii(c_buf + record_start, qualities_end - record_start):
+                raise FastqFormatError("Non-ASCII characters found in record.",
+                                       line=n_records * 4)
+
             if save_as_bytes:
                 name = PyBytes_FromStringAndSize(c_buf + name_start, name_length)
                 sequence = PyBytes_FromStringAndSize(c_buf + sequence_start, sequence_length)
@@ -474,10 +479,6 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             else:
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
-                # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
-                if not string_is_ascii(c_buf + record_start, qualities_end - record_start):
-                    raise FastqFormatError("Non-ASCII characters found in record.", 
-                                           line=n_records * 4)
                 name = PyUnicode_New(name_length, 127)
                 sequence = PyUnicode_New(sequence_length, 127)
                 qualities = PyUnicode_New(qualities_length, 127)
