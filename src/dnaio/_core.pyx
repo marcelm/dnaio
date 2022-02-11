@@ -324,7 +324,7 @@ cdef class FastqIter:
         object file
         Py_ssize_t bufend
         Py_ssize_t record_start
-    cdef readonly Py_ssize_t n_records
+    cdef readonly Py_ssize_t number_of_records
 
     def __cinit__(self, file, sequence_class, Py_ssize_t buffer_size):
         self.buffer_size = buffer_size
@@ -335,7 +335,7 @@ cdef class FastqIter:
         self.save_as_bytes = sequence_class is BytesSequence
         self.use_custom_class = (sequence_class is not Sequence and
                              sequence_class is not BytesSequence)
-        self.n_records = 0
+        self.number_of_records = 0
         self.extra_newline = False
         self.yielded_two_headers = False
         self.eof = False
@@ -397,7 +397,7 @@ cdef class FastqIter:
                     '{!r}'.format(
                         shorten(self.buf[self.record_start:last_read_position].decode('latin-1'),
                                 500)),
-                    line=self.n_records * 4 + lines)
+                    line=self.number_of_records * 4 + lines)
             else:  # EOF Reached. Stop iterating.
                 self.eof = True
         self.record_start = 0
@@ -456,11 +456,11 @@ cdef class FastqIter:
             if self.c_buf[self.record_start] != b'@':
                 raise FastqFormatError("Line expected to "
                     "start with '@', but found {!r}".format(chr(self.c_buf[self.record_start])),
-                    line=self.n_records * 4)
+                    line=self.number_of_records * 4)
             if self.c_buf[second_header_start] != b'+':
                 raise FastqFormatError("Line expected to "
                     "start with '+', but found {!r}".format(chr(self.c_buf[second_header_start])),
-                    line=self.n_records * 4 + 2)
+                    line=self.number_of_records * 4 + 2)
 
             name_start = self.record_start + 1  # Skip @
             second_header_start += 1  # Skip +
@@ -489,13 +489,13 @@ cdef class FastqIter:
                         "empty or equal to the first description.".format(
                             self.c_buf[name_start:name_end].decode('latin-1'),
                             self.c_buf[second_header_start:second_header_end]
-                            .decode('latin-1')), line=self.n_records * 4 + 2)
+                            .decode('latin-1')), line=self.number_of_records * 4 + 2)
 
             if qualities_length != sequence_length:
                 raise FastqFormatError(
-                    "Length of sequence and qualities differ", line=self.n_records * 4 + 3)
+                    "Length of sequence and qualities differ", line=self.number_of_records * 4 + 3)
 
-            if self.n_records == 0 and not self.yielded_two_headers:
+            if self.number_of_records == 0 and not self.yielded_two_headers:
                 self.yielded_two_headers = True
                 return bool(second_header_length)  # first yielded value is special
 
@@ -522,7 +522,7 @@ cdef class FastqIter:
                     ret_val = Sequence.__new__(Sequence, name, sequence, qualities)
 
             ### Advance record to next position
-            self.n_records += 1
+            self.number_of_records += 1
             self.record_start = qualities_end + 1
             return ret_val
 

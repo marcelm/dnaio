@@ -73,13 +73,13 @@ class TwoFilePairedEndReader(PairedEndReader):
             next(iter(self.reader2))
         except StopIteration:
             pass
-        if self.reader1.n_records < self.reader2.n_records:
+        if self.reader1.number_of_records < self.reader2.number_of_records:
             raise FileFormatError(
                 "Reads are improperly paired. There are more reads in "
                 "file 2 than in file 1.",
                 line=None,
             ) from None
-        if self.reader1.n_records > self.reader2.n_records:
+        if self.reader1.number_of_records > self.reader2.number_of_records:
             raise FileFormatError(
                 "Reads are improperly paired. There are more reads in "
                 "file 1 than in file 2.",

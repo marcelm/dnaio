@@ -79,7 +79,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
         self.sequence_class = sequence_class
         self.delivers_qualities = False
         self._delimiter = '\n' if keep_linebreaks else ''
-        self.n_records = 0
+        self.number_of_records = 0
 
     def __iter__(self) -> Iterator[Sequence]:
         """
@@ -97,7 +97,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
                 continue
             if line and line[0] == '>':
                 if name is not None:
-                    self.n_records += 1
+                    self.number_of_records += 1
                     yield self.sequence_class(name, self._delimiter.join(seq), None)
                 name = line[1:]
                 seq = []
@@ -110,7 +110,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
                     f"Expected '>' at beginning of record, but got '{_shorten(line)}'.", line=i)
 
         if name is not None:
-            self.n_records += 1
+            self.number_of_records += 1
             yield self.sequence_class(name, self._delimiter.join(seq), None)
         # Prevent TextIOWrapper from closing the underlying file
         f.detach()
@@ -157,8 +157,8 @@ class FastqReader(BinaryFileReader, SingleEndReader):
         return self._iter
 
     @property
-    def n_records(self):
+    def number_of_records(self):
         try:
-            return self._iter.n_records
+            return self._iter.number_of_records
         except AttributeError:
             return 0
