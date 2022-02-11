@@ -345,7 +345,7 @@ cdef class FastqIter:
         if buffer_size < 1:
             raise ValueError("Starting buffer size too small")
 
-    cdef _update_buffer(self):
+    cdef _read_into_buffer(self):
         # self.buf is a byte buffer that is re-used in each iteration. Its layout is:
         #
         # |-- complete records --|
@@ -426,7 +426,7 @@ cdef class FastqIter:
             # void *memchr(const void *str, int c, size_t n)
             name_end_ptr = <char *>memchr(self.c_buf + self.record_start, b'\n', <size_t>(self.bufend - self.record_start))
             if name_end_ptr == NULL:
-                self._update_buffer()
+                self._read_into_buffer()
                 continue
             # bufend - sequence_start is always nonnegative:
             # - name_end is at most bufend - 1
@@ -435,19 +435,19 @@ cdef class FastqIter:
             sequence_start = name_end + 1
             sequence_end_ptr = <char *>memchr(self.c_buf + sequence_start, b'\n', <size_t>(self.bufend - sequence_start))
             if sequence_end_ptr == NULL:
-                self._update_buffer()
+                self._read_into_buffer()
                 continue
             sequence_end = sequence_end_ptr - self.c_buf
             second_header_start = sequence_end + 1
             second_header_end_ptr = <char *>memchr(self.c_buf + second_header_start, b'\n', <size_t>(self.bufend - second_header_start))
             if second_header_end_ptr == NULL:
-                self._update_buffer()
+                self._read_into_buffer()
                 continue
             second_header_end = second_header_end_ptr - self.c_buf
             qualities_start = second_header_end + 1
             qualities_end_ptr = <char *>memchr(self.c_buf + qualities_start, b'\n', <size_t>(self.bufend - qualities_start))
             if qualities_end_ptr == NULL:
-                self._update_buffer()
+                self._read_into_buffer()
                 continue
             qualities_end = qualities_end_ptr - self.c_buf
 
