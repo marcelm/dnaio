@@ -14,6 +14,8 @@ cdef extern from "Python.h":
 
 from typing import Union
 
+import warnings
+
 from .exceptions import FastqFormatError
 from ._util import shorten
 
@@ -294,7 +296,7 @@ def paired_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssiz
     return record_start1, record_start2
 
 
-cdef class fastq_iter:
+cdef class FastqIter:
     """
     Parse a FASTQ file and yield Sequence objects
 
