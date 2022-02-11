@@ -416,6 +416,8 @@ cdef class FastqIter:
             char *sequence_end_ptr
             char *second_header_end_ptr
             char *qualities_end_ptr
+        # Repeatedly attempt to parse the buffer until we have found a full record.
+        # If an attempt fails, we read more data before retrying.
         while True:
             if self.eof:
                 raise StopIteration()
