@@ -317,7 +317,7 @@ cdef class FastqIter:
         char *c_buf
         type sequence_class
         bint save_as_bytes
-        bint custom_class
+        bint use_custom_class
         bint extra_newline
         bint yielded_two_headers
         bint eof
@@ -333,7 +333,7 @@ cdef class FastqIter:
         self.c_buf = self.buf
         self.sequence_class = sequence_class
         self.save_as_bytes = sequence_class is BytesSequence
-        self.custom_class = (sequence_class is not Sequence and
+        self.use_custom_class = (sequence_class is not Sequence and
                              sequence_class is not BytesSequence)
         self.n_records = 0
         self.extra_newline = False
@@ -514,7 +514,7 @@ cdef class FastqIter:
                 memcpy(PyUnicode_1BYTE_DATA(sequence), self.c_buf + sequence_start, sequence_length)
                 memcpy(PyUnicode_1BYTE_DATA(qualities), self.c_buf + qualities_start, qualities_length)
                 
-                if self.custom_class:
+                if self.use_custom_class:
                     ret_val = self.sequence_class(name, sequence, qualities)
                 else:
                     ret_val = Sequence.__new__(Sequence, name, sequence, qualities)
