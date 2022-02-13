@@ -342,6 +342,10 @@ cdef class FastqIter:
         if buffer_size < 1:
             raise ValueError("Starting buffer size too small")
 
+    def __dealloc__(self):
+        if self.buffer != NULL:
+            PyMem_Free(self.buffer)
+
     cdef _read_into_buffer(self):
         # When this function is called, the last record in self.buffer is incomplete.
         # The incomplete recordis moved to the beginning of self.buffer, and the
