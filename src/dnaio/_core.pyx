@@ -332,7 +332,7 @@ cdef class FastqIter:
         self.sequence_class = sequence_class
         self.save_as_bytes = sequence_class is BytesSequence
         self.use_custom_class = (sequence_class is not Sequence and
-                             sequence_class is not BytesSequence)
+                                 sequence_class is not BytesSequence)
         self.number_of_records = 0
         self.extra_newline = False
         self.yielded_two_headers = False
