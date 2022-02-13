@@ -320,7 +320,7 @@ cdef class FastqIter:
         bint yielded_two_headers
         bint eof
         object file
-        Py_ssize_t bufend
+        Py_ssize_t bytes_in_buffer
         Py_ssize_t record_start
     cdef readonly Py_ssize_t number_of_records
 
@@ -337,7 +337,7 @@ cdef class FastqIter:
         self.extra_newline = False
         self.yielded_two_headers = False
         self.eof = False
-        self.bufend = 0
+        self.bytes_in_buffer = 0
         self.record_start = 0
         self.file = file
         if buffer_size < 1:
@@ -357,24 +357,24 @@ cdef class FastqIter:
         # in the previous iteration because it contained an incomplete
         # FASTQ record.
 
-        cdef Py_ssize_t last_read_position = self.bufend
+        cdef Py_ssize_t last_read_position = self.bytes_in_buffer
         cdef Py_ssize_t bufstart
-        if self.record_start == 0 and self.bufend == len(self.buf):
+        if self.record_start == 0 and self.bytes_in_buffer == len(self.buf):
             # buffer too small, double it
             self.buffer_size *= 2
             prev_buf = self.buf
             self.buf = bytearray(self.buffer_size)
-            self.buf[0:self.bufend] = prev_buf
+            self.buf[0:self.bytes_in_buffer] = prev_buf
             del prev_buf
-            bufstart = self.bufend
+            bufstart = self.bytes_in_buffer
             self.buf_view = self.buf
             self.buffer = self.buf
         else:
-            bufstart = self.bufend - self.record_start
-            self.buf[0:bufstart] = self.buf[self.record_start:self.bufend]
+            bufstart = self.bytes_in_buffer - self.record_start
+            self.buf[0:bufstart] = self.buf[self.record_start:self.bytes_in_buffer]
         assert bufstart < len(self.buf_view)
-        self.bufend = self.file.readinto(self.buf_view[bufstart:]) + bufstart
-        if bufstart == self.bufend:
+        self.bytes_in_buffer = self.file.readinto(self.buf_view[bufstart:]) + bufstart
+        if bufstart == self.bytes_in_buffer:
             # End of file
             if bufstart > 0 and self.buf_view[bufstart-1] != b'\n':
                 # There is still data in the buffer and its last character is
@@ -382,7 +382,7 @@ cdef class FastqIter:
                 # newline. Append a newline and continue.
                 self.buf_view[bufstart] = b'\n'
                 bufstart += 1
-                self.bufend += 1
+                self.bytes_in_buffer += 1
                 self.extra_newline = True
             elif last_read_position > self.record_start:  # Incomplete FASTQ records are present.
                 if self.extra_newline:
@@ -424,7 +424,7 @@ cdef class FastqIter:
             # using 64-bit integers. See:
             # https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=string/memchr.c;hb=HEAD
             # void *memchr(const void *str, int c, size_t n)
-            name_end_ptr = <char *>memchr(self.buffer + self.record_start, b'\n', <size_t>(self.bufend - self.record_start))
+            name_end_ptr = <char *>memchr(self.buffer + self.record_start, b'\n', <size_t>(self.bytes_in_buffer - self.record_start))
             if name_end_ptr == NULL:
                 self._read_into_buffer()
                 continue
@@ -433,19 +433,19 @@ cdef class FastqIter:
             # - thus sequence_start is at most bufend
             name_end = name_end_ptr - self.buffer
             sequence_start = name_end + 1
-            sequence_end_ptr = <char *>memchr(self.buffer + sequence_start, b'\n', <size_t>(self.bufend - sequence_start))
+            sequence_end_ptr = <char *>memchr(self.buffer + sequence_start, b'\n', <size_t>(self.bytes_in_buffer - sequence_start))
             if sequence_end_ptr == NULL:
                 self._read_into_buffer()
                 continue
             sequence_end = sequence_end_ptr - self.buffer
             second_header_start = sequence_end + 1
-            second_header_end_ptr = <char *>memchr(self.buffer + second_header_start, b'\n', <size_t>(self.bufend - second_header_start))
+            second_header_end_ptr = <char *>memchr(self.buffer + second_header_start, b'\n', <size_t>(self.bytes_in_buffer - second_header_start))
             if second_header_end_ptr == NULL:
                 self._read_into_buffer()
                 continue
             second_header_end = second_header_end_ptr - self.buffer
             qualities_start = second_header_end + 1
-            qualities_end_ptr = <char *>memchr(self.buffer + qualities_start, b'\n', <size_t>(self.bufend - qualities_start))
+            qualities_end_ptr = <char *>memchr(self.buffer + qualities_start, b'\n', <size_t>(self.bytes_in_buffer - qualities_start))
             if qualities_end_ptr == NULL:
                 self._read_into_buffer()
                 continue
