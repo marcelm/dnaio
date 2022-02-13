@@ -348,7 +348,7 @@ cdef class FastqIter:
 
     cdef _read_into_buffer(self):
         # When this function is called, the last record in self.buffer is incomplete.
-        # The incomplete recordis moved to the beginning of self.buffer, and the
+        # The incomplete record is moved to the beginning of self.buffer, and the
         # remainder of self.buffer is filled up with bytes from self.file.
 
         cdef char *tmp
