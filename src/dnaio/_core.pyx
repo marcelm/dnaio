@@ -312,7 +312,7 @@ cdef class FastqIter:
         Py_ssize_t buffer_size
         bytearray buf
         char[:] buf_view
-        char *c_buf
+        char *buffer
         type sequence_class
         bint save_as_bytes
         bint use_custom_class
@@ -328,7 +328,7 @@ cdef class FastqIter:
         self.buffer_size = buffer_size
         self.buf = bytearray(buffer_size)
         self.buf_view = self.buf
-        self.c_buf = self.buf
+        self.buffer = self.buf
         self.sequence_class = sequence_class
         self.save_as_bytes = sequence_class is BytesSequence
         self.use_custom_class = (sequence_class is not Sequence and
@@ -368,7 +368,7 @@ cdef class FastqIter:
             del prev_buf
             bufstart = self.bufend
             self.buf_view = self.buf
-            self.c_buf = self.buf
+            self.buffer = self.buf
         else:
             bufstart = self.bufend - self.record_start
             self.buf[0:bufstart] = self.buf[self.record_start:self.bufend]
@@ -424,40 +424,40 @@ cdef class FastqIter:
             # using 64-bit integers. See:
             # https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=string/memchr.c;hb=HEAD
             # void *memchr(const void *str, int c, size_t n)
-            name_end_ptr = <char *>memchr(self.c_buf + self.record_start, b'\n', <size_t>(self.bufend - self.record_start))
+            name_end_ptr = <char *>memchr(self.buffer + self.record_start, b'\n', <size_t>(self.bufend - self.record_start))
             if name_end_ptr == NULL:
                 self._read_into_buffer()
                 continue
             # bufend - sequence_start is always nonnegative:
             # - name_end is at most bufend - 1
             # - thus sequence_start is at most bufend
-            name_end = name_end_ptr - self.c_buf
+            name_end = name_end_ptr - self.buffer
             sequence_start = name_end + 1
-            sequence_end_ptr = <char *>memchr(self.c_buf + sequence_start, b'\n', <size_t>(self.bufend - sequence_start))
+            sequence_end_ptr = <char *>memchr(self.buffer + sequence_start, b'\n', <size_t>(self.bufend - sequence_start))
             if sequence_end_ptr == NULL:
                 self._read_into_buffer()
                 continue
-            sequence_end = sequence_end_ptr - self.c_buf
+            sequence_end = sequence_end_ptr - self.buffer
             second_header_start = sequence_end + 1
-            second_header_end_ptr = <char *>memchr(self.c_buf + second_header_start, b'\n', <size_t>(self.bufend - second_header_start))
+            second_header_end_ptr = <char *>memchr(self.buffer + second_header_start, b'\n', <size_t>(self.bufend - second_header_start))
             if second_header_end_ptr == NULL:
                 self._read_into_buffer()
                 continue
-            second_header_end = second_header_end_ptr - self.c_buf
+            second_header_end = second_header_end_ptr - self.buffer
             qualities_start = second_header_end + 1
-            qualities_end_ptr = <char *>memchr(self.c_buf + qualities_start, b'\n', <size_t>(self.bufend - qualities_start))
+            qualities_end_ptr = <char *>memchr(self.buffer + qualities_start, b'\n', <size_t>(self.bufend - qualities_start))
             if qualities_end_ptr == NULL:
                 self._read_into_buffer()
                 continue
-            qualities_end = qualities_end_ptr - self.c_buf
+            qualities_end = qualities_end_ptr - self.buffer
 
-            if self.c_buf[self.record_start] != b'@':
+            if self.buffer[self.record_start] != b'@':
                 raise FastqFormatError("Line expected to "
-                    "start with '@', but found {!r}".format(chr(self.c_buf[self.record_start])),
+                    "start with '@', but found {!r}".format(chr(self.buffer[self.record_start])),
                     line=self.number_of_records * 4)
-            if self.c_buf[second_header_start] != b'+':
+            if self.buffer[second_header_start] != b'+':
                 raise FastqFormatError("Line expected to "
-                    "start with '+', but found {!r}".format(chr(self.c_buf[second_header_start])),
+                    "start with '+', but found {!r}".format(chr(self.buffer[second_header_start])),
                     line=self.number_of_records * 4 + 2)
 
             name_start = self.record_start + 1  # Skip @
@@ -468,25 +468,25 @@ cdef class FastqIter:
             qualities_length = qualities_end - qualities_start
 
             # Check for \r\n line-endings and compensate
-            if self.c_buf[name_end - 1] == b'\r':
+            if self.buffer[name_end - 1] == b'\r':
                 name_length -= 1
-            if self.c_buf[sequence_end - 1] == b'\r':
+            if self.buffer[sequence_end - 1] == b'\r':
                 sequence_length -= 1
-            if self.c_buf[second_header_end - 1] == b'\r':
+            if self.buffer[second_header_end - 1] == b'\r':
                 second_header_length -= 1
-            if self.c_buf[qualities_end - 1] == b'\r':
+            if self.buffer[qualities_end - 1] == b'\r':
                 qualities_length -= 1
 
             if second_header_length:  # should be 0 when only + is present
                 if (name_length != second_header_length or
-                        strncmp(self.c_buf+second_header_start,
-                            self.c_buf + name_start, second_header_length) != 0):
+                        strncmp(self.buffer+second_header_start,
+                            self.buffer + name_start, second_header_length) != 0):
                     raise FastqFormatError(
                         "Sequence descriptions don't match ('{}' != '{}').\n"
                         "The second sequence description must be either "
                         "empty or equal to the first description.".format(
-                            self.c_buf[name_start:name_end].decode('latin-1'),
-                            self.c_buf[second_header_start:second_header_end]
+                            self.buffer[name_start:name_end].decode('latin-1'),
+                            self.buffer[second_header_start:second_header_end]
                             .decode('latin-1')), line=self.number_of_records * 4 + 2)
 
             if qualities_length != sequence_length:
@@ -498,9 +498,9 @@ cdef class FastqIter:
                 return bool(second_header_length)  # first yielded value is special
 
             if self.save_as_bytes:
-                name = PyBytes_FromStringAndSize(self.c_buf + name_start, name_length)
-                sequence = PyBytes_FromStringAndSize(self.c_buf + sequence_start, sequence_length)
-                qualities = PyBytes_FromStringAndSize(self.c_buf + qualities_start, qualities_length)
+                name = PyBytes_FromStringAndSize(self.buffer + name_start, name_length)
+                sequence = PyBytes_FromStringAndSize(self.buffer + sequence_start, sequence_length)
+                qualities = PyBytes_FromStringAndSize(self.buffer + qualities_start, qualities_length)
                 ret_val = BytesSequence.__new__(BytesSequence, name, sequence, qualities)
             else:
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
@@ -510,9 +510,9 @@ cdef class FastqIter:
                 qualities = PyUnicode_New(qualities_length, 255)
                 if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
                     raise MemoryError()
-                memcpy(PyUnicode_1BYTE_DATA(name), self.c_buf + name_start, name_length)
-                memcpy(PyUnicode_1BYTE_DATA(sequence), self.c_buf + sequence_start, sequence_length)
-                memcpy(PyUnicode_1BYTE_DATA(qualities), self.c_buf + qualities_start, qualities_length)
+                memcpy(PyUnicode_1BYTE_DATA(name), self.buffer + name_start, name_length)
+                memcpy(PyUnicode_1BYTE_DATA(sequence), self.buffer + sequence_start, sequence_length)
+                memcpy(PyUnicode_1BYTE_DATA(qualities), self.buffer + qualities_start, qualities_length)
                 
                 if self.use_custom_class:
                     ret_val = self.sequence_class(name, sequence, qualities)
