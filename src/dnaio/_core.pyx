@@ -1,9 +1,10 @@
 # cython: language_level=3, emit_code_comments=False
 
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE, PyBytes_Size
+from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check, PyUnicode_GET_LENGTH
 from cpython.ref cimport PyObject
-from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn
+from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn, memmove
 cimport cython
 
 cdef extern from "Python.h":
@@ -310,9 +311,8 @@ cdef class FastqIter:
     """
     cdef:
         Py_ssize_t buffer_size
-        bytearray buf
-        char[:] buf_view
         char *buffer
+        Py_ssize_t bytes_in_buffer
         type sequence_class
         bint save_as_bytes
         bint use_custom_class
@@ -320,15 +320,15 @@ cdef class FastqIter:
         bint yielded_two_headers
         bint eof
         object file
-        Py_ssize_t bytes_in_buffer
         Py_ssize_t record_start
     cdef readonly Py_ssize_t number_of_records
 
     def __cinit__(self, file, sequence_class, Py_ssize_t buffer_size):
         self.buffer_size = buffer_size
-        self.buf = bytearray(buffer_size)
-        self.buf_view = self.buf
-        self.buffer = self.buf
+        self.buffer = <char *>PyMem_Malloc(self.buffer_size)
+        if self.buffer == NULL:
+            raise MemoryError()
+        self.bytes_in_buffer = 0
         self.sequence_class = sequence_class
         self.save_as_bytes = sequence_class is BytesSequence
         self.use_custom_class = (sequence_class is not Sequence and
@@ -337,7 +337,6 @@ cdef class FastqIter:
         self.extra_newline = False
         self.yielded_two_headers = False
         self.eof = False
-        self.bytes_in_buffer = 0
         self.record_start = 0
         self.file = file
         if buffer_size < 1:
@@ -357,48 +356,54 @@ cdef class FastqIter:
         # in the previous iteration because it contained an incomplete
         # FASTQ record.
 
-        cdef Py_ssize_t last_read_position = self.bytes_in_buffer
-        cdef Py_ssize_t bufstart
-        if self.record_start == 0 and self.bytes_in_buffer == len(self.buf):
+        cdef char *tmp
+        cdef Py_ssize_t remaining_bytes
+
+        if self.record_start == 0 and self.bytes_in_buffer == self.buffer_size:
             # buffer too small, double it
             self.buffer_size *= 2
-            prev_buf = self.buf
-            self.buf = bytearray(self.buffer_size)
-            self.buf[0:self.bytes_in_buffer] = prev_buf
-            del prev_buf
-            bufstart = self.bytes_in_buffer
-            self.buf_view = self.buf
-            self.buffer = self.buf
+            tmp = <char *>PyMem_Realloc(self.buffer, self.buffer_size)
+            if tmp == NULL:
+                raise MemoryError()
+            self.buffer = tmp
         else:
-            bufstart = self.bytes_in_buffer - self.record_start
-            self.buf[0:bufstart] = self.buf[self.record_start:self.bytes_in_buffer]
-        assert bufstart < len(self.buf_view)
-        self.bytes_in_buffer = self.file.readinto(self.buf_view[bufstart:]) + bufstart
-        if bufstart == self.bytes_in_buffer:
-            # End of file
-            if bufstart > 0 and self.buf_view[bufstart-1] != b'\n':
+            # Move the incomplete record from the end of the buffer to the beginning.
+            remaining_bytes = self.bytes_in_buffer - self.record_start
+            memmove(self.buffer, self.buffer + self.record_start, remaining_bytes)
+            self.bytes_in_buffer = remaining_bytes
+            self.record_start = 0
+
+        cdef Py_ssize_t empty_bytes_in_buffer = self.buffer_size - self.bytes_in_buffer
+        cdef object filechunk = self.file.read(empty_bytes_in_buffer)
+        cdef Py_ssize_t filechunk_size = PyBytes_Size(filechunk)
+        if filechunk_size == -1:  # Not a bytes object
+            raise TypeError("self.file is not a binary file reader.")
+        memcpy(self.buffer + self.bytes_in_buffer, PyBytes_AS_STRING(filechunk), filechunk_size)
+        self.bytes_in_buffer += filechunk_size
+
+        if filechunk_size == 0:  # End of file
+            if self.bytes_in_buffer == 0:  # EOF Reached. Stop iterating.
+                self.eof = True
+                return
+            if not self.extra_newline and self.buffer[self.bytes_in_buffer - 1] != b'\n':
                 # There is still data in the buffer and its last character is
                 # not a newline: This is a file that is missing the final
                 # newline. Append a newline and continue.
-                self.buf_view[bufstart] = b'\n'
-                bufstart += 1
+                self.buffer[self.bytes_in_buffer] = b'\n'
                 self.bytes_in_buffer += 1
                 self.extra_newline = True
-            elif last_read_position > self.record_start:  # Incomplete FASTQ records are present.
+            else:  # Incomplete FASTQ records are present.
                 if self.extra_newline:
                     # Do not report the linefeed that was added by dnaio but
                     # was not present in the original input.
-                    last_read_position -= 1
-                lines = self.buf[self.record_start:last_read_position].count(b'\n')
+                    self.bytes_in_buffer -= 1
+                lines = self.buffer[self.record_start:self.bytes_in_buffer].count(b'\n')
                 raise FastqFormatError(
                     'Premature end of file encountered. The incomplete final record was: '
                     '{!r}'.format(
-                        shorten(self.buf[self.record_start:last_read_position].decode('latin-1'),
+                        shorten(self.buffer[self.record_start:self.bytes_in_buffer].decode('latin-1'),
                                 500)),
                     line=self.number_of_records * 4 + lines)
-            else:  # EOF Reached. Stop iterating.
-                self.eof = True
-        self.record_start = 0
 
     def __iter__(self):
         return self
