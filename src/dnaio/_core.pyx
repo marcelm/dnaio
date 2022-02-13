@@ -343,18 +343,9 @@ cdef class FastqIter:
             raise ValueError("Starting buffer size too small")
 
     cdef _read_into_buffer(self):
-        # self.buf is a byte buffer that is re-used in each iteration. Its layout is:
-        #
-        # |-- complete records --|
-        # +---+------------------+---------+-------+
-        # |   |                  |         |       |
-        # +---+------------------+---------+-------+
-        # ^   ^                  ^         ^       ^
-        # 0   bufstart           end       bufend  len(buf)
-        #
-        # buf[0:bufstart] is the 'leftover' data that could not be processed
-        # in the previous iteration because it contained an incomplete
-        # FASTQ record.
+        # When this function is called, the last record in self.buffer is incomplete.
+        # The incomplete recordis moved to the beginning of self.buffer, and the
+        # remainder of self.buffer is filled up with bytes from self.file.
 
         cdef char *tmp
         cdef Py_ssize_t remaining_bytes
@@ -369,6 +360,7 @@ cdef class FastqIter:
         else:
             # Move the incomplete record from the end of the buffer to the beginning.
             remaining_bytes = self.bytes_in_buffer - self.record_start
+            # Memmove copies safely when dest and src overlap.
             memmove(self.buffer, self.buffer + self.record_start, remaining_bytes)
             self.bytes_in_buffer = remaining_bytes
             self.record_start = 0
