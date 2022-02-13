@@ -1,6 +1,6 @@
 # cython: language_level=3, emit_code_comments=False
 
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE, PyBytes_Size
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check, PyUnicode_GET_LENGTH
 from cpython.ref cimport PyObject
@@ -371,17 +371,16 @@ cdef class FastqIter:
 
         cdef Py_ssize_t empty_bytes_in_buffer = self.buffer_size - self.bytes_in_buffer
         cdef object filechunk = self.file.read(empty_bytes_in_buffer)
-        cdef Py_ssize_t filechunk_size = PyBytes_Size(filechunk)
-        if filechunk_size == -1:  # Not a bytes object
+        if not PyBytes_CheckExact(filechunk):
             raise TypeError("self.file is not a binary file reader.")
+        cdef Py_ssize_t filechunk_size = PyBytes_GET_SIZE(filechunk)
         memcpy(self.buffer + self.bytes_in_buffer, PyBytes_AS_STRING(filechunk), filechunk_size)
         self.bytes_in_buffer += filechunk_size
 
         if filechunk_size == 0:  # End of file
             if self.bytes_in_buffer == 0:  # EOF Reached. Stop iterating.
                 self.eof = True
-                return
-            if not self.extra_newline and self.buffer[self.bytes_in_buffer - 1] != b'\n':
+            elif not self.extra_newline and self.buffer[self.bytes_in_buffer - 1] != b'\n':
                 # There is still data in the buffer and its last character is
                 # not a newline: This is a file that is missing the final
                 # newline. Append a newline and continue.
