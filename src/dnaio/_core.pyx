@@ -375,6 +375,10 @@ cdef class FastqIter:
         if not PyBytes_CheckExact(filechunk):
             raise TypeError("self.file is not a binary file reader.")
         cdef Py_ssize_t filechunk_size = PyBytes_GET_SIZE(filechunk)
+        if filechunk_size > empty_bytes_in_buffer:
+            raise ValueError(f"read() returned too much data: "
+                             f"{empty_bytes_in_buffer} bytes requested, "
+                             f"{filechunk_size} bytes returned.")
         memcpy(self.buffer + self.bytes_in_buffer, PyBytes_AS_STRING(filechunk), filechunk_size)
         self.bytes_in_buffer += filechunk_size
 
