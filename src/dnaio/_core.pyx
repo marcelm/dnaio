@@ -509,9 +509,9 @@ cdef class FastqIter:
                 return bool(second_header_length)  # first yielded value is special
 
             # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
-            if not string_is_ascii(self.c_buf + self.record_start, qualities_end - record_start):
+            if not string_is_ascii(self.c_buf + self.record_start, qualities_end - self.record_start):
                 raise FastqFormatError("Non-ASCII characters found in record.",
-                                       line=n_records * 4)
+                                       line=self.number_of_records * 4)
 
             if self.save_as_bytes:
                 name = PyBytes_FromStringAndSize(self.c_buf + name_start, name_length)
