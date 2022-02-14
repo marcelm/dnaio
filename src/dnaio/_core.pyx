@@ -347,9 +347,10 @@ cdef class FastqIter:
             PyMem_Free(self.buffer)
 
     cdef _read_into_buffer(self):
-        # When this function is called, the last record in self.buffer is incomplete.
-        # The incomplete record is moved to the beginning of self.buffer, and the
-        # remainder of self.buffer is filled up with bytes from self.file.
+        # This function sets self.record_start at 0 and makes sure self.buffer
+        # starts at the start of a FASTQ record. Any incomplete FASTQ remainder
+        # of the already processed buffer is moved to the start of the buffer
+        # and the rest of the buffer is filled up with bytes from the file.
 
         cdef char *tmp
         cdef Py_ssize_t remaining_bytes
