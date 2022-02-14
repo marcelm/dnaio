@@ -406,7 +406,7 @@ cdef class FastqIter:
     def __next__(self):
         cdef:
             object ret_val
-            Py_ssize_t bufstart, bufend, name_start, name_end, name_length
+            Py_ssize_t name_start, name_end, name_length
             Py_ssize_t sequence_start, sequence_end, sequence_length
             Py_ssize_t second_header_start, second_header_end, second_header_length
             Py_ssize_t qualities_start, qualities_end, qualities_length
@@ -428,9 +428,9 @@ cdef class FastqIter:
             if name_end_ptr == NULL:
                 self._read_into_buffer()
                 continue
-            # bufend - sequence_start is always nonnegative:
-            # - name_end is at most bufend - 1
-            # - thus sequence_start is at most bufend
+            # self.bytes_in_buffer - sequence_start is always nonnegative:
+            # - name_end is at most self.bytes_in_buffer - 1
+            # - thus sequence_start is at most self.bytes_in_buffer
             name_end = name_end_ptr - self.buffer
             sequence_start = name_end + 1
             sequence_end_ptr = <char *>memchr(self.buffer + sequence_start, b'\n', <size_t>(self.bytes_in_buffer - sequence_start))
