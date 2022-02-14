@@ -508,17 +508,18 @@ cdef class FastqIter:
                 self.yielded_two_headers = True
                 return bool(second_header_length)  # first yielded value is special
 
-            # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
-            if not string_is_ascii(self.c_buf + self.record_start, qualities_end - self.record_start):
-                raise FastqFormatError("Non-ASCII characters found in record.",
-                                       line=self.number_of_records * 4)
-
             if self.save_as_bytes:
                 name = PyBytes_FromStringAndSize(self.c_buf + name_start, name_length)
                 sequence = PyBytes_FromStringAndSize(self.c_buf + sequence_start, sequence_length)
                 qualities = PyBytes_FromStringAndSize(self.c_buf + qualities_start, qualities_length)
                 ret_val = BytesSequence.__new__(BytesSequence, name, sequence, qualities)
             else:
+                # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
+                if not string_is_ascii(self.c_buf + self.record_start,
+                                       qualities_end - self.record_start):
+                    raise FastqFormatError(
+                        "Non-ASCII characters found in record.",
+                        line=self.number_of_records * 4)
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
                 name = PyUnicode_New(name_length, 127)
