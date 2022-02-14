@@ -305,7 +305,7 @@ def paired_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssiz
     return record_start1, record_start2
 
 
-def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
+cdef class FastqIter:
     """
     Parse a FASTQ file and yield Sequence objects
 
@@ -320,117 +320,158 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
         if a FASTQ record is encountered that does not fit.
     """
     cdef:
-        bytearray buf = bytearray(buffer_size)
-        char[:] buf_view = buf
-        char* c_buf = buf
-        object name
-        object sequence
-        object qualities
-        Py_ssize_t last_read_position = 0
-        Py_ssize_t record_start = 0
-        Py_ssize_t bufstart, bufend, name_start, name_end, name_length
-        Py_ssize_t sequence_start, sequence_end, sequence_length
-        Py_ssize_t second_header_start, second_header_end, second_header_length
-        Py_ssize_t qualities_start, qualities_end, qualities_length
-        char *name_end_ptr
-        char *sequence_end_ptr
-        char *second_header_end_ptr
-        char *qualities_end_ptr
-        bint save_as_bytes = sequence_class is BytesSequence
-        bint custom_class = (sequence_class is not Sequence and
-                             sequence_class is not BytesSequence)
-        Py_ssize_t n_records = 0
-        bint extra_newline = False
+        Py_ssize_t buffer_size
+        bytearray buf
+        char[:] buf_view
+        char *c_buf
+        type sequence_class
+        bint save_as_bytes
+        bint use_custom_class
+        bint extra_newline
+        bint yielded_two_headers
+        bint eof
+        object file
+        Py_ssize_t bufend
+        Py_ssize_t record_start
+    cdef readonly Py_ssize_t number_of_records
 
-    if buffer_size < 1:
-        raise ValueError("Starting buffer size too small")
+    def __cinit__(self, file, sequence_class, Py_ssize_t buffer_size):
+        self.buffer_size = buffer_size
+        self.buf = bytearray(buffer_size)
+        self.buf_view = self.buf
+        self.c_buf = self.buf
+        self.sequence_class = sequence_class
+        self.save_as_bytes = sequence_class is BytesSequence
+        self.use_custom_class = (sequence_class is not Sequence and
+                                 sequence_class is not BytesSequence)
+        self.number_of_records = 0
+        self.extra_newline = False
+        self.yielded_two_headers = False
+        self.eof = False
+        self.bufend = 0
+        self.record_start = 0
+        self.file = file
+        if buffer_size < 1:
+            raise ValueError("Starting buffer size too small")
 
-    # buf is a byte buffer that is re-used in each iteration. Its layout is:
-    #
-    # |-- complete records --|
-    # +---+------------------+---------+-------+
-    # |   |                  |         |       |
-    # +---+------------------+---------+-------+
-    # ^   ^                  ^         ^       ^
-    # 0   bufstart           end       bufend  len(buf)
-    #
-    # buf[0:bufstart] is the 'leftover' data that could not be processed
-    # in the previous iteration because it contained an incomplete
-    # FASTQ record.
+    cdef _read_into_buffer(self):
+        # self.buf is a byte buffer that is re-used in each iteration. Its layout is:
+        #
+        # |-- complete records --|
+        # +---+------------------+---------+-------+
+        # |   |                  |         |       |
+        # +---+------------------+---------+-------+
+        # ^   ^                  ^         ^       ^
+        # 0   bufstart           end       bufend  len(buf)
+        #
+        # buf[0:bufstart] is the 'leftover' data that could not be processed
+        # in the previous iteration because it contained an incomplete
+        # FASTQ record.
 
-    readinto = file.readinto
-    bufstart = 0
-
-    # The input file is processed in chunks that each fit into buf
-    while True:
-        assert bufstart < len(buf_view)
-        bufend = readinto(buf_view[bufstart:]) + bufstart
-        if bufstart == bufend:
+        cdef Py_ssize_t last_read_position = self.bufend
+        cdef Py_ssize_t bufstart
+        if self.record_start == 0 and self.bufend == len(self.buf):
+            # buffer too small, double it
+            self.buffer_size *= 2
+            prev_buf = self.buf
+            self.buf = bytearray(self.buffer_size)
+            self.buf[0:self.bufend] = prev_buf
+            del prev_buf
+            bufstart = self.bufend
+            self.buf_view = self.buf
+            self.c_buf = self.buf
+        else:
+            bufstart = self.bufend - self.record_start
+            self.buf[0:bufstart] = self.buf[self.record_start:self.bufend]
+        assert bufstart < len(self.buf_view)
+        self.bufend = self.file.readinto(self.buf_view[bufstart:]) + bufstart
+        if bufstart == self.bufend:
             # End of file
-            if bufstart > 0 and buf_view[bufstart-1] != b'\n':
+            if bufstart > 0 and self.buf_view[bufstart-1] != b'\n':
                 # There is still data in the buffer and its last character is
                 # not a newline: This is a file that is missing the final
                 # newline. Append a newline and continue.
-                buf_view[bufstart] = b'\n'
+                self.buf_view[bufstart] = b'\n'
                 bufstart += 1
-                bufend += 1
-                extra_newline = True
-            elif last_read_position > record_start:  # Incomplete FASTQ records are present.
-                if extra_newline:
+                self.bufend += 1
+                self.extra_newline = True
+            elif last_read_position > self.record_start:  # Incomplete FASTQ records are present.
+                if self.extra_newline:
                     # Do not report the linefeed that was added by dnaio but
                     # was not present in the original input.
                     last_read_position -= 1
-                lines = buf[record_start:last_read_position].count(b'\n')
+                lines = self.buf[self.record_start:last_read_position].count(b'\n')
                 raise FastqFormatError(
                     'Premature end of file encountered. The incomplete final record was: '
                     '{!r}'.format(
-                        shorten(buf[record_start:last_read_position].decode('latin-1'),
+                        shorten(self.buf[self.record_start:last_read_position].decode('latin-1'),
                                 500)),
-                    line=n_records * 4 + lines)
+                    line=self.number_of_records * 4 + lines)
             else:  # EOF Reached. Stop iterating.
-                return
+                self.eof = True
+        self.record_start = 0
 
-        # Parse all complete FASTQ records in this chunk
-        record_start = 0
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        cdef:
+            object ret_val
+            Py_ssize_t bufstart, bufend, name_start, name_end, name_length
+            Py_ssize_t sequence_start, sequence_end, sequence_length
+            Py_ssize_t second_header_start, second_header_end, second_header_length
+            Py_ssize_t qualities_start, qualities_end, qualities_length
+            char *name_end_ptr
+            char *sequence_end_ptr
+            char *second_header_end_ptr
+            char *qualities_end_ptr
+        # Repeatedly attempt to parse the buffer until we have found a full record.
+        # If an attempt fails, we read more data before retrying.
         while True:
+            if self.eof:
+                raise StopIteration()
             ### Check for a complete record (i.e 4 newlines are present)
             # Use libc memchr, this optimizes looking for characters by
             # using 64-bit integers. See:
             # https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=string/memchr.c;hb=HEAD
             # void *memchr(const void *str, int c, size_t n)
-            name_end_ptr = <char *>memchr(c_buf + record_start, b'\n', <size_t>(bufend - record_start))
+            name_end_ptr = <char *>memchr(self.c_buf + self.record_start, b'\n', <size_t>(self.bufend - self.record_start))
             if name_end_ptr == NULL:
-                break
+                self._read_into_buffer()
+                continue
             # bufend - sequence_start is always nonnegative:
             # - name_end is at most bufend - 1
             # - thus sequence_start is at most bufend
-            name_end = name_end_ptr - c_buf
+            name_end = name_end_ptr - self.c_buf
             sequence_start = name_end + 1
-            sequence_end_ptr = <char *>memchr(c_buf + sequence_start, b'\n', <size_t>(bufend - sequence_start))
+            sequence_end_ptr = <char *>memchr(self.c_buf + sequence_start, b'\n', <size_t>(self.bufend - sequence_start))
             if sequence_end_ptr == NULL:
-                break
-            sequence_end = sequence_end_ptr - c_buf
+                self._read_into_buffer()
+                continue
+            sequence_end = sequence_end_ptr - self.c_buf
             second_header_start = sequence_end + 1
-            second_header_end_ptr = <char *>memchr(c_buf + second_header_start, b'\n', <size_t>(bufend - second_header_start))
+            second_header_end_ptr = <char *>memchr(self.c_buf + second_header_start, b'\n', <size_t>(self.bufend - second_header_start))
             if second_header_end_ptr == NULL:
-                break
-            second_header_end = second_header_end_ptr - c_buf
+                self._read_into_buffer()
+                continue
+            second_header_end = second_header_end_ptr - self.c_buf
             qualities_start = second_header_end + 1
-            qualities_end_ptr = <char *>memchr(c_buf + qualities_start, b'\n', <size_t>(bufend - qualities_start))
+            qualities_end_ptr = <char *>memchr(self.c_buf + qualities_start, b'\n', <size_t>(self.bufend - qualities_start))
             if qualities_end_ptr == NULL:
-                break
-            qualities_end = qualities_end_ptr - c_buf
+                self._read_into_buffer()
+                continue
+            qualities_end = qualities_end_ptr - self.c_buf
 
-            if c_buf[record_start] != b'@':
+            if self.c_buf[self.record_start] != b'@':
                 raise FastqFormatError("Line expected to "
-                    "start with '@', but found {!r}".format(chr(c_buf[record_start])),
-                    line=n_records * 4)
-            if c_buf[second_header_start] != b'+':
+                    "start with '@', but found {!r}".format(chr(self.c_buf[self.record_start])),
+                    line=self.number_of_records * 4)
+            if self.c_buf[second_header_start] != b'+':
                 raise FastqFormatError("Line expected to "
-                    "start with '+', but found {!r}".format(chr(c_buf[second_header_start])),
-                    line=n_records * 4 + 2)
+                    "start with '+', but found {!r}".format(chr(self.c_buf[second_header_start])),
+                    line=self.number_of_records * 4 + 2)
 
-            name_start = record_start + 1  # Skip @
+            name_start = self.record_start + 1  # Skip @
             second_header_start += 1  # Skip +
             name_length = name_end - name_start
             sequence_length = sequence_end - sequence_start
@@ -438,44 +479,45 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
             qualities_length = qualities_end - qualities_start
 
             # Check for \r\n line-endings and compensate
-            if c_buf[name_end - 1] == b'\r':
+            if self.c_buf[name_end - 1] == b'\r':
                 name_length -= 1
-            if c_buf[sequence_end - 1] == b'\r':
+            if self.c_buf[sequence_end - 1] == b'\r':
                 sequence_length -= 1
-            if c_buf[second_header_end - 1] == b'\r':
+            if self.c_buf[second_header_end - 1] == b'\r':
                 second_header_length -= 1
-            if c_buf[qualities_end - 1] == b'\r':
+            if self.c_buf[qualities_end - 1] == b'\r':
                 qualities_length -= 1
 
             if second_header_length:  # should be 0 when only + is present
                 if (name_length != second_header_length or
-                        strncmp(c_buf+second_header_start,
-                            c_buf + name_start, second_header_length) != 0):
+                        strncmp(self.c_buf+second_header_start,
+                            self.c_buf + name_start, second_header_length) != 0):
                     raise FastqFormatError(
                         "Sequence descriptions don't match ('{}' != '{}').\n"
                         "The second sequence description must be either "
                         "empty or equal to the first description.".format(
-                            c_buf[name_start:name_end].decode('latin-1'),
-                            c_buf[second_header_start:second_header_end]
-                            .decode('latin-1')), line=n_records * 4 + 2)
+                            self.c_buf[name_start:name_end].decode('latin-1'),
+                            self.c_buf[second_header_start:second_header_end]
+                            .decode('latin-1')), line=self.number_of_records * 4 + 2)
 
             if qualities_length != sequence_length:
                 raise FastqFormatError(
-                    "Length of sequence and qualities differ", line=n_records * 4 + 3)
+                    "Length of sequence and qualities differ", line=self.number_of_records * 4 + 3)
 
-            if n_records == 0:
-                yield bool(second_header_length)  # first yielded value is special
+            if self.number_of_records == 0 and not self.yielded_two_headers:
+                self.yielded_two_headers = True
+                return bool(second_header_length)  # first yielded value is special
 
             # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
-            if not string_is_ascii(c_buf + record_start, qualities_end - record_start):
+            if not string_is_ascii(self.c_buf + self.record_start, qualities_end - record_start):
                 raise FastqFormatError("Non-ASCII characters found in record.",
                                        line=n_records * 4)
 
-            if save_as_bytes:
-                name = PyBytes_FromStringAndSize(c_buf + name_start, name_length)
-                sequence = PyBytes_FromStringAndSize(c_buf + sequence_start, sequence_length)
-                qualities = PyBytes_FromStringAndSize(c_buf + qualities_start, qualities_length)
-                yield BytesSequence.__new__(BytesSequence, name, sequence, qualities)
+            if self.save_as_bytes:
+                name = PyBytes_FromStringAndSize(self.c_buf + name_start, name_length)
+                sequence = PyBytes_FromStringAndSize(self.c_buf + sequence_start, sequence_length)
+                qualities = PyBytes_FromStringAndSize(self.c_buf + qualities_start, qualities_length)
+                ret_val = BytesSequence.__new__(BytesSequence, name, sequence, qualities)
             else:
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
@@ -484,33 +526,19 @@ def fastq_iter(file, sequence_class, Py_ssize_t buffer_size):
                 qualities = PyUnicode_New(qualities_length, 127)
                 if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
                     raise MemoryError()
-                memcpy(PyUnicode_1BYTE_DATA(name), c_buf + name_start, name_length)
-                memcpy(PyUnicode_1BYTE_DATA(sequence), c_buf + sequence_start, sequence_length)
-                memcpy(PyUnicode_1BYTE_DATA(qualities), c_buf + qualities_start, qualities_length)
+                memcpy(PyUnicode_1BYTE_DATA(name), self.c_buf + name_start, name_length)
+                memcpy(PyUnicode_1BYTE_DATA(sequence), self.c_buf + sequence_start, sequence_length)
+                memcpy(PyUnicode_1BYTE_DATA(qualities), self.c_buf + qualities_start, qualities_length)
                 
-                if custom_class:
-                    yield sequence_class(name, sequence, qualities)
+                if self.use_custom_class:
+                    ret_val = self.sequence_class(name, sequence, qualities)
                 else:
-                    yield Sequence.__new__(Sequence, name, sequence, qualities)
+                    ret_val = Sequence.__new__(Sequence, name, sequence, qualities)
 
             ### Advance record to next position
-            n_records += 1
-            record_start = qualities_end + 1
-        # bufend reached
-        last_read_position = bufend
-        if record_start == 0 and bufend == len(buf):
-            # buffer too small, double it
-            buffer_size *= 2
-            prev_buf = buf
-            buf = bytearray(buffer_size)
-            buf[0:bufend] = prev_buf
-            del prev_buf
-            bufstart = bufend
-            buf_view = buf
-            c_buf = buf
-        else:
-            bufstart = bufend - record_start
-            buf[0:bufstart] = buf[record_start:bufend]
+            self.number_of_records += 1
+            self.record_start = qualities_end + 1
+            return ret_val
 
 
 def record_names_match(header1: str, header2: str):
