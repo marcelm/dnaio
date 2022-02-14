@@ -1,5 +1,5 @@
-automodule
-==========
+dnaio API
+=========
 
 .. module:: dnaio
 

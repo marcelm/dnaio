@@ -12,6 +12,7 @@ author = "Marcel Martin"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx_issues",
 ]
 
 templates_path = ["_templates"]
@@ -30,3 +31,6 @@ html_show_sphinx = False
 #html_static_path = ["_static"]
 
 # default_role = "obj" (or "any")
+
+issues_uri = 'https://github.com/marcelm/dnaio/issues/{issue}'
+issues_pr_uri = 'https://github.com/marcelm/dnaio/pull/{pr}'
