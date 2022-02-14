@@ -68,23 +68,29 @@ def open(
     Open sequence files in FASTA or FASTQ format for reading or writing.
 
     Parameters:
+
       file1:
+        Path or an open file-like object. For reading single-end reads, this is
+        the only required argument.
+
       file2:
-        Paths to regular or compressed files or file-like
-        objects (as str or as pathlib.Path). Use only file1 if data is single-end.
-        If sequences are paired, use also file2.
+        Path or an open file-like object. When reading paired-end reads from
+        two files, set this to the second file.
+
       mode:
         Either ``'r'`` or ``'rb'`` for reading, ``'w'`` for writing
         or ``'a'`` for appending.
+        With mode ``'r'``, the returned Reader yields `Sequence` objects.
+        With mode ``'rb'``, the returned Reader yields `BytesSequence` objects.
 
-        With mode ``'r'`` the returned Reader iterates over Sequence objects.
-        With mode ``'rb'`` the returned Reader iterates over BytesSequence objects.
       interleaved:
         If True, then file1 contains interleaved paired-end data.
         file2 must be None in this case.
+
       fileformat:
         If *None*, the file format is autodetected from the file name
         extension. Set to ``'fasta'`` or ``'fastq'`` to not auto-detect.
+
       qualities:
         When mode is ``'w'`` and fileformat is *None*, this can be set
         to *True* or *False* to specify whether the written sequences will have
@@ -101,7 +107,8 @@ def open(
         also open compressed file formats.
 
     Return:
-       An instance of one of the ...Reader or ...Writer classes
+       A subclass of `SingleEndReader`, `PairedEndReader`, `SingleEndWriter` or
+       `PairedEndWriter`.
     """
     if mode not in ("r", "rb", "w", "a"):
         raise ValueError("Mode must be 'r', 'rb', 'w' or 'a'")

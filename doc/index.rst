@@ -1,5 +1,5 @@
-dnaio documentation
-===================
+dnaio
+=====
 
 .. include:: ../README.rst
 

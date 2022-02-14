@@ -2,11 +2,12 @@
 
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.abspath(".."))
 
 project = "dnaio"
-copyright = "2021 dnaio authors"
+copyright = f"{time.gmtime().tm_year} dnaio authors"
 author = "Marcel Martin"
 
 extensions = [
@@ -24,13 +25,14 @@ exclude_patterns = []
 
 html_theme = "furo"
 html_show_sphinx = False
+html_title = "dnaio"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 #html_static_path = ["_static"]
 
-# default_role = "obj" (or "any")
+default_role = "obj"  # (or "any")
 
 issues_uri = 'https://github.com/marcelm/dnaio/issues/{issue}'
 issues_pr_uri = 'https://github.com/marcelm/dnaio/pull/{pr}'

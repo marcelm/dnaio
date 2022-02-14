@@ -9,14 +9,20 @@ The open function
 .. autofunction:: dnaio.open
 
 
-The ``Sequence`` class
-----------------------
+The ``Sequence`` classes
+------------------------
 
 .. autoclass:: dnaio.Sequence
    :members:
    :special-members: __len__, __getitem__
 
    .. automethod:: __init__(name: str, sequence: str, qualities: Optional[str] = None)
+
+.. autoclass:: dnaio.BytesSequence
+   :members:
+   :special-members: __len__, __getitem__
+
+   .. automethod:: __init__(name: bytes, sequence: bytes, qualities: Optional[bytes] = None)
 
 Exceptions
 ----------
@@ -52,7 +58,11 @@ Reader and writer classes
 .. autoclass:: InterleavedPairedEndWriter
    :members: write
 
+.. autoclass:: SingleEndReader
+
 .. autoclass:: PairedEndReader
+
+.. autoclass:: SingleEndWriter
 
 .. autoclass:: PairedEndWriter
    :members: write
