@@ -1,4 +1,3 @@
-import itertools
 from contextlib import ExitStack
 from os import PathLike
 from typing import Union, BinaryIO, Optional, Iterator, Tuple
@@ -52,33 +51,11 @@ class TwoFilePairedEndReader(PairedEndReader):
         """
         Iterate over the paired reads. Each item is a pair of Sequence objects.
         """
-        # Avoid usage of zip() below since it will consume one item too many,
-        # when one of the iterators is exhausted. zip in python 3.10 has a
-        # 'strict' keyword that can be used to prevent this and throw an error,
-        # but it will take a long time for 3.10 or higher to be available on
-        # everyone's machine.
-        # Instead use zip_longest from itertools. This yields None if one of
-        # the iterators is exhausted. Checking for None identity is fast.
-        # So we can quickly check if the iterator is still yielding.
-        # This is faster than implementing a while loop with next calls,
-        # which requires expensive function lookups.
         if "b" in self.mode:
             name_matcher = record_names_match_bytes
         else:
             name_matcher = record_names_match  # type: ignore
-        for r1, r2 in itertools.zip_longest(self.reader1, self.reader2):
-            if r1 is None:
-                raise FileFormatError(
-                    "Reads are improperly paired. There are more reads in "
-                    "file 2 than in file 1.",
-                    line=None,
-                ) from None
-            if r2 is None:
-                raise FileFormatError(
-                    "Reads are improperly paired. There are more reads in "
-                    "file 1 than in file 2.",
-                    line=None,
-                ) from None
+        for r1, r2 in zip(self.reader1, self.reader2):
             if not name_matcher(r1.name, r2.name):
                 raise FileFormatError(
                     f"Reads are improperly paired. Read name '{r1.name}' "
@@ -86,6 +63,28 @@ class TwoFilePairedEndReader(PairedEndReader):
                     line=None,
                 ) from None
             yield (r1, r2)
+
+        # Force consumption of another read to test if iterators are out of sync.
+        try:
+            next(iter(self.reader1))
+        except StopIteration:
+            pass
+        try:
+            next(iter(self.reader2))
+        except StopIteration:
+            pass
+        if self.reader1.number_of_records < self.reader2.number_of_records:
+            raise FileFormatError(
+                "Reads are improperly paired. There are more reads in "
+                "file 2 than in file 1.",
+                line=None,
+            ) from None
+        if self.reader1.number_of_records > self.reader2.number_of_records:
+            raise FileFormatError(
+                "Reads are improperly paired. There are more reads in "
+                "file 1 than in file 2.",
+                line=None,
+            ) from None
 
     def close(self) -> None:
         self._close()
