@@ -165,7 +165,9 @@ class FastqReader(BinaryFileReader, SingleEndReader):
             chunk = peek(peek_size)
             lines = chunk.split(b"\n")
             for i, line in enumerate(lines):
-                if i + 2 >= len(lines):
+                if i + 3 >= len(lines):
+                    # Second header line is at i + 2. By checking for i + 3
+                    # we make sure the second header line is included entirely.
                     break
                 # Condition below is only true for the start of a record. Not
                 # for a quality line that starts with @.
