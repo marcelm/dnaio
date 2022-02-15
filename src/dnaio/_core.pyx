@@ -298,10 +298,6 @@ cdef class FastqIter:
     """
     Parse a FASTQ file and yield Sequence objects
 
-    The *first value* that the generator yields is a boolean indicating whether
-    the first record in the FASTQ has a repeated header (in the third row
-    after the ``+``).
-
     file -- a file-like object, opened in binary mode (it must have a readinto
     method)
 
@@ -317,7 +313,6 @@ cdef class FastqIter:
         bint save_as_bytes
         bint use_custom_class
         bint extra_newline
-        bint yielded_two_headers
         bint eof
         object file
         Py_ssize_t bufend
@@ -335,7 +330,6 @@ cdef class FastqIter:
                                  sequence_class is not BytesSequence)
         self.number_of_records = 0
         self.extra_newline = False
-        self.yielded_two_headers = False
         self.eof = False
         self.bufend = 0
         self.record_start = 0
@@ -492,10 +486,6 @@ cdef class FastqIter:
             if qualities_length != sequence_length:
                 raise FastqFormatError(
                     "Length of sequence and qualities differ", line=self.number_of_records * 4 + 3)
-
-            if self.number_of_records == 0 and not self.yielded_two_headers:
-                self.yielded_two_headers = True
-                return bool(second_header_length)  # first yielded value is special
 
             if self.save_as_bytes:
                 name = PyBytes_FromStringAndSize(self.c_buf + name_start, name_length)
