@@ -171,12 +171,12 @@ cdef class Sequence:
             header1_chars = <char *>PyUnicode_1BYTE_DATA(self.name)
             header1_length = <size_t> PyUnicode_GET_LENGTH(self.name)
         else:
-            raise ValueError(f"name should be ASCII-only. Got {self.name:R}.")
+            raise ValueError(f"name should be ASCII-only. Got {self.name!r}.")
 
         if PyUnicode_KIND(other.name) == PyUnicode_1BYTE_KIND:
             header2_chars = <char *>PyUnicode_1BYTE_DATA(other.name)
         else:
-            raise ValueError(f"name should be ASCII-only. Got {other.name:R}.")
+            raise ValueError(f"name should be ASCII-only. Got {other.name!r}.")
         return record_ids_match(header1_chars, header2_chars, header1_length)
 
 
