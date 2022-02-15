@@ -4,7 +4,7 @@ from typing import Union, BinaryIO, Optional, Iterator, Tuple
 
 from xopen import xopen
 
-from ._core import Sequence, record_names_match, record_names_match_bytes
+from ._core import Sequence
 from .exceptions import FileFormatError
 from .interfaces import PairedEndReader, PairedEndWriter
 from .readers import FastaReader, FastqReader
@@ -51,18 +51,14 @@ class TwoFilePairedEndReader(PairedEndReader):
         """
         Iterate over the paired reads. Each item is a pair of Sequence objects.
         """
-        if "b" in self.mode:
-            name_matcher = record_names_match_bytes
-        else:
-            name_matcher = record_names_match  # type: ignore
         for r1, r2 in zip(self.reader1, self.reader2):
-            if not name_matcher(r1.name, r2.name):
+            if not r1.is_mate(r2):
                 raise FileFormatError(
                     f"Reads are improperly paired. Read name '{r1.name}' "
                     f"in file 1 does not match '{r2.name}' in file 2.",
                     line=None,
                 ) from None
-            yield (r1, r2)
+            yield r1, r2
 
         # Force consumption of another read to test if iterators are out of sync.
         try:
@@ -121,10 +117,6 @@ class InterleavedPairedEndReader(PairedEndReader):
         return f"{self.__class__.__name__}({self.reader})"
 
     def __iter__(self) -> Iterator[Tuple[Sequence, Sequence]]:
-        if "b" in self.mode:
-            name_matcher = record_names_match_bytes
-        else:
-            name_matcher = record_names_match  # type: ignore
         it = iter(self.reader)
         for r1 in it:
             try:
@@ -135,13 +127,13 @@ class InterleavedPairedEndReader(PairedEndReader):
                     f"'{r1.name}' has no partner.",
                     line=None,
                 ) from None
-            if not name_matcher(r1.name, r2.name):  # type: ignore
+            if not r1.is_mate(r2):
                 raise FileFormatError(
                     f"Reads are improperly paired. Name '{r1.name}' "
                     f"(first) does not match '{r2.name}' (second).",
                     line=None,
                 )
-            yield (r1, r2)
+            yield r1, r2
 
     def close(self) -> None:
         self.reader.close()
