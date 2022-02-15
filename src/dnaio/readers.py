@@ -138,23 +138,46 @@ class FastqReader(BinaryFileReader, SingleEndReader):
         self.sequence_class = sequence_class
         self.delivers_qualities = True
         self.buffer_size = buffer_size
-        # The first value yielded by FastqIter indicates
-        # whether the file has repeated headers
-        self._iter: Iterator[Sequence] = FastqIter(self._file, self.sequence_class, self.buffer_size)
-        try:
-            th = next(self._iter)
-            assert isinstance(th, bool)
-            self.two_headers: bool = th
-        except StopIteration:
-            # Empty file
-            self.two_headers = False
-            self._iter = iter(())
-        except Exception:
-            self.close()
-            raise
+        self._iter: FastqIter = FastqIter(self._file, self.sequence_class, self.buffer_size)
+        self._two_headers = None
 
     def __iter__(self) -> Iterator[Sequence]:
         return self._iter
+
+    @property
+    def two_headers(self):
+        if self._two_headers is not None:
+            return self._two_headers
+
+        if hasattr(self._file, "peek"):
+            peek = self._file.peek
+        elif self._file.seekable():
+            def peek(n):
+                original_pos = self._file.tell()
+                chunk = self._file.read(n)
+                self._file.seek(original_pos)
+                return chunk
+        else:
+            raise io.UnsupportedOperation
+
+        peek_size = 512
+        while peek_size <= 2 * 1024 * 1024:
+            chunk = peek(peek_size)
+            lines = chunk.split(b"\n")
+            for i, line in enumerate(lines):
+                if i + 2 >= len(lines):
+                    break
+                # Condition below is only true for the start of a record. Not
+                # for a quality line that starts with @.
+                if line.startswith(b"@") and lines[i+2].startswith(b"+"):
+                    self._two_headers = (lines[i+2] != b"+" and
+                                         lines[i+2] != b"+\r")
+                    return self._two_headers
+            peek_size *= 2
+        # Fallback to False. This file is likely not a valid FASTQ file. This
+        # will be discovered during iteration and a proper error will be thrown
+        # there.
+        return False
 
     @property
     def number_of_records(self):
