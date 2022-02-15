@@ -115,32 +115,15 @@ class FastqWriter(FileWriter, SingleEndWriter):
     ):
         super().__init__(file, opener=opener, _close_file=_close_file)
         self._two_headers = two_headers
-        # setattr avoids a complaint from Mypy
-        setattr(self, "write", self._write_two_headers if self._two_headers else self._write)
 
     def __repr__(self) -> str:
         return f"FastqWriter('{getattr(self._file, 'name', self._file)}')"
 
     def write(self, record: Sequence) -> None:
         """
-        Dummy method to make it possible to instantiate this class.
-        The correct write method is assigned in the constructor.
-        """
-        assert False
-
-    def _write(self, record: Sequence) -> None:
-        """
         Write a Sequence record to the FASTQ file.
-
         """
-        self._file.write(record.fastq_bytes())
-
-    def _write_two_headers(self, record: Sequence) -> None:
-        """
-        Write a Sequence record to the FASTQ file, repeating the header
-        in the third line after the "+" .
-        """
-        self._file.write(record.fastq_bytes_two_headers())
+        self._file.write(record.fastq_bytes(self._two_headers))
 
     def writeseq(self, name: str, sequence: str, qualities: str) -> None:
         self._file.write(f"@{name:s}\n{sequence:s}\n+\n{qualities:s}\n".encode("ascii"))
