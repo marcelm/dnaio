@@ -149,6 +149,19 @@ cdef class Sequence:
         return self.fastq_bytes(two_headers=True)
 
     def is_mate(self, Sequence other):
+        """Check whether this instance and other are part of the same read pair
+
+        Checking is done by comparing IDs. The ID is the part of the name
+        before the first whitespace. Any 1,2 or 3 at the end of the IDs is
+        excluded from the check as forward reads may have a 1 appended to their
+        ID and reverse reads a 2 etc.
+
+        Args:
+            other (Sequence): The Sequence object to compare.
+
+        Returns:
+            bool: Whether this and other are part of the same read pair.
+        """
         cdef:
             char * header1_chars = NULL
             char * header2_chars = NULL
@@ -229,6 +242,19 @@ cdef class BytesSequence:
         return self.fastq_bytes(two_headers=True)
 
     def is_mate(self, BytesSequence other):
+        """Check whether this instance and other are part of the same read pair
+
+        Checking is done by comparing IDs. The ID is the part of the name
+        before the first whitespace. Any 1,2 or 3 at the end of the IDs is
+        excluded from the check as forward reads may have a 1 appended to their
+        ID and reverse reads a 2 etc.
+
+        Args:
+            other (BytesSequence): The BytesSequence object to compare.
+
+        Returns:
+            bool: Whether this and other are part of the same read pair.
+        """
         # No need to check if type is bytes as it is guaranteed by the type.
         return record_ids_match(PyBytes_AS_STRING(self.name),
                                 PyBytes_AS_STRING(other.name),
