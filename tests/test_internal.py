@@ -60,15 +60,29 @@ class TestSequence:
             Sequence("nąme1", "A", "=")
         error.match("ASCII")
 
+    def test_init_name_none(self):
+        with pytest.raises(TypeError) as error:
+            Sequence(None, "A", "=")
+        error.match("str")
+
     def test_init_sequence_bad(self):
         with pytest.raises(ValueError) as error:
             Sequence("name1", "Ä", "=")
         error.match("ASCII")
 
+    def test_init_sequence_none(self):
+        with pytest.raises(TypeError) as error:
+            Sequence("name1", None, "=")
+        error.match("str")
+
     def test_init_qualities_bad(self):
         with pytest.raises(ValueError) as error:
             Sequence("name1", "A", "ä")
         error.match("ASCII")
+
+    def test_init_qualities_none(self):
+        seq = Sequence("name1", "A", None)
+        assert seq.qualities is None
 
     def test_set_name_bad(self):
         seq = Sequence("name1", "A", "=")
@@ -76,11 +90,23 @@ class TestSequence:
             seq.name = "näme1"
         error.match("ASCII")
 
+    def test_set_name_none(self):
+        seq = Sequence("name1", "A", "=")
+        with pytest.raises(TypeError) as error:
+            seq.name = None
+        error.match("str")
+
     def test_set_sequence_bad(self):
         seq = Sequence("name1", "A", "=")
         with pytest.raises(ValueError) as error:
             seq.sequence = "Ä"
         error.match("ASCII")
+
+    def test_set_sequence_none(self):
+        seq = Sequence("name1", "A", "=")
+        with pytest.raises(TypeError) as error:
+            seq.sequence = None
+        error.match("str")
 
     def test_set_qualities_bad(self):
         seq = Sequence("name1", "A", "=")
