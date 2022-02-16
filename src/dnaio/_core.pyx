@@ -58,6 +58,8 @@ cdef class Sequence:
 
     def __init__(self, str name, str sequence, str qualities = None):
         # __cinit__ is called first and sets all the variables.
+        # Because of the str typing, cython ensures that all objects passed are
+        # unicode objects.
         if not PyUnicode_IS_COMPACT_ASCII(name):
             raise ValueError("Name must be a valid ASCII-string.")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
