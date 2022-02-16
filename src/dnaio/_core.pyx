@@ -59,12 +59,12 @@ cdef class Sequence:
     def __init__(self, str name, str sequence, str qualities = None):
         # __cinit__ is called first and sets all the variables.
         if not PyUnicode_IS_COMPACT_ASCII(name):
-            raise ValueError("Name must be a valid ascii-string.")
+            raise ValueError("Name must be a valid ASCII-string.")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
-            raise ValueError("sequence must be a valid ascii-string.")
+            raise ValueError("sequence must be a valid ASCII-string.")
         if qualities is not None:
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
-                raise ValueError("Name must be a valid ascii-string.")
+                raise ValueError("Name must be a valid ASCII-string.")
             if len(qualities) != len(sequence):
                 rname = shorten(name)
                 raise ValueError("In read named {!r}: length of quality sequence "
@@ -78,7 +78,7 @@ cdef class Sequence:
     @name.setter
     def name(self, str name):
         if not PyUnicode_IS_COMPACT_ASCII(name):
-            raise ValueError("Name must be a valid ascii-string.")
+            raise ValueError("Name must be a valid ASCII-string.")
         self._name = name
 
     @property
@@ -88,7 +88,7 @@ cdef class Sequence:
     @sequence.setter
     def sequence(self, str sequence):
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
-            raise ValueError("sequence must be a valid ascii-string.")
+            raise ValueError("sequence must be a valid ASCII-string.")
         self._sequence = sequence
 
     @property
@@ -99,7 +99,7 @@ cdef class Sequence:
     def qualities(self, qualities):
         if PyUnicode_Check(qualities):
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
-                raise ValueError("Name must be a valid ascii-string.")
+                raise ValueError("Name must be a valid ASCII-string.")
         elif qualities is None:
             pass
         else:

@@ -55,15 +55,43 @@ class TestSequence:
     def test_is_mate_succes(self):
         assert Sequence("name1", "A", "=").is_mate(Sequence("name2", "GC", "FF"))
 
-    def test_is_mate_self_bad_name(self):
+    def test_init_name_bad(self):
         with pytest.raises(ValueError) as error:
-            Sequence("nąme1", "A", "=").is_mate(Sequence("name2", "GC", "FF"))
+            Sequence("nąme1", "A", "=")
         error.match("ASCII")
 
-    def test_is_mate_other_bad_name(self):
+    def test_init_sequence_bad(self):
         with pytest.raises(ValueError) as error:
-            Sequence("name1", "A", "=").is_mate(Sequence("nąme2", "GC", "FF"))
+            Sequence("name1", "Ä", "=")
         error.match("ASCII")
+
+    def test_init_qualities_bad(self):
+        with pytest.raises(ValueError) as error:
+            Sequence("name1", "A", "ä")
+        error.match("ASCII")
+
+    def test_set_name_bad(self):
+        seq = Sequence("name1", "A", "=")
+        with pytest.raises(ValueError) as error:
+            seq.name = "näme1"
+        error.match("ASCII")
+
+    def test_set_sequence_bad(self):
+        seq = Sequence("name1", "A", "=")
+        with pytest.raises(ValueError) as error:
+            seq.sequence = "Ä"
+        error.match("ASCII")
+
+    def test_set_qualities_bad(self):
+        seq = Sequence("name1", "A", "=")
+        with pytest.raises(ValueError) as error:
+            seq.qualities = "Ä"
+        error.match("ASCII")
+
+    def test_set_qualities_none(self):
+        seq = Sequence("name1", "A", "=")
+        seq.qualities = None
+        assert seq.qualities is None
 
 
 class TestBytesSequence:
