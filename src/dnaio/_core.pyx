@@ -128,7 +128,7 @@ cdef class Sequence:
         return self.__class__(
             self._name,
             self._sequence[key],
-            self._qualities[key] if self.qualities is not None else None)
+            self._qualities[key] if self._qualities is not None else None)
 
     def __repr__(self):
         qstr = ''
