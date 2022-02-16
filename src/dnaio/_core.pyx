@@ -56,15 +56,19 @@ cdef class Sequence:
         self._sequence = sequence
         self._qualities = qualities
 
-    def __init__(self, str name, str sequence, str qualities = None):
+    def __init__(self, object name, object sequence, object qualities = None):
         # __cinit__ is called first and sets all the variables.
-        # Because of the str typing, cython ensures that all objects passed are
-        # unicode objects.
+        if not PyUnicode_Check(name):
+            raise TypeError(f"name should be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
             raise ValueError("name must be a valid ASCII-string.")
+        if not PyUnicode_Check(sequence):
+            raise TypeError(f"sequence should be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
             raise ValueError("sequence must be a valid ASCII-string.")
         if qualities is not None:
+            if not PyUnicode_Check(qualities):
+                raise TypeError(f"qualities should be of type str, got {type(qualities)}")
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
                 raise ValueError("qualities must be a valid ASCII-string.")
             if len(qualities) != len(sequence):
@@ -78,7 +82,9 @@ cdef class Sequence:
         return self._name
 
     @name.setter
-    def name(self, str name):
+    def name(self, name):
+        if not PyUnicode_Check(name):
+            raise TypeError(f"name must be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
             raise ValueError("name must be a valid ASCII-string.")
         self._name = name
@@ -88,7 +94,9 @@ cdef class Sequence:
         return self._sequence
 
     @sequence.setter
-    def sequence(self, str sequence):
+    def sequence(self, sequence):
+        if not PyUnicode_Check(sequence):
+            raise TypeError(f"sequence must be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
             raise ValueError("sequence must be a valid ASCII-string.")
         self._sequence = sequence
@@ -105,8 +113,8 @@ cdef class Sequence:
         elif qualities is None:
             pass
         else:
-            raise TypeError(f"qualities must be a of type str or None. "
-                            f"Got {type(qualities)}.")
+            raise TypeError(f"qualities must be of type str or None, "
+                            f"got {type(qualities)}.")
         self._qualities = qualities
 
     def __getitem__(self, key):
