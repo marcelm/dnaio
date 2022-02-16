@@ -50,7 +50,7 @@ cdef class Sequence:
         object _sequence
         object _qualities
 
-    def __cinit__(self, str name, str sequence, str qualities=None):
+    def __cinit__(self, object name, object sequence, object qualities=None):
         """Set qualities to None if there are no quality values"""
         self._name = name
         self._sequence = sequence
