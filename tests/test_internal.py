@@ -52,6 +52,19 @@ class TestSequence:
         assert Sequence("name", "ACGT", "====").fastq_bytes_two_headers() == \
             b"@name\nACGT\n+name\n====\n"
 
+    def test_is_mate_succes(self):
+        assert Sequence("name1", "A", "=").is_mate(Sequence("name2", "GC", "FF"))
+
+    def test_is_mate_self_bad_name(self):
+        with pytest.raises(ValueError) as error:
+            Sequence("nąme1", "A", "=").is_mate(Sequence("name2", "GC", "FF"))
+        error.match("ASCII")
+
+    def test_is_mate_other_bad_name(self):
+        with pytest.raises(ValueError) as error:
+            Sequence("name1", "A", "=").is_mate(Sequence("nąme2", "GC", "FF"))
+        error.match("ASCII")
+
 
 class TestBytesSequence:
     def test_too_many_qualities(self):
@@ -89,6 +102,10 @@ class TestBytesSequence:
         assert sys.getrefcount(name) == name_ref
         assert sys.getrefcount(sequence) == seq_ref
         assert sys.getrefcount(qualities) == qual_ref
+
+    def test_is_mate_succes(self):
+        assert BytesSequence(b"name1", b"A", b"=").is_mate(
+            BytesSequence(b"name2", b"GC", b"FF"))
 
 
 class TestFastaReader:
