@@ -61,12 +61,12 @@ cdef class Sequence:
         # Because of the str typing, cython ensures that all objects passed are
         # unicode objects.
         if not PyUnicode_IS_COMPACT_ASCII(name):
-            raise ValueError("Name must be a valid ASCII-string.")
+            raise ValueError("name must be a valid ASCII-string.")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
             raise ValueError("sequence must be a valid ASCII-string.")
         if qualities is not None:
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
-                raise ValueError("Name must be a valid ASCII-string.")
+                raise ValueError("qualities must be a valid ASCII-string.")
             if len(qualities) != len(sequence):
                 rname = shorten(name)
                 raise ValueError("In read named {!r}: length of quality sequence "
@@ -80,7 +80,7 @@ cdef class Sequence:
     @name.setter
     def name(self, str name):
         if not PyUnicode_IS_COMPACT_ASCII(name):
-            raise ValueError("Name must be a valid ASCII-string.")
+            raise ValueError("name must be a valid ASCII-string.")
         self._name = name
 
     @property
@@ -101,11 +101,11 @@ cdef class Sequence:
     def qualities(self, qualities):
         if PyUnicode_Check(qualities):
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
-                raise ValueError("Name must be a valid ASCII-string.")
+                raise ValueError("qualities must be a valid ASCII-string.")
         elif qualities is None:
             pass
         else:
-            raise TypeError(f"Qualities must be a of type str or None. "
+            raise TypeError(f"qualities must be a of type str or None. "
                             f"Got {type(qualities)}.")
         self._qualities = qualities
 
