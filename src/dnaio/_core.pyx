@@ -71,6 +71,42 @@ cdef class Sequence:
                                  "({}) and length of read ({}) do not match".format(
                     rname, len(qualities), len(sequence)))
 
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, str name):
+        if not PyUnicode_IS_COMPACT_ASCII(name):
+            raise ValueError("Name must be a valid ascii-string.")
+        self._name = name
+
+    @property
+    def sequence(self):
+        return self._sequence
+
+    @sequence.setter
+    def sequence(self, str sequence):
+        if not PyUnicode_IS_COMPACT_ASCII(sequence):
+            raise ValueError("sequence must be a valid ascii-string.")
+        self._sequence = sequence
+
+    @property
+    def qualities(self):
+        return self._qualities
+
+    @qualities.setter
+    def qualities(self, qualities):
+        if PyUnicode_Check(qualities):
+            if not PyUnicode_IS_COMPACT_ASCII(qualities):
+                raise ValueError("Name must be a valid ascii-string.")
+        elif qualities is None:
+            pass
+        else:
+            raise TypeError(f"Qualities must be a of type str or None. "
+                            f"Got {type(qualities)}.")
+        self._qualities = qualities
+
     def __getitem__(self, key):
         """
         Slice this Sequence. If the qualities attribute is not None, it is
