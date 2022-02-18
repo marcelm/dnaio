@@ -343,8 +343,7 @@ cdef class FastqIter:
             raise ValueError("Starting buffer size too small")
 
     def __dealloc__(self):
-        if self.buffer != NULL:
-            PyMem_Free(self.buffer)
+        PyMem_Free(self.buffer)
 
     cdef _read_into_buffer(self):
         # This function sets self.record_start at 0 and makes sure self.buffer
