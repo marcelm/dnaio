@@ -590,7 +590,7 @@ cdef class FastqIter:
                 ret_val = BytesSequence.__new__(BytesSequence, name, sequence, qualities)
             else:
                 # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
-                if not string_is_ascii(self.c_buf + self.record_start,
+                if not string_is_ascii(self.buffer + self.record_start,
                                        qualities_end - self.record_start):
                     raise FastqFormatError(
                         "Non-ASCII characters found in record.",
