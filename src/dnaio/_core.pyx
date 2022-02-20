@@ -308,35 +308,37 @@ def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
     buf2[:length2] contain the same number of lines (where the
     line number is divisible by four).
     """
+    # Acquire buffers. Cython automatically checks for errors here.
+    cdef Py_buffer data1_buffer
+    cdef Py_buffer data2_buffer
+    PyObject_GetBuffer(buf1, &data1_buffer, PyBUF_SIMPLE)
+    PyObject_GetBuffer(buf2, &data2_buffer, PyBUF_SIMPLE)
+
     cdef:
-        Py_ssize_t pos1 = 0, pos2 = 0
         Py_ssize_t linebreaks = 0
         Py_ssize_t record_start1 = 0
         Py_ssize_t record_start2 = 0
-        Py_buffer data1_buffer
-        Py_buffer data2_buffer
-    PyObject_GetBuffer(buf1, &data1_buffer, PyBUF_SIMPLE)
-    PyObject_GetBuffer(buf2, &data2_buffer, PyBUF_SIMPLE)
-    cdef char * data1 = <char *>data1_buffer.buf
-    cdef char * data2 = <char *>data2_buffer.buf
-
+        char * data1 = <char *>data1_buffer.buf
+        char * data2 = <char *>data2_buffer.buf
+        char * data1_end = data1 + end1
+        char * data2_end = data2 + end2
+        char * pos1 = data1
+        char * pos2 = data2
     try:
         while True:
-            while pos1 < end1 and data1[pos1] != b'\n':
-                pos1 += 1
-            if pos1 == end1:
+            pos1 = <char *>memchr(pos1, b'\n', data1_end - pos1)
+            if pos1 == NULL:
                 break
             pos1 += 1
-            while pos2 < end2 and data2[pos2] != b'\n':
-                pos2 += 1
-            if pos2 == end2:
+            pos2 = <char *>memchr(pos2, b'\n', data2_end - pos2)
+            if pos2 == NULL:
                 break
             pos2 += 1
             linebreaks += 1
             if linebreaks == 4:
                 linebreaks = 0
-                record_start1 = pos1
-                record_start2 = pos2
+                record_start1 = pos1 - data1
+                record_start2 = pos2 - data2
 
         # Hit the end of the data block
         return record_start1, record_start2
