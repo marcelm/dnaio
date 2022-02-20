@@ -324,27 +324,27 @@ def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
         char * data2_end = data2 + end2
         char * pos1 = data1
         char * pos2 = data2
-    try:
-        while True:
-            pos1 = <char *>memchr(pos1, b'\n', data1_end - pos1)
-            if pos1 == NULL:
-                break
-            pos1 += 1
-            pos2 = <char *>memchr(pos2, b'\n', data2_end - pos2)
-            if pos2 == NULL:
-                break
-            pos2 += 1
-            linebreaks += 1
-            if linebreaks == 4:
-                linebreaks = 0
-                record_start1 = pos1 - data1
-                record_start2 = pos2 - data2
 
-        # Hit the end of the data block
-        return record_start1, record_start2
-    finally:
-        PyBuffer_Release(&data1_buffer)
-        PyBuffer_Release(&data2_buffer)
+    while True:
+        pos1 = <char *>memchr(pos1, b'\n', data1_end - pos1)
+        if pos1 == NULL:
+            break
+        pos1 += 1
+        pos2 = <char *>memchr(pos2, b'\n', data2_end - pos2)
+        if pos2 == NULL:
+            break
+        pos2 += 1
+        linebreaks += 1
+        if linebreaks == 4:
+            linebreaks = 0
+            record_start1 = pos1 - data1
+            record_start2 = pos2 - data2
+
+    # Hit the end of the data block
+    # This code will always be reached, so the buffers are always safely released.
+    PyBuffer_Release(&data1_buffer)
+    PyBuffer_Release(&data2_buffer)
+    return record_start1, record_start2
 
 
 cdef class FastqIter:
