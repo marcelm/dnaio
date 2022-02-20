@@ -1,5 +1,6 @@
 # cython: language_level=3, emit_code_comments=False
 
+from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check, PyUnicode_GET_LENGTH
@@ -298,17 +299,8 @@ cdef bytes create_fastq_record(char * name, char * sequence, char * qualities,
         retval_ptr[cursor] = b"\n"
         return retval
 
-# It would be nice to be able to have the first parameter be an
-# unsigned char[:] (memory view), but this fails with a BufferError
-# when a bytes object is passed in.
-# See <https://stackoverflow.com/questions/28203670/>
 
-ctypedef fused bytes_or_bytearray:
-    bytes
-    bytearray
-
-
-def paired_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssize_t end1, Py_ssize_t end2):
+def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
     """
     Skip forward in the two buffers by multiples of four lines.
 
@@ -319,30 +311,38 @@ def paired_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssiz
     cdef:
         Py_ssize_t pos1 = 0, pos2 = 0
         Py_ssize_t linebreaks = 0
-        unsigned char* data1 = buf1
-        unsigned char* data2 = buf2
         Py_ssize_t record_start1 = 0
         Py_ssize_t record_start2 = 0
+        Py_buffer data1_buffer
+        Py_buffer data2_buffer
+    PyObject_GetBuffer(buf1, &data1_buffer, PyBUF_SIMPLE)
+    PyObject_GetBuffer(buf2, &data2_buffer, PyBUF_SIMPLE)
+    cdef char * data1 = <char *>data1_buffer.buf
+    cdef char * data2 = <char *>data2_buffer.buf
 
-    while True:
-        while pos1 < end1 and data1[pos1] != b'\n':
+    try:
+        while True:
+            while pos1 < end1 and data1[pos1] != b'\n':
+                pos1 += 1
+            if pos1 == end1:
+                break
             pos1 += 1
-        if pos1 == end1:
-            break
-        pos1 += 1
-        while pos2 < end2 and data2[pos2] != b'\n':
+            while pos2 < end2 and data2[pos2] != b'\n':
+                pos2 += 1
+            if pos2 == end2:
+                break
             pos2 += 1
-        if pos2 == end2:
-            break
-        pos2 += 1
-        linebreaks += 1
-        if linebreaks == 4:
-            linebreaks = 0
-            record_start1 = pos1
-            record_start2 = pos2
+            linebreaks += 1
+            if linebreaks == 4:
+                linebreaks = 0
+                record_start1 = pos1
+                record_start2 = pos2
 
-    # Hit the end of the data block
-    return record_start1, record_start2
+        # Hit the end of the data block
+        return record_start1, record_start2
+    finally:
+        PyBuffer_Release(&data1_buffer)
+        PyBuffer_Release(&data2_buffer)
 
 
 cdef class FastqIter:
