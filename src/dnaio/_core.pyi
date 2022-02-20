@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple, Union, BinaryIO, Iterator, Type, TypeVar, Any
+from typing import Optional, Tuple, Union, BinaryIO, Iterator, Type, TypeVar
 
 
 class Sequence:
