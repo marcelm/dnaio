@@ -1,5 +1,6 @@
-dnaio API
-=========
+The dnaio API
+=============
+
 
 .. module:: dnaio
 
@@ -23,17 +24,6 @@ The ``Sequence`` classes
    :special-members: __len__, __getitem__
 
    .. automethod:: __init__(name: bytes, sequence: bytes, qualities: Optional[bytes] = None)
-
-Exceptions
-----------
-
-.. autoexception:: UnknownFileFormat
-
-.. autoexception:: FileFormatError
-
-.. autoexception:: FastaFormatError
-
-.. autoexception:: FastqFormatError
 
 
 Reader and writer classes
@@ -74,3 +64,15 @@ Functions
 .. autofunction:: read_chunks
 .. autofunction:: read_paired_chunks
 .. autofunction:: record_names_match
+
+
+Exceptions
+----------
+
+.. autoexception:: UnknownFileFormat
+
+.. autoexception:: FileFormatError
+
+.. autoexception:: FastaFormatError
+
+.. autoexception:: FastqFormatError
