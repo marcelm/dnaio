@@ -2,7 +2,7 @@
 
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
-from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check, PyUnicode_GET_LENGTH
+from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check, PyUnicode_GET_LENGTH, PyUnicode_DecodeASCII
 from cpython.ref cimport PyObject
 from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn, memmove
 cimport cython
@@ -597,14 +597,9 @@ cdef class FastqIter:
                         line=self.number_of_records * 4)
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
-                name = PyUnicode_New(name_length, 127)
-                sequence = PyUnicode_New(sequence_length, 127)
-                qualities = PyUnicode_New(qualities_length, 127)
-                if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
-                    raise MemoryError()
-                memcpy(PyUnicode_1BYTE_DATA(name), self.buffer + name_start, name_length)
-                memcpy(PyUnicode_1BYTE_DATA(sequence), self.buffer + sequence_start, sequence_length)
-                memcpy(PyUnicode_1BYTE_DATA(qualities), self.buffer + qualities_start, qualities_length)
+                name = PyUnicode_DecodeASCII(self.buffer + name_start, name_length, "strict")
+                sequence = PyUnicode_DecodeASCII(self.buffer + sequence_start, sequence_length, "strict")
+                qualities = PyUnicode_DecodeASCII(self.buffer + qualities_start, qualities_length, "strict")
                 
                 if self.use_custom_class:
                     ret_val = self.sequence_class(name, sequence, qualities)
