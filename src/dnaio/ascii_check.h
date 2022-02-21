@@ -11,9 +11,8 @@ string_is_ascii(char * string, size_t length) {
     // The first loop aligns the memory address. Char_ptr is cast to a size_t
     // to return the memory address. Uint64_t is 8 bytes long, and the processor
     // handles this better when its address is a multiplier of 8. This loops
-    // handles the first few bytes that are not on such a multiplier boundary
-    // by checking if the 1, 2 or 4 bits are set.
-    while ((size_t)char_ptr & 0b111 && n != 0) {
+    // handles the first few bytes that are not on such a multiplier boundary.
+    while ((size_t)char_ptr % sizeof(uint64_t) && n != 0) {
         if (*char_ptr & ASCII_MASK_1BYTE) {
             return 0;
         }
