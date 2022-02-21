@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static inline int 
+static int
 string_is_ascii(char * string, size_t length) {
     size_t n = length;
     char * char_ptr = string;
