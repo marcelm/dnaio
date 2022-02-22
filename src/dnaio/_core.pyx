@@ -1,5 +1,6 @@
 # cython: language_level=3, emit_code_comments=False
 
+from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check, PyUnicode_GET_LENGTH
@@ -298,17 +299,8 @@ cdef bytes create_fastq_record(char * name, char * sequence, char * qualities,
         retval_ptr[cursor] = b"\n"
         return retval
 
-# It would be nice to be able to have the first parameter be an
-# unsigned char[:] (memory view), but this fails with a BufferError
-# when a bytes object is passed in.
-# See <https://stackoverflow.com/questions/28203670/>
 
-ctypedef fused bytes_or_bytearray:
-    bytes
-    bytearray
-
-
-def paired_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssize_t end1, Py_ssize_t end2):
+def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
     """
     Skip forward in the two buffers by multiples of four lines.
 
@@ -316,23 +308,31 @@ def paired_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssiz
     buf2[:length2] contain the same number of lines (where the
     line number is divisible by four).
     """
+    # Acquire buffers. Cython automatically checks for errors here.
+    cdef Py_buffer data1_buffer
+    cdef Py_buffer data2_buffer
+    PyObject_GetBuffer(buf1, &data1_buffer, PyBUF_SIMPLE)
+    PyObject_GetBuffer(buf2, &data2_buffer, PyBUF_SIMPLE)
+
     cdef:
-        Py_ssize_t pos1 = 0, pos2 = 0
         Py_ssize_t linebreaks = 0
-        unsigned char* data1 = buf1
-        unsigned char* data2 = buf2
-        Py_ssize_t record_start1 = 0
-        Py_ssize_t record_start2 = 0
+        char * data1 = <char *>data1_buffer.buf
+        char * data2 = <char *>data2_buffer.buf
+        # The min() function ensures we do not read beyond the size of the buffer.
+        char * data1_end = data1 + min(end1, data1_buffer.len)
+        char * data2_end = data2 + min(end2, data2_buffer.len)
+        char * pos1 = data1
+        char * pos2 = data2
+        char * record_start1 = data1
+        char * record_start2 = data2
 
     while True:
-        while pos1 < end1 and data1[pos1] != b'\n':
-            pos1 += 1
-        if pos1 == end1:
+        pos1 = <char *>memchr(pos1, b'\n', data1_end - pos1)
+        if pos1 == NULL:
             break
         pos1 += 1
-        while pos2 < end2 and data2[pos2] != b'\n':
-            pos2 += 1
-        if pos2 == end2:
+        pos2 = <char *>memchr(pos2, b'\n', data2_end - pos2)
+        if pos2 == NULL:
             break
         pos2 += 1
         linebreaks += 1
@@ -342,7 +342,10 @@ def paired_fastq_heads(bytes_or_bytearray buf1, bytes_or_bytearray buf2, Py_ssiz
             record_start2 = pos2
 
     # Hit the end of the data block
-    return record_start1, record_start2
+    # This code will always be reached, so the buffers are always safely released.
+    PyBuffer_Release(&data1_buffer)
+    PyBuffer_Release(&data2_buffer)
+    return record_start1 - data1, record_start2 - data2
 
 
 cdef class FastqIter:
