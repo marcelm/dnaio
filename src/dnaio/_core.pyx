@@ -318,8 +318,9 @@ def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
         Py_ssize_t linebreaks = 0
         char * data1 = <char *>data1_buffer.buf
         char * data2 = <char *>data2_buffer.buf
-        char * data1_end = data1 + end1
-        char * data2_end = data2 + end2
+        # The min() function ensures we do not read beyond the size of the buffer.
+        char * data1_end = data1 + min(end1, data1_buffer.len)
+        char * data2_end = data2 + min(end2, data2_buffer.len)
         char * pos1 = data1
         char * pos2 = data2
         char * record_start1 = data1
