@@ -4,8 +4,8 @@ Sequence I/O: Read and write FASTA and FASTQ files efficiently
 
 __all__ = [
     'open',
-    'Sequence',
-    'BytesSequence',
+    'SequenceRecord',
+    'BytesSequenceRecord',
     'SingleEndReader',
     'PairedEndReader',
     'SingleEndWriter',
@@ -33,7 +33,7 @@ from typing import Optional, Union, BinaryIO
 
 from xopen import xopen
 
-from ._core import Sequence, BytesSequence, record_names_match
+from ._core import SequenceRecord, BytesSequenceRecord, record_names_match
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .singleend import _open_single
@@ -80,8 +80,8 @@ def open(
       mode:
         Either ``'r'`` or ``'rb'`` for reading, ``'w'`` for writing
         or ``'a'`` for appending.
-        With mode ``'r'``, the returned Reader yields `Sequence` objects.
-        With mode ``'rb'``, the returned Reader yields `BytesSequence` objects.
+        With mode ``'r'``, the returned Reader yields `SequenceRecord` objects.
+        With mode ``'rb'``, the returned Reader yields `BytesSequenceRecord` objects.
 
       interleaved:
         If True, then file1 contains interleaved paired-end data.

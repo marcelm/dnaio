@@ -32,18 +32,17 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
     cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
     return ascii
 
-cdef class Sequence:
-    """
-    A sequencing read with read name/id and (optional) qualities
 
-    If qualities are available, they are as
-    For a Sequence a FASTA file
-    record containing a read in a FASTA or FASTQ file. For FASTA, the qualities attribute
-    is None. For FASTQ, qualities is a string and it contains the qualities
+cdef class SequenceRecord:
+    """
+    A sequencing read with read name (id) and optional quality values.
+
+    If no quality values are available, the qualities attribute is None.
+    For FASTQ files, qualities is a string and it contains the qualities
     encoded as ASCII(qual+33).
 
     Attributes:
-      name (str): The read description
+      name (str): The read header
       sequence (str):
       qualities (str):
     """
@@ -121,11 +120,11 @@ cdef class Sequence:
 
     def __getitem__(self, key):
         """
-        Slice this Sequence. If the qualities attribute is not None, it is
+        Slice this SequenceRecord. If the qualities attribute is not None, it is
         sliced accordingly. The read name is copied unchanged.
 
         Returns:
-          A new Sequence object with a sliced sequence.
+          A new SequenceRecord object with a sliced sequence.
         """
         return self.__class__(
             self._name,
@@ -136,17 +135,17 @@ cdef class Sequence:
         qstr = ''
         if self._qualities is not None:
             qstr = ', qualities={!r}'.format(shorten(self._qualities))
-        return '<Sequence(name={!r}, sequence={!r}{})>'.format(
+        return '<SequenceRecord(name={!r}, sequence={!r}{})>'.format(
             shorten(self._name), shorten(self._sequence), qstr)
 
     def __len__(self):
         """
         Returns:
-           The number of characters in this sequence
+           The number of characters in the sequence
         """
         return len(self._sequence)
 
-    def __richcmp__(self, Sequence other, int op):
+    def __richcmp__(self, SequenceRecord other, int op):
         if 2 <= op <= 3:
             eq = self._name == other._name and \
                 self._sequence == other._sequence and \
@@ -159,7 +158,7 @@ cdef class Sequence:
             raise NotImplementedError()
 
     def __reduce__(self):
-        return (Sequence, (self._name, self._sequence, self._qualities))
+        return (SequenceRecord, (self._name, self._sequence, self._qualities))
 
     def qualities_as_bytes(self):
         """Return the qualities as a bytes object.
@@ -193,7 +192,7 @@ cdef class Sequence:
         """
         return self.fastq_bytes(two_headers=True)
 
-    def is_mate(self, Sequence other):
+    def is_mate(self, SequenceRecord other):
         """Check whether this instance and other are part of the same read pair
 
         Checking is done by comparing IDs. The ID is the part of the name
@@ -202,7 +201,7 @@ cdef class Sequence:
         ID and reverse reads a 2 etc.
 
         Args:
-            other (Sequence): The Sequence object to compare.
+            other (SequenceRecord): The object to compare to
 
         Returns:
             bool: Whether this and other are part of the same read pair.
@@ -214,7 +213,7 @@ cdef class Sequence:
         return record_ids_match(header1_chars, header2_chars, header1_length)
 
 
-cdef class BytesSequence:
+cdef class BytesSequenceRecord:
     """
     A sequencing read with read name/id and (optional) qualities
 
@@ -281,7 +280,7 @@ cdef class BytesSequence:
         self._qualities = qualities
 
     def __repr__(self):
-        return '<BytesSequence(name={!r}, sequence={!r}, qualities={!r})>'.format(
+        return '<BytesSequenceRecord(name={!r}, sequence={!r}, qualities={!r})>'.format(
             shorten(self._name), shorten(self._sequence), shorten(self._qualities))
 
     def __len__(self):
@@ -291,7 +290,7 @@ cdef class BytesSequence:
         """
         return len(self.sequence)
 
-    def __richcmp__(self, BytesSequence other, int op):
+    def __richcmp__(self, BytesSequenceRecord other, int op):
         if 2 <= op <= 3:
             eq = self._name == other._name and \
                 self._sequence == other._sequence and \
@@ -329,7 +328,7 @@ cdef class BytesSequence:
         """
         return self.fastq_bytes(two_headers=True)
 
-    def is_mate(self, BytesSequence other):
+    def is_mate(self, BytesSequenceRecord other):
         """Check whether this instance and other are part of the same read pair
 
         Checking is done by comparing IDs. The ID is the part of the name
@@ -338,7 +337,7 @@ cdef class BytesSequence:
         ID and reverse reads a 2 etc.
 
         Args:
-            other (BytesSequence): The BytesSequence object to compare.
+            other (BytesSequenceRecord): The object to compare to
 
         Returns:
             bool: Whether this and other are part of the same read pair.
@@ -436,7 +435,7 @@ def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
 
 cdef class FastqIter:
     """
-    Parse a FASTQ file and yield Sequence objects
+    Parse a FASTQ file and yield SequenceRecord objects
 
     The *first value* that the generator yields is a boolean indicating whether
     the first record in the FASTQ has a repeated header (in the third row
@@ -469,9 +468,11 @@ cdef class FastqIter:
             raise MemoryError()
         self.bytes_in_buffer = 0
         self.sequence_class = sequence_class
-        self.save_as_bytes = sequence_class is BytesSequence
-        self.use_custom_class = (sequence_class is not Sequence and
-                                 sequence_class is not BytesSequence)
+        self.save_as_bytes = sequence_class is BytesSequenceRecord
+        self.use_custom_class = (
+            sequence_class is not SequenceRecord
+            and sequence_class is not BytesSequenceRecord
+        )
         self.number_of_records = 0
         self.extra_newline = False
         self.yielded_two_headers = False
@@ -644,7 +645,7 @@ cdef class FastqIter:
                 name = PyBytes_FromStringAndSize(self.buffer + name_start, name_length)
                 sequence = PyBytes_FromStringAndSize(self.buffer + sequence_start, sequence_length)
                 qualities = PyBytes_FromStringAndSize(self.buffer + qualities_start, qualities_length)
-                ret_val = BytesSequence.__new__(BytesSequence, name, sequence, qualities)
+                ret_val = BytesSequenceRecord.__new__(BytesSequenceRecord, name, sequence, qualities)
             else:
                 # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
                 if not string_is_ascii(self.buffer + self.record_start,
@@ -666,9 +667,9 @@ cdef class FastqIter:
                 if self.use_custom_class:
                     ret_val = self.sequence_class(name, sequence, qualities)
                 else:
-                    ret_val = Sequence.__new__(Sequence, name, sequence, qualities)
+                    ret_val = SequenceRecord.__new__(SequenceRecord, name, sequence, qualities)
 
-            ### Advance record to next position
+            # Advance record to next position
             self.number_of_records += 1
             self.record_start = qualities_end + 1
             return ret_val
