@@ -49,6 +49,11 @@ from .chunks import read_chunks, read_paired_chunks
 from ._version import version as __version__
 
 
+# Backwards compatibility aliases
+Sequence = SequenceRecord
+BytesSequence = BytesSequenceRecord
+
+
 def open(
     file1: Union[str, PathLike, BinaryIO],
     *,
