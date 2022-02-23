@@ -6,5 +6,4 @@ setup(
         [
             Extension("dnaio._core", sources=["src/dnaio/_core.pyx"]),
         ],
-    setup_requires=["cython >=0.29.20"]
 )
