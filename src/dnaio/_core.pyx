@@ -215,6 +215,20 @@ cdef class Sequence:
 
 
 cdef class BytesSequence:
+    """
+    A sequencing read with read name/id and (optional) qualities
+
+    If qualities are available, they are as
+    For a Sequence a FASTA file
+    record containing a read in a FASTA or FASTQ file. For FASTA, the qualities attribute
+    is None. For FASTQ, qualities is a bytes object and it contains the qualities
+    encoded as ASCII(qual+33).
+
+    Attributes:
+      name (bytes): The read description
+      sequence (bytes):
+      qualities (bytes):
+    """
     cdef:
         object _name
         object _sequence
@@ -267,7 +281,7 @@ cdef class BytesSequence:
 
     @qualities.setter
     def qualities(self, qualities):
-        if not (PyBytes_CheckExact(qualities)or qualities is None):
+        if not (PyBytes_CheckExact(qualities) or qualities is None):
             raise TypeError(f"qualities must be of type bytes or None, "
                             f"got {type(qualities)}.")
         self._qualities = qualities
@@ -296,6 +310,11 @@ cdef class BytesSequence:
             raise NotImplementedError()
 
     def fastq_bytes(self, two_headers=False):
+        """Return the entire FASTQ record as bytes which can be written
+        into a file.
+
+        Optionally the header (after the @) can be repeated on the third line
+        (after the +), when two_headers is enabled."""
         if self._qualities is None:
             raise ValueError("Cannot create a FASTQ record when qualities is not set.")
         cdef:
