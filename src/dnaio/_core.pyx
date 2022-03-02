@@ -3,7 +3,7 @@
 from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
-from cpython.unicode cimport PyUnicode_Check, PyUnicode_GET_LENGTH
+from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
 from cpython.ref cimport PyObject
 from libc.string cimport memcmp, memcpy, memchr, strcspn, memmove
 cimport cython
@@ -58,16 +58,16 @@ cdef class Sequence:
 
     def __init__(self, object name, object sequence, object qualities = None):
         # __cinit__ is called first and sets all the variables.
-        if not PyUnicode_Check(name):
+        if not PyUnicode_CheckExact(name):
             raise TypeError(f"name should be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
             raise ValueError("name must be a valid ASCII-string.")
-        if not PyUnicode_Check(sequence):
+        if not PyUnicode_CheckExact(sequence):
             raise TypeError(f"sequence should be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
             raise ValueError("sequence must be a valid ASCII-string.")
         if qualities is not None:
-            if not PyUnicode_Check(qualities):
+            if not PyUnicode_CheckExact(qualities):
                 raise TypeError(f"qualities should be of type str, got {type(qualities)}")
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
                 raise ValueError("qualities must be a valid ASCII-string.")
@@ -83,7 +83,7 @@ cdef class Sequence:
 
     @name.setter
     def name(self, name):
-        if not PyUnicode_Check(name):
+        if not PyUnicode_CheckExact(name):
             raise TypeError(f"name must be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
             raise ValueError("name must be a valid ASCII-string.")
@@ -95,7 +95,7 @@ cdef class Sequence:
 
     @sequence.setter
     def sequence(self, sequence):
-        if not PyUnicode_Check(sequence):
+        if not PyUnicode_CheckExact(sequence):
             raise TypeError(f"sequence must be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
             raise ValueError("sequence must be a valid ASCII-string.")
@@ -107,7 +107,7 @@ cdef class Sequence:
 
     @qualities.setter
     def qualities(self, qualities):
-        if PyUnicode_Check(qualities):
+        if PyUnicode_CheckExact(qualities):
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
                 raise ValueError("qualities must be a valid ASCII-string.")
         elif qualities is None:
@@ -684,7 +684,7 @@ def record_names_match(header1: str, header2: str):
         char * header1_chars = NULL
         char * header2_chars = NULL
         size_t header1_length
-    if PyUnicode_Check(header1):
+    if PyUnicode_CheckExact(header1):
         if PyUnicode_KIND(header1) == PyUnicode_1BYTE_KIND:
             header1_chars = <char *>PyUnicode_1BYTE_DATA(header1)
             header1_length = <size_t> PyUnicode_GET_LENGTH(header1)
@@ -696,7 +696,7 @@ def record_names_match(header1: str, header2: str):
         raise TypeError(f"Header 1 is the wrong type. Expected bytes or string, "
                         f"got: {type(header1)}")
 
-    if PyUnicode_Check(header2):
+    if PyUnicode_CheckExact(header2):
         if PyUnicode_KIND(header2) == PyUnicode_1BYTE_KIND:
             header2_chars = <char *>PyUnicode_1BYTE_DATA(header2)
         else:
