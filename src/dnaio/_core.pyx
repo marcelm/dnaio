@@ -215,28 +215,74 @@ cdef class Sequence:
 
 
 cdef class BytesSequence:
+    """
+    A sequencing read with read name/id and (optional) qualities
+
+    Attributes:
+      name (bytes): The read description
+      sequence (bytes):
+      qualities (bytes):
+    """
     cdef:
-        public bytes name
-        public bytes sequence
-        public bytes qualities
+        object _name
+        object _sequence
+        object _qualities
 
-    def __cinit__(self, bytes name, bytes sequence, bytes qualities):
+    def __cinit__(self, object name, object sequence, object qualities):
         """Set qualities to None if there are no quality values"""
-        self.name = name
-        self.sequence = sequence
-        self.qualities = qualities
+        self._name = name
+        self._sequence = sequence
+        self._qualities = qualities
 
-    def __init__(self, bytes name, bytes sequence, bytes qualities):
+    def __init__(self, object name, object sequence, object qualities = None):
         # __cinit__ is called first and sets all the variables.
-        if len(qualities) != len(sequence):
-            rname = shorten(name)
-            raise ValueError("In read named {!r}: length of quality sequence "
-                             "({}) and length of read ({}) do not match".format(
-                rname, len(qualities), len(sequence)))
-    
+        if not PyBytes_CheckExact(name):
+            raise TypeError(f"name should be of type bytes, got {type(name)}")
+        if not PyBytes_CheckExact(sequence):
+            raise TypeError(f"sequence should be of type bytes, got {type(sequence)}")
+        if qualities is not None:
+            if not PyBytes_CheckExact(qualities):
+                raise TypeError(f"qualities should be of type bytes, got {type(qualities)}")
+            if len(qualities) != len(sequence):
+                rname = shorten(name)
+                raise ValueError("In read named {!r}: length of quality sequence "
+                                 "({}) and length of read ({}) do not match".format(
+                    rname, len(qualities), len(sequence)))
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        if not PyBytes_CheckExact(name):
+            raise TypeError(f"name must be of type bytes, got {type(name)}")
+        self._name = name
+
+    @property
+    def sequence(self):
+        return self._sequence
+
+    @sequence.setter
+    def sequence(self, sequence):
+        if not PyBytes_CheckExact(sequence):
+            raise TypeError(f"sequence must be of type bytes, got {type(sequence)}")
+        self._sequence = sequence
+
+    @property
+    def qualities(self):
+        return self._qualities
+
+    @qualities.setter
+    def qualities(self, qualities):
+        if not (PyBytes_CheckExact(qualities) or qualities is None):
+            raise TypeError(f"qualities must be of type bytes or None, "
+                            f"got {type(qualities)}.")
+        self._qualities = qualities
+
     def __repr__(self):
         return '<BytesSequence(name={!r}, sequence={!r}, qualities={!r})>'.format(
-            shorten(self.name), shorten(self.sequence), shorten(self.qualities))
+            shorten(self._name), shorten(self._sequence), shorten(self._qualities))
 
     def __len__(self):
         """
@@ -245,11 +291,11 @@ cdef class BytesSequence:
         """
         return len(self.sequence)
 
-    def __richcmp__(self, other, int op):
+    def __richcmp__(self, BytesSequence other, int op):
         if 2 <= op <= 3:
-            eq = self.name == other.name and \
-                self.sequence == other.sequence and \
-                self.qualities == other.qualities
+            eq = self._name == other._name and \
+                self._sequence == other._sequence and \
+                self._qualities == other._qualities
             if op == 2:
                 return eq
             else:
@@ -258,12 +304,20 @@ cdef class BytesSequence:
             raise NotImplementedError()
 
     def fastq_bytes(self, two_headers=False):
-        name = PyBytes_AS_STRING(self.name)
-        name_length = PyBytes_GET_SIZE(self.name)
-        sequence = PyBytes_AS_STRING(self.sequence)
-        sequence_length = PyBytes_GET_SIZE(self.sequence)
-        qualities = PyBytes_AS_STRING(self.qualities)
-        qualities_length = PyBytes_GET_SIZE(self.qualities)
+        """Return the entire FASTQ record as bytes which can be written
+        into a file.
+
+        Optionally the header (after the @) can be repeated on the third line
+        (after the +), when two_headers is enabled."""
+        if self._qualities is None:
+            raise ValueError("Cannot create a FASTQ record when qualities is not set.")
+        cdef:
+            char * name = PyBytes_AS_STRING(self._name)
+            Py_ssize_t name_length = PyBytes_GET_SIZE(self._name)
+            char * sequence = PyBytes_AS_STRING(self._sequence)
+            Py_ssize_t sequence_length = PyBytes_GET_SIZE(self._sequence)
+            char * qualities = PyBytes_AS_STRING(self._qualities)
+            Py_ssize_t qualities_length = PyBytes_GET_SIZE(self._qualities)
         return create_fastq_record(name, sequence, qualities,
                                    name_length, sequence_length, qualities_length,
                                    two_headers)
@@ -290,9 +344,9 @@ cdef class BytesSequence:
             bool: Whether this and other are part of the same read pair.
         """
         # No need to check if type is bytes as it is guaranteed by the type.
-        return record_ids_match(PyBytes_AS_STRING(self.name),
-                                PyBytes_AS_STRING(other.name),
-                                PyBytes_GET_SIZE(self.name))
+        return record_ids_match(PyBytes_AS_STRING(self._name),
+                                PyBytes_AS_STRING(other._name),
+                                PyBytes_GET_SIZE(self._name))
 
 
 cdef bytes create_fastq_record(char * name, char * sequence, char * qualities,
