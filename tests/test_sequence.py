@@ -5,7 +5,7 @@ import pytest
 from dnaio import SequenceRecord, BytesSequenceRecord
 
 
-class TestSequence:
+class TestSequenceRecord:
     def test_too_many_qualities(self):
         with pytest.raises(ValueError):
             SequenceRecord(name="name", sequence="ACGT", qualities="#####")
@@ -86,7 +86,7 @@ class TestSequence:
         assert seq.qualities is None
 
 
-class TestBytesSequence:
+class TestBytesSequenceRecord:
     def test_too_many_qualities(self):
         with pytest.raises(ValueError):
             BytesSequenceRecord(name=b"name", sequence=b"ACGT", qualities=b"#####")
@@ -162,3 +162,15 @@ class TestBytesSequence:
         seq = BytesSequenceRecord(b"name1", b"A", b"=")
         seq.qualities = None
         assert seq.qualities is None
+
+
+def test_legacy_sequence():
+    from dnaio import Sequence
+    s = Sequence("name", "ACGT", "####")
+    assert isinstance(s, SequenceRecord)
+
+
+def test_legacy_bytes_sequence():
+    from dnaio import BytesSequence
+    s = BytesSequence(b"name", b"ACGT", b"####")
+    assert isinstance(s, BytesSequenceRecord)
