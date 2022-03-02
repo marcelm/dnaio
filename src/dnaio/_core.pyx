@@ -1,7 +1,7 @@
 # cython: language_level=3, emit_code_comments=False
 
 from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE, PyBytes_CheckExact
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_Check, PyUnicode_GET_LENGTH
 from cpython.ref cimport PyObject
@@ -710,7 +710,7 @@ def record_names_match(header1: str, header2: str):
 
 
 def record_names_match_bytes(header1: bytes, header2: bytes):
-    if not (PyBytes_Check(header1) and PyBytes_Check(header2)):
+    if not (PyBytes_CheckExact(header1) and PyBytes_CheckExact(header2)):
         raise TypeError("Header1 and header2 should both be bytes objects. "
                         "Got {} and {}".format(type(header1), type(header2)))
     return record_ids_match(PyBytes_AS_STRING(header1),
