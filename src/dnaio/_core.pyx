@@ -10,8 +10,6 @@ cimport cython
 
 cdef extern from "Python.h":
     unsigned char * PyUnicode_1BYTE_DATA(object o)
-    int PyUnicode_KIND(object o)
-    int PyUnicode_1BYTE_KIND
     bint PyUnicode_IS_COMPACT_ASCII(object o)
     object PyUnicode_New(Py_ssize_t size, Py_UCS4 maxchar)
 
@@ -685,23 +683,20 @@ def record_names_match(header1: str, header2: str):
         char * header2_chars = NULL
         size_t header1_length
     if PyUnicode_CheckExact(header1):
-        if PyUnicode_KIND(header1) == PyUnicode_1BYTE_KIND:
+        if PyUnicode_IS_COMPACT_ASCII(header1):
             header1_chars = <char *>PyUnicode_1BYTE_DATA(header1)
             header1_length = <size_t> PyUnicode_GET_LENGTH(header1)
         else:
-            header1 = header1.encode('latin1')
-            header1_chars = PyBytes_AS_STRING(header1)
-            header1_length = PyBytes_GET_SIZE(header1)
+            raise ValueError("header1 must be a valid ASCII-string.")
     else:
         raise TypeError(f"Header 1 is the wrong type. Expected bytes or string, "
                         f"got: {type(header1)}")
 
     if PyUnicode_CheckExact(header2):
-        if PyUnicode_KIND(header2) == PyUnicode_1BYTE_KIND:
+        if PyUnicode_IS_COMPACT_ASCII(header2):
             header2_chars = <char *>PyUnicode_1BYTE_DATA(header2)
         else:
-            header2 = header2.encode('latin1')
-            header2_chars = PyBytes_AS_STRING(header2)
+            raise ValueError("header2 must be a valid ASCII-string.")
     else:
         raise TypeError(f"Header 2 is the wrong type. Expected bytes or string, "
                         f"got: {type(header2)}")
