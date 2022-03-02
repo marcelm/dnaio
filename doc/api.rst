@@ -10,16 +10,16 @@ The open function
 .. autofunction:: dnaio.open
 
 
-The ``Sequence`` classes
-------------------------
+The ``SequenceRecord`` classes
+------------------------------
 
-.. autoclass:: dnaio.Sequence
+.. autoclass:: dnaio.SequenceRecord
    :members:
    :special-members: __len__, __getitem__
 
    .. automethod:: __init__(name: str, sequence: str, qualities: Optional[str] = None)
 
-.. autoclass:: dnaio.BytesSequence
+.. autoclass:: dnaio.BytesSequenceRecord
    :members:
    :special-members: __len__, __getitem__
 
@@ -39,9 +39,9 @@ Reader and writer classes
 .. autoclass:: FastqWriter
    :members: writeseq
 
-   .. py:method:: write(record: Sequence) -> None:
+   .. py:method:: write(record: SequenceRecord) -> None:
 
-      Write a Sequence record to the FASTQ file.
+      Write a SequenceRecord to the FASTQ file.
 
 .. autoclass:: InterleavedPairedEndReader
 

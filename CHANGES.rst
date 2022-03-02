@@ -2,6 +2,12 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* Renamed ``Sequence`` to ``SequenceRecord`` and ``BytesSequence`` to ``BytesSequenceRecord``.
+  The previous names are still available as aliases so existing code will continue to work.
+
 v0.7.1 (2022-01-26)
 -------------------
 

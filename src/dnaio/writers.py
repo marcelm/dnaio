@@ -3,7 +3,7 @@ from typing import Union, BinaryIO, Optional
 
 from xopen import xopen
 
-from . import Sequence
+from . import SequenceRecord
 from ._util import _is_path
 from .interfaces import SingleEndWriter
 
@@ -63,7 +63,7 @@ class FastaWriter(FileWriter, SingleEndWriter):
         return f"FastaWriter('{getattr(self._file, 'name', self._file)}')"
 
     def write(self, name_or_record, sequence: Optional[str] = None):
-        """Write an entry to the the FASTA file.
+        """Write an entry to the FASTA file.
 
         If only one parameter (name_or_record) is given, it must have
         attributes .name and .sequence, which are then used.
@@ -73,7 +73,7 @@ class FastaWriter(FileWriter, SingleEndWriter):
         The effect is that you can write this:
         writer.write("name", "ACCAT")
         or
-        writer.write(Sequence("name", "ACCAT"))
+        writer.write(SequenceRecord("name", "ACCAT"))
         """
         if sequence is None:
             name = name_or_record.name
@@ -121,23 +121,23 @@ class FastqWriter(FileWriter, SingleEndWriter):
     def __repr__(self) -> str:
         return f"FastqWriter('{getattr(self._file, 'name', self._file)}')"
 
-    def write(self, record: Sequence) -> None:
+    def write(self, record: SequenceRecord) -> None:
         """
         Dummy method to make it possible to instantiate this class.
         The correct write method is assigned in the constructor.
         """
         assert False
 
-    def _write(self, record: Sequence) -> None:
+    def _write(self, record: SequenceRecord) -> None:
         """
-        Write a Sequence record to the FASTQ file.
+        Write a SequenceRecord to the FASTQ file.
 
         """
         self._file.write(record.fastq_bytes())
 
-    def _write_two_headers(self, record: Sequence) -> None:
+    def _write_two_headers(self, record: SequenceRecord) -> None:
         """
-        Write a Sequence record to the FASTQ file, repeating the header
+        Write a `SequenceRecord` to the FASTQ file, repeating the header
         in the third line after the "+" .
         """
         self._file.write(record.fastq_bytes_two_headers())
