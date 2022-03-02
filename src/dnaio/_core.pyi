@@ -18,7 +18,7 @@ class Sequence:
 class BytesSequence:
     name: bytes
     sequence: bytes
-    qualities: bytes
+    qualities: Optional[bytes]
 
     def __init__(self, name: bytes, sequence: bytes, qualities: bytes = ...) -> None: ...
     def __getitem__(self, s: slice) -> BytesSequence: ...

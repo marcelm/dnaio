@@ -161,6 +161,42 @@ class TestBytesSequence:
         assert BytesSequence(b"name1", b"A", b"=").is_mate(
             BytesSequence(b"name2", b"GC", b"FF"))
 
+    def test_init_name_none(self):
+        with pytest.raises(TypeError) as error:
+            BytesSequence(None, b"A", b"=")
+        error.match("bytes")
+
+    def test_init_sequence_none(self):
+        with pytest.raises(TypeError) as error:
+            BytesSequence(b"name1", None, b"=")
+        error.match("bytes")
+
+    def test_init_qualities_none(self):
+        seq = BytesSequence(b"name1", b"A", None)
+        assert seq.qualities is None
+
+    def test_init_qualities_wrong_tpye(self):
+        with pytest.raises(TypeError) as error:
+            BytesSequence(b"name1", b"A", "=")
+        error.match("bytes")
+
+    def test_set_name_none(self):
+        seq = BytesSequence(b"name1", b"A", b"=")
+        with pytest.raises(TypeError) as error:
+            seq.name = None
+        error.match("bytes")
+
+    def test_set_sequence_none(self):
+        seq = BytesSequence(b"name1", b"A", b"=")
+        with pytest.raises(TypeError) as error:
+            seq.sequence = None
+        error.match("bytes")
+
+    def test_set_qualities_none(self):
+        seq = BytesSequence(b"name1", b"A", b"=")
+        seq.qualities = None
+        assert seq.qualities is None
+
 
 class TestFastaReader:
     def test_file(self):
