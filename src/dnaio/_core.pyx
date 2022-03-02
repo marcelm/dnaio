@@ -218,12 +218,6 @@ cdef class BytesSequence:
     """
     A sequencing read with read name/id and (optional) qualities
 
-    If qualities are available, they are as
-    For a Sequence a FASTA file
-    record containing a read in a FASTA or FASTQ file. For FASTA, the qualities attribute
-    is None. For FASTQ, qualities is a bytes object and it contains the qualities
-    encoded as ASCII(qual+33).
-
     Attributes:
       name (bytes): The read description
       sequence (bytes):
