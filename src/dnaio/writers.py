@@ -9,6 +9,10 @@ from .interfaces import SingleEndWriter
 
 
 class FileWriter:
+    """
+    A mix-in that manages opening and closing and provides a context manager
+    """
+
     def __init__(
         self,
         file: Union[PathLike, str, BinaryIO],
@@ -53,8 +57,11 @@ class FastaWriter(FileWriter, SingleEndWriter):
         _close_file: Optional[bool] = None,
     ):
         """
-        If line_length is not None, the lines will
-        be wrapped after line_length characters.
+
+        Arguments:
+            file: A path or an open file-like object
+            line_length: Wrap sequence lines after this many characters (None disables wrapping)
+            opener: If *file* is a path, this function is called to open it.
         """
         super().__init__(file, opener=opener, _close_file=_close_file)
         self.line_length = line_length if line_length != 0 else None
@@ -63,7 +70,7 @@ class FastaWriter(FileWriter, SingleEndWriter):
         return f"FastaWriter('{getattr(self._file, 'name', self._file)}')"
 
     def write(self, name_or_record, sequence: Optional[str] = None):
-        """Write an entry to the FASTA file.
+        """Write a record to the FASTA file.
 
         If only one parameter (name_or_record) is given, it must have
         attributes .name and .sequence, which are then used.
@@ -94,7 +101,7 @@ class FastaWriter(FileWriter, SingleEndWriter):
 
 class FastqWriter(FileWriter, SingleEndWriter):
     """
-    Write sequences with qualities in FASTQ format.
+    Write records in FASTQ format.
 
     FASTQ files are formatted like this::
 
@@ -113,6 +120,12 @@ class FastqWriter(FileWriter, SingleEndWriter):
         opener=xopen,
         _close_file: Optional[bool] = None,
     ):
+        """
+        Arguments:
+            file: A path or an open file-like object
+            two_headers: If True, the header is repeated on the third line of each record after the "+".
+            opener: If *file* is a path, this function is called to open it.
+        """
         super().__init__(file, opener=opener, _close_file=_close_file)
         self._two_headers = two_headers
         # setattr avoids a complaint from Mypy
@@ -130,14 +143,13 @@ class FastqWriter(FileWriter, SingleEndWriter):
 
     def _write(self, record: SequenceRecord) -> None:
         """
-        Write a SequenceRecord to the FASTQ file.
-
+        Write a record to the FASTQ file.
         """
         self._file.write(record.fastq_bytes())
 
     def _write_two_headers(self, record: SequenceRecord) -> None:
         """
-        Write a `SequenceRecord` to the FASTQ file, repeating the header
+        Write a record to the FASTQ file, repeating the header
         in the third line after the "+" .
         """
         self._file.write(record.fastq_bytes_two_headers())

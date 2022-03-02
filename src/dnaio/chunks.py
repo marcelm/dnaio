@@ -1,4 +1,11 @@
-"""Chunked reading of FASTA and FASTQ files"""
+"""
+Chunked reading of FASTA and FASTQ files
+
+This can be used to very quickly split up the input file into similarly-sized chunks,
+without actually parsing the records. The chunks can then be distributed to worker threads
+or subprocess and be parsed and processed there.
+"""
+
 from io import RawIOBase
 from typing import Optional, Iterator, Tuple
 
@@ -46,11 +53,23 @@ def _fastq_head(buf: bytes, end: Optional[int] = None) -> int:
 
 def read_chunks(f: RawIOBase, buffer_size: int = 4 * 1024**2) -> Iterator[memoryview]:
     """
-    Read a chunk of complete FASTA or FASTQ records from a file.
-    The size of a chunk is at most buffer_size.
-    f needs to be a file opened in binary mode.
+    Read chunks of complete FASTA or FASTQ records from a file.
+    If the format is detected to be FASTQ, all chunks except possibly the last contain
+    an even number of records such that interleaved paired-end reads remain in sync.
+    The yielded memoryview objects are only valid for one iteration because the internal
+    buffer is re-used in the next iteration.
 
-    The yielded memoryview objects become invalid on the next iteration.
+    Arguments:
+        f: File with FASTA or FASTQ reads; must have been opened in binary mode
+        buffer_size: Largest allowed chunk size
+
+    Yields:
+        memoryview representing the chunk. This becomes invalid on the next iteration.
+
+    Raises:
+         ValueError: A FASTQ record was encountered that is larger than *buffer_size*.
+         UnknownFileFormat: The file format could not be detected
+           (the first byte must be "@", ">" or "#")
     """
     # This buffer is re-used in each iteration.
     buf = bytearray(buffer_size)
@@ -109,6 +128,29 @@ def read_paired_chunks(
     f2: RawIOBase,
     buffer_size: int = 4 * 1024**2,
 ) -> Iterator[Tuple[memoryview, memoryview]]:
+    """
+    Read chunks of paired-end FASTQ reads from two files.
+    A pair of chunks (memoryview objects) is yielded on each iteration,
+    and both chunks are guaranteed to have the same number of sequences.
+    That is, the paired-end reads will stay in sync.
+
+    The memoryviews are only valid for one iteration because the internal
+    buffer is re-used in the next iteration.
+
+    This is similar to `read_chunks`, but for paired-end data.
+    Unlike `read_chunks`, this only works for FASTQ input.
+
+    Args:
+        f: File with R1 reads; must have been opened in binary mode
+        f2: File with R2 reads; must have been opened in binary mode
+        buffer_size: Largest allowed chunk size
+
+    Yields:
+        Pairs of memoryview objects.
+
+    Raises:
+         ValueError: A FASTQ record was encountered that is larger than *buffer_size*.
+    """
     if buffer_size < 1:
         raise ValueError("Buffer size too small")
 

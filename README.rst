@@ -19,7 +19,7 @@ dnaio processes FASTQ and FASTA files
 Example usage
 =============
 
-The main interface is the ``dnaio.open`` function::
+The main interface is the `dnaio.open` function::
 
     import dnaio
 

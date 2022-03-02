@@ -7,7 +7,7 @@ The dnaio API
 The open function
 -----------------
 
-.. autofunction:: dnaio.open
+.. autofunction:: open
 
 
 The ``SequenceRecord`` classes
@@ -58,11 +58,17 @@ Reader and writer classes
    :members: write
 
 
-Functions
----------
+Chunked reading of sequence records
+-----------------------------------
+
+The following functions can be used to very quickly split up the input file(s)
+into similarly-sized chunks without actually parsing the records. The chunks
+can then be distributed to worker threads or subprocesses and be parsed and
+processed there.
 
 .. autofunction:: read_chunks
 .. autofunction:: read_paired_chunks
+
 .. autofunction:: record_names_match
 
 
@@ -74,5 +80,7 @@ Exceptions
 .. autoexception:: FileFormatError
 
 .. autoexception:: FastaFormatError
+   :show-inheritance:
 
 .. autoexception:: FastqFormatError
+   :show-inheritance:

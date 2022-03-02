@@ -413,7 +413,7 @@ class TestFastaWriter:
         assert not bio.closed
         assert not fw._file.closed
 
-    def test_write_zero_length_SequenceRecord(self):
+    def test_write_zero_length_sequence_record(self):
         bio = BytesIO()
         with FastaWriter(bio) as fw:
             fw.write(SequenceRecord("name", ""))
