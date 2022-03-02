@@ -3,9 +3,9 @@
 from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
-from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check, PyUnicode_GET_LENGTH
+from cpython.unicode cimport PyUnicode_Check, PyUnicode_GET_LENGTH
 from cpython.ref cimport PyObject
-from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn, memmove
+from libc.string cimport memcmp, memcpy, memchr, strcspn, memmove
 cimport cython
 
 cdef extern from "Python.h":
@@ -17,8 +17,6 @@ cdef extern from "Python.h":
 
 cdef extern from "ascii_check.h":
     int string_is_ascii(char * string, size_t length)
-
-from typing import Union
 
 from .exceptions import FastqFormatError
 from ._util import shorten
@@ -622,7 +620,7 @@ cdef class FastqIter:
 
             if second_header_length:  # should be 0 when only + is present
                 if (name_length != second_header_length or
-                        strncmp(self.buffer+second_header_start,
+                        memcmp(self.buffer+second_header_start,
                             self.buffer + name_start, second_header_length) != 0):
                     raise FastqFormatError(
                         "Sequence descriptions don't match ('{}' != '{}').\n"
@@ -662,7 +660,7 @@ cdef class FastqIter:
                 memcpy(PyUnicode_1BYTE_DATA(name), self.buffer + name_start, name_length)
                 memcpy(PyUnicode_1BYTE_DATA(sequence), self.buffer + sequence_start, sequence_length)
                 memcpy(PyUnicode_1BYTE_DATA(qualities), self.buffer + qualities_start, qualities_length)
-                
+
                 if self.use_custom_class:
                     ret_val = self.sequence_class(name, sequence, qualities)
                 else:
