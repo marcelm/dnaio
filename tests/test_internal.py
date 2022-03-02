@@ -55,15 +55,69 @@ class TestSequence:
     def test_is_mate_succes(self):
         assert Sequence("name1", "A", "=").is_mate(Sequence("name2", "GC", "FF"))
 
-    def test_is_mate_self_bad_name(self):
+    def test_init_name_bad(self):
         with pytest.raises(ValueError) as error:
-            Sequence("nąme1", "A", "=").is_mate(Sequence("name2", "GC", "FF"))
+            Sequence("nąme1", "A", "=")
         error.match("ASCII")
 
-    def test_is_mate_other_bad_name(self):
+    def test_init_name_none(self):
+        with pytest.raises(TypeError) as error:
+            Sequence(None, "A", "=")
+        error.match("str")
+
+    def test_init_sequence_bad(self):
         with pytest.raises(ValueError) as error:
-            Sequence("name1", "A", "=").is_mate(Sequence("nąme2", "GC", "FF"))
+            Sequence("name1", "Ä", "=")
         error.match("ASCII")
+
+    def test_init_sequence_none(self):
+        with pytest.raises(TypeError) as error:
+            Sequence("name1", None, "=")
+        error.match("str")
+
+    def test_init_qualities_bad(self):
+        with pytest.raises(ValueError) as error:
+            Sequence("name1", "A", "ä")
+        error.match("ASCII")
+
+    def test_init_qualities_none(self):
+        seq = Sequence("name1", "A", None)
+        assert seq.qualities is None
+
+    def test_set_name_bad(self):
+        seq = Sequence("name1", "A", "=")
+        with pytest.raises(ValueError) as error:
+            seq.name = "näme1"
+        error.match("ASCII")
+
+    def test_set_name_none(self):
+        seq = Sequence("name1", "A", "=")
+        with pytest.raises(TypeError) as error:
+            seq.name = None
+        error.match("str")
+
+    def test_set_sequence_bad(self):
+        seq = Sequence("name1", "A", "=")
+        with pytest.raises(ValueError) as error:
+            seq.sequence = "Ä"
+        error.match("ASCII")
+
+    def test_set_sequence_none(self):
+        seq = Sequence("name1", "A", "=")
+        with pytest.raises(TypeError) as error:
+            seq.sequence = None
+        error.match("str")
+
+    def test_set_qualities_bad(self):
+        seq = Sequence("name1", "A", "=")
+        with pytest.raises(ValueError) as error:
+            seq.qualities = "Ä"
+        error.match("ASCII")
+
+    def test_set_qualities_none(self):
+        seq = Sequence("name1", "A", "=")
+        seq.qualities = None
+        assert seq.qualities is None
 
 
 class TestBytesSequence:
@@ -272,6 +326,14 @@ class TestFastqReader:
         with dnaio.open(fastq) as f:
             records = list(f)
         assert records == [Sequence('r1', 'A', 'H')]
+
+    def test_non_ascii_in_record(self):
+        # \xc4 -> Ä
+        fastq = BytesIO(b'@r1\n\xc4\n+\nH')
+        with dnaio.open(fastq) as f:
+            with pytest.raises(FastqFormatError) as e:
+                list(f)
+            e.match("Non-ASCII")
 
     def test_not_opened_as_binary(self):
         filename = 'tests/data/simple.fastq'
@@ -665,3 +727,39 @@ def test_fasta_writer_repr(tmp_path):
 def test_fastq_writer_repr(tmp_path):
     with FastqWriter(tmp_path / "out.fastq") as fw:
         repr(fw)
+
+
+class TestAsciiCheck:
+    from dnaio._core import bytes_ascii_check
+
+    ASCII_STRING = "In het Nederlands komen bijzondere leestekens niet vaak voor.".encode('ascii')
+    # NON-ASCII from the German wikipedia.
+    NON_ASCII_STRING = "In späterer Zeit trat Umlaut sehr häufig analogisch ein.".encode('latin-1')
+
+    def test_ascii(self):
+        assert self.bytes_ascii_check(self.ASCII_STRING)
+
+    def test_ascii_all_chars(self):
+        assert self.bytes_ascii_check(bytes(range(128)))
+        assert not self.bytes_ascii_check(bytes(range(129)))
+
+    def test_non_ascii(self):
+        assert not self.bytes_ascii_check(self.NON_ASCII_STRING)
+
+    def test_non_ascii_lengths(self):
+        # Make sure that the function finds the non-ascii byte correctly for
+        # all lengths.
+        non_ascii_char = "é".encode("latin-1")
+        for i in range(len(self.ASCII_STRING)):
+            test_string = self.ASCII_STRING[:i] + non_ascii_char
+            assert not self.bytes_ascii_check(test_string)
+
+    def test_ascii_lengths(self):
+        # Make sure the ascii check is correct even though there are non-ASCII
+        # bytes directly behind the search space.
+        # This ensures there is no overshoot where the algorithm checks bytes
+        # after the search space.
+        non_ascii_char = "é".encode("latin-1")
+        for i in range(1, len(self.ASCII_STRING) + 1):
+            test_string = self.ASCII_STRING[:i] + (non_ascii_char * 8)
+            assert self.bytes_ascii_check(test_string, i - 1)

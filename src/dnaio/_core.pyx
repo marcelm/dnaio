@@ -12,13 +12,25 @@ cdef extern from "Python.h":
     unsigned char * PyUnicode_1BYTE_DATA(object o)
     int PyUnicode_KIND(object o)
     int PyUnicode_1BYTE_KIND
+    bint PyUnicode_IS_COMPACT_ASCII(object o)
     object PyUnicode_New(Py_ssize_t size, Py_UCS4 maxchar)
+
+cdef extern from "ascii_check.h":
+    int string_is_ascii(char * string, size_t length)
 
 from typing import Union
 
 from .exceptions import FastqFormatError
 from ._util import shorten
 
+
+def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
+    if length == -1:
+        length = PyBytes_GET_SIZE(string)
+    else:
+        length = min(length, PyBytes_GET_SIZE(string))
+    cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
+    return ascii
 
 cdef class Sequence:
     """
@@ -36,23 +48,76 @@ cdef class Sequence:
       qualities (str):
     """
     cdef:
-        public str name
-        public str sequence
-        public str qualities
+        object _name
+        object _sequence
+        object _qualities
 
-    def __cinit__(self, str name, str sequence, str qualities=None):
+    def __cinit__(self, object name, object sequence, object qualities=None):
         """Set qualities to None if there are no quality values"""
-        self.name = name
-        self.sequence = sequence
-        self.qualities = qualities
+        self._name = name
+        self._sequence = sequence
+        self._qualities = qualities
 
-    def __init__(self, str name, str sequence, str qualities = None):
+    def __init__(self, object name, object sequence, object qualities = None):
         # __cinit__ is called first and sets all the variables.
-        if qualities is not None and len(qualities) != len(sequence):
-            rname = shorten(name)
-            raise ValueError("In read named {!r}: length of quality sequence "
-                             "({}) and length of read ({}) do not match".format(
-                rname, len(qualities), len(sequence)))
+        if not PyUnicode_Check(name):
+            raise TypeError(f"name should be of type str, got {type(name)}")
+        if not PyUnicode_IS_COMPACT_ASCII(name):
+            raise ValueError("name must be a valid ASCII-string.")
+        if not PyUnicode_Check(sequence):
+            raise TypeError(f"sequence should be of type str, got {type(sequence)}")
+        if not PyUnicode_IS_COMPACT_ASCII(sequence):
+            raise ValueError("sequence must be a valid ASCII-string.")
+        if qualities is not None:
+            if not PyUnicode_Check(qualities):
+                raise TypeError(f"qualities should be of type str, got {type(qualities)}")
+            if not PyUnicode_IS_COMPACT_ASCII(qualities):
+                raise ValueError("qualities must be a valid ASCII-string.")
+            if len(qualities) != len(sequence):
+                rname = shorten(name)
+                raise ValueError("In read named {!r}: length of quality sequence "
+                                 "({}) and length of read ({}) do not match".format(
+                    rname, len(qualities), len(sequence)))
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        if not PyUnicode_Check(name):
+            raise TypeError(f"name must be of type str, got {type(name)}")
+        if not PyUnicode_IS_COMPACT_ASCII(name):
+            raise ValueError("name must be a valid ASCII-string.")
+        self._name = name
+
+    @property
+    def sequence(self):
+        return self._sequence
+
+    @sequence.setter
+    def sequence(self, sequence):
+        if not PyUnicode_Check(sequence):
+            raise TypeError(f"sequence must be of type str, got {type(sequence)}")
+        if not PyUnicode_IS_COMPACT_ASCII(sequence):
+            raise ValueError("sequence must be a valid ASCII-string.")
+        self._sequence = sequence
+
+    @property
+    def qualities(self):
+        return self._qualities
+
+    @qualities.setter
+    def qualities(self, qualities):
+        if PyUnicode_Check(qualities):
+            if not PyUnicode_IS_COMPACT_ASCII(qualities):
+                raise ValueError("qualities must be a valid ASCII-string.")
+        elif qualities is None:
+            pass
+        else:
+            raise TypeError(f"qualities must be of type str or None, "
+                            f"got {type(qualities)}.")
+        self._qualities = qualities
 
     def __getitem__(self, key):
         """
@@ -63,29 +128,29 @@ cdef class Sequence:
           A new Sequence object with a sliced sequence.
         """
         return self.__class__(
-            self.name,
-            self.sequence[key],
-            self.qualities[key] if self.qualities is not None else None)
+            self._name,
+            self._sequence[key],
+            self._qualities[key] if self._qualities is not None else None)
 
     def __repr__(self):
         qstr = ''
-        if self.qualities is not None:
-            qstr = ', qualities={!r}'.format(shorten(self.qualities))
+        if self._qualities is not None:
+            qstr = ', qualities={!r}'.format(shorten(self._qualities))
         return '<Sequence(name={!r}, sequence={!r}{})>'.format(
-            shorten(self.name), shorten(self.sequence), qstr)
+            shorten(self._name), shorten(self._sequence), qstr)
 
     def __len__(self):
         """
         Returns:
            The number of characters in this sequence
         """
-        return len(self.sequence)
+        return len(self._sequence)
 
-    def __richcmp__(self, other, int op):
+    def __richcmp__(self, Sequence other, int op):
         if 2 <= op <= 3:
-            eq = self.name == other.name and \
-                self.sequence == other.sequence and \
-                self.qualities == other.qualities
+            eq = self._name == other._name and \
+                self._sequence == other._sequence and \
+                self._qualities == other._qualities
             if op == 2:
                 return eq
             else:
@@ -94,13 +159,13 @@ cdef class Sequence:
             raise NotImplementedError()
 
     def __reduce__(self):
-        return (Sequence, (self.name, self.sequence, self.qualities))
+        return (Sequence, (self._name, self._sequence, self._qualities))
 
     def qualities_as_bytes(self):
         """Return the qualities as a bytes object.
 
         This is a faster version of qualities.encode('ascii')."""
-        return self.qualities.encode('ascii')
+        return self._qualities.encode('ascii')
 
     def fastq_bytes(self, two_headers = False):
         """Return the entire FASTQ record as bytes which can be written
@@ -108,37 +173,15 @@ cdef class Sequence:
 
         Optionally the header (after the @) can be repeated on the third line
         (after the +), when two_headers is enabled."""
+        if self._qualities is None:
+            raise ValueError("Cannot create a FASTQ record when qualities is not set.")
         cdef:
-            char * name
-            char * sequence
-            char * qualities
-            Py_ssize_t name_length
-            Py_ssize_t sequence_length
-            Py_ssize_t qualities_length
-
-        if PyUnicode_KIND(self.name) == PyUnicode_1BYTE_KIND:
-            name = <char *>PyUnicode_1BYTE_DATA(self.name)
-            name_length = <size_t>PyUnicode_GET_LENGTH(self.name)
-        else:
-            # Allow non-ASCII in name
-            name_bytes = self.name.encode('latin-1')
-            name = PyBytes_AS_STRING(name_bytes)
-            name_length = PyBytes_GET_SIZE(name_bytes)
-        if PyUnicode_KIND(self.sequence) == PyUnicode_1BYTE_KIND:
-            sequence = <char *>PyUnicode_1BYTE_DATA(self.sequence)
-            sequence_length = <size_t>PyUnicode_GET_LENGTH(self.sequence)
-        else:
-            # Don't allow non-ASCII in sequence and qualities
-            sequence_bytes = self.sequence.encode('ascii')
-            sequence = PyBytes_AS_STRING(sequence_bytes)
-            sequence_length = PyBytes_GET_SIZE(sequence_bytes)
-        if PyUnicode_KIND(self.qualities) == PyUnicode_1BYTE_KIND:
-            qualities = <char *>PyUnicode_1BYTE_DATA(self.qualities)
-            qualities_length = <size_t>PyUnicode_GET_LENGTH(self.qualities)
-        else:
-            qualities_bytes = self.qualities.encode('ascii')
-            qualities = PyBytes_AS_STRING(qualities_bytes)
-            qualities_length = PyBytes_GET_SIZE(qualities_bytes)
+            char * name = <char *>PyUnicode_1BYTE_DATA(self._name)
+            char * sequence = <char *>PyUnicode_1BYTE_DATA(self._sequence)
+            char * qualities = <char *>PyUnicode_1BYTE_DATA(self._qualities)
+            size_t name_length = <size_t>PyUnicode_GET_LENGTH(self._name)
+            size_t sequence_length = <size_t>PyUnicode_GET_LENGTH(self._sequence)
+            size_t qualities_length = <size_t>PyUnicode_GET_LENGTH(self._qualities)
         return create_fastq_record(name, sequence, qualities,
                                    name_length, sequence_length, qualities_length,
                                    two_headers)
@@ -165,20 +208,9 @@ cdef class Sequence:
             bool: Whether this and other are part of the same read pair.
         """
         cdef:
-            char * header1_chars = NULL
-            char * header2_chars = NULL
-            size_t header1_length
-        # No need to check if type is unicode as it is guaranteed by the type.
-        if PyUnicode_KIND(self.name) == PyUnicode_1BYTE_KIND:
-            header1_chars = <char *>PyUnicode_1BYTE_DATA(self.name)
-            header1_length = <size_t> PyUnicode_GET_LENGTH(self.name)
-        else:
-            raise ValueError(f"name should be ASCII-only. Got {self.name!r}.")
-
-        if PyUnicode_KIND(other.name) == PyUnicode_1BYTE_KIND:
-            header2_chars = <char *>PyUnicode_1BYTE_DATA(other.name)
-        else:
-            raise ValueError(f"name should be ASCII-only. Got {other.name!r}.")
+            char * header1_chars = <char *>PyUnicode_1BYTE_DATA(self._name)
+            size_t header1_length = <size_t> PyUnicode_GET_LENGTH(self._name)
+            char * header2_chars = <char *>PyUnicode_1BYTE_DATA(other._name)
         return record_ids_match(header1_chars, header2_chars, header1_length)
 
 
@@ -560,11 +592,17 @@ cdef class FastqIter:
                 qualities = PyBytes_FromStringAndSize(self.buffer + qualities_start, qualities_length)
                 ret_val = BytesSequence.__new__(BytesSequence, name, sequence, qualities)
             else:
+                # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
+                if not string_is_ascii(self.buffer + self.record_start,
+                                       qualities_end - self.record_start):
+                    raise FastqFormatError(
+                        "Non-ASCII characters found in record.",
+                        line=self.number_of_records * 4)
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
-                name = PyUnicode_New(name_length, 255)
-                sequence = PyUnicode_New(sequence_length, 255)
-                qualities = PyUnicode_New(qualities_length, 255)
+                name = PyUnicode_New(name_length, 127)
+                sequence = PyUnicode_New(sequence_length, 127)
+                qualities = PyUnicode_New(qualities_length, 127)
                 if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
                     raise MemoryError()
                 memcpy(PyUnicode_1BYTE_DATA(name), self.buffer + name_start, name_length)
