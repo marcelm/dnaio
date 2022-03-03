@@ -348,41 +348,45 @@ cdef class BytesSequenceRecord:
                                 PyBytes_GET_SIZE(self._name))
 
 
-cdef bytes create_fastq_record(char * name, char * sequence, char * qualities,
-                               Py_ssize_t name_length,
-                               Py_ssize_t sequence_length,
-                               Py_ssize_t qualities_length,
-                               bint two_headers = False):
-        # Total size is name + sequence + qualities + 4 newlines + '+' and an
-        # '@' to be put in front of the name.
-        cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
+cdef bytes create_fastq_record(
+    char * name,
+    char * sequence,
+    char * qualities,
+    Py_ssize_t name_length,
+    Py_ssize_t sequence_length,
+    Py_ssize_t qualities_length,
+    bint two_headers = False
+):
+    # Total size is name + sequence + qualities + 4 newlines + '+' and an
+    # '@' to be put in front of the name.
+    cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
 
-        if two_headers:
-            # We need space for the name after the +.
-            total_size += name_length
+    if two_headers:
+        # We need space for the name after the +.
+        total_size += name_length
 
-        # This is the canonical way to create an uninitialized bytestring of given size
-        cdef bytes retval = PyBytes_FromStringAndSize(NULL, total_size)
-        cdef char * retval_ptr = PyBytes_AS_STRING(retval)
+    # This is the canonical way to create an uninitialized bytestring of given size
+    cdef bytes retval = PyBytes_FromStringAndSize(NULL, total_size)
+    cdef char * retval_ptr = PyBytes_AS_STRING(retval)
 
-        # Write the sequences into the bytestring at the correct positions.
-        cdef size_t cursor
-        retval_ptr[0] = b"@"
-        memcpy(retval_ptr + 1, name, name_length)
-        cursor = name_length + 1
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        memcpy(retval_ptr + cursor, sequence, sequence_length)
-        cursor += sequence_length
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        retval_ptr[cursor] = b"+"; cursor += 1
-        if two_headers:
-            memcpy(retval_ptr + cursor, name, name_length)
-            cursor += name_length
-        retval_ptr[cursor] = b"\n"; cursor += 1
-        memcpy(retval_ptr + cursor, qualities, qualities_length)
-        cursor += qualities_length
-        retval_ptr[cursor] = b"\n"
-        return retval
+    # Write the sequences into the bytestring at the correct positions.
+    cdef size_t cursor
+    retval_ptr[0] = b"@"
+    memcpy(retval_ptr + 1, name, name_length)
+    cursor = name_length + 1
+    retval_ptr[cursor] = b"\n"; cursor += 1
+    memcpy(retval_ptr + cursor, sequence, sequence_length)
+    cursor += sequence_length
+    retval_ptr[cursor] = b"\n"; cursor += 1
+    retval_ptr[cursor] = b"+"; cursor += 1
+    if two_headers:
+        memcpy(retval_ptr + cursor, name, name_length)
+        cursor += name_length
+    retval_ptr[cursor] = b"\n"; cursor += 1
+    memcpy(retval_ptr + cursor, qualities, qualities_length)
+    cursor += qualities_length
+    retval_ptr[cursor] = b"\n"
+    return retval
 
 
 def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
@@ -719,6 +723,7 @@ def record_names_match_bytes(header1: bytes, header2: bytes):
     return record_ids_match(PyBytes_AS_STRING(header1),
                             PyBytes_AS_STRING(header2),
                             PyBytes_GET_SIZE(header1))
+
 
 cdef bint record_ids_match(char *header1, char *header2, size_t header1_length):
     """
