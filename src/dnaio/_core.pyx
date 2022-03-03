@@ -35,16 +35,19 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
 
 cdef class SequenceRecord:
     """
-    A sequencing read with read name (id) and optional quality values.
-
-    If no quality values are available, the qualities attribute is None.
-    For FASTQ files, qualities is a string and it contains the qualities
-    encoded as ASCII(qual+33).
+    A named sequence with optional quality values.
+    This typically represents a record from a FASTA or FASTQ file.
+    The readers returned by `dnaio.open` yield objects of this type
+    when mode is set to ``"r"``
 
     Attributes:
-      name (str): The read header
-      sequence (str):
-      qualities (str):
+        name (str): The read header
+        sequence (str): The nucleotide (or amino acid) sequence
+        qualities (str): None if no quality values are available
+            (such as when the record comes from a FASTA file).
+            If quality values are available, this is a string
+            that contains the Phred-scaled qualities encoded as
+            ASCII(qual+33) (as in FASTQ).
     """
     cdef:
         object _name
@@ -114,8 +117,10 @@ cdef class SequenceRecord:
         elif qualities is None:
             pass
         else:
-            raise TypeError(f"qualities must be of type str or None, "
-                            f"got {type(qualities)}.")
+            raise TypeError(
+                f"qualities must be of type str or None, "
+                f"got {type(qualities)}."
+            )
         self._qualities = qualities
 
     def __getitem__(self, key):
@@ -124,12 +129,13 @@ cdef class SequenceRecord:
         sliced accordingly. The read name is copied unchanged.
 
         Returns:
-          A new SequenceRecord object with a sliced sequence.
+            A new `SequenceRecord` object representing the sliced sequence.
         """
         return self.__class__(
             self._name,
             self._sequence[key],
-            self._qualities[key] if self._qualities is not None else None)
+            self._qualities[key] if self._qualities is not None else None,
+        )
 
     def __repr__(self):
         qstr = ''
@@ -161,19 +167,28 @@ cdef class SequenceRecord:
         return (SequenceRecord, (self._name, self._sequence, self._qualities))
 
     def qualities_as_bytes(self):
-        """Return the qualities as a bytes object.
+        """
+        Return the qualities as a bytes object.
 
-        This is a faster version of qualities.encode('ascii')."""
+        This is a faster version of ``record.qualities.encode('ascii')``.
+        """
         return self._qualities.encode('ascii')
 
-    def fastq_bytes(self, two_headers = False):
-        """Return the entire FASTQ record as bytes which can be written
-        into a file.
+    def fastq_bytes(self, two_headers=False):
+        """
+        Format this record in FASTQ format
 
-        Optionally the header (after the @) can be repeated on the third line
-        (after the +), when two_headers is enabled."""
+        Arguments:
+            two_headers (bool): If True, repeat the header (after the ``@``)
+                on the third line (after the ``+``)
+
+        Returns:
+            A bytes object with the formatted record.
+            This can be written directly to a file.
+        """
         if self._qualities is None:
             raise ValueError("Cannot create a FASTQ record when qualities is not set.")
+
         cdef:
             char * name = <char *>PyUnicode_1BYTE_DATA(self._name)
             char * sequence = <char *>PyUnicode_1BYTE_DATA(self._sequence)
@@ -181,9 +196,16 @@ cdef class SequenceRecord:
             size_t name_length = <size_t>PyUnicode_GET_LENGTH(self._name)
             size_t sequence_length = <size_t>PyUnicode_GET_LENGTH(self._sequence)
             size_t qualities_length = <size_t>PyUnicode_GET_LENGTH(self._qualities)
-        return create_fastq_record(name, sequence, qualities,
-                                   name_length, sequence_length, qualities_length,
-                                   two_headers)
+
+        return create_fastq_record(
+            name,
+            sequence,
+            qualities,
+            name_length,
+            sequence_length,
+            qualities_length,
+            two_headers,
+        )
 
     def fastq_bytes_two_headers(self):
         """
@@ -193,10 +215,11 @@ cdef class SequenceRecord:
         return self.fastq_bytes(two_headers=True)
 
     def is_mate(self, SequenceRecord other):
-        """Check whether this instance and other are part of the same read pair
+        """
+        Check whether this instance and another are part of the same read pair
 
         Checking is done by comparing IDs. The ID is the part of the name
-        before the first whitespace. Any 1,2 or 3 at the end of the IDs is
+        before the first whitespace. Any 1, 2 or 3 at the end of the IDs is
         excluded from the check as forward reads may have a 1 appended to their
         ID and reverse reads a 2 etc.
 
@@ -204,7 +227,7 @@ cdef class SequenceRecord:
             other (SequenceRecord): The object to compare to
 
         Returns:
-            bool: Whether this and other are part of the same read pair.
+            bool: Whether this and *other* are part of the same read pair.
         """
         cdef:
             char * header1_chars = <char *>PyUnicode_1BYTE_DATA(self._name)
@@ -215,12 +238,22 @@ cdef class SequenceRecord:
 
 cdef class BytesSequenceRecord:
     """
-    A sequencing read with read name/id and (optional) qualities
+    A named sequence with optional quality values.
+    This typically represents a record from a FASTA or FASTQ file.
+    The difference to `SequenceRecord` is that all attributes are
+    bytes objects instead of str, which for some applications
+    gives a speedup.
+    The readers returned by `dnaio.open` yield objects of this type
+    when mode is set to ``"rb"``
 
     Attributes:
-      name (bytes): The read description
-      sequence (bytes):
-      qualities (bytes):
+        name (bytes): The read header
+        sequence (bytes): The nucleotide (or amino acid) sequence
+        qualities (bytes): None if no quality values are available
+            (such as when the record comes from a FASTA file).
+            If quality values are available, this is a bytes object
+            that contains the Phred-scaled qualities encoded as
+            ASCII(qual+33) (as in FASTQ).
     """
     cdef:
         object _name
@@ -286,7 +319,7 @@ cdef class BytesSequenceRecord:
     def __len__(self):
         """
         Returns:
-           The number of characters in this sequence
+           The number of nucleotides in this sequence
         """
         return len(self.sequence)
 
@@ -303,13 +336,20 @@ cdef class BytesSequenceRecord:
             raise NotImplementedError()
 
     def fastq_bytes(self, two_headers=False):
-        """Return the entire FASTQ record as bytes which can be written
-        into a file.
+        """
+        Format this record in FASTQ format
 
-        Optionally the header (after the @) can be repeated on the third line
-        (after the +), when two_headers is enabled."""
+        Arguments:
+            two_headers (bool): If True, repeat the header (after the ``@``)
+            on the third line (after the ``+``)
+
+        Returns:
+            A bytes object with the formatted record.
+            This can be written directly to a file.
+        """
         if self._qualities is None:
             raise ValueError("Cannot create a FASTQ record when qualities is not set.")
+
         cdef:
             char * name = PyBytes_AS_STRING(self._name)
             Py_ssize_t name_length = PyBytes_GET_SIZE(self._name)
@@ -317,9 +357,16 @@ cdef class BytesSequenceRecord:
             Py_ssize_t sequence_length = PyBytes_GET_SIZE(self._sequence)
             char * qualities = PyBytes_AS_STRING(self._qualities)
             Py_ssize_t qualities_length = PyBytes_GET_SIZE(self._qualities)
-        return create_fastq_record(name, sequence, qualities,
-                                   name_length, sequence_length, qualities_length,
-                                   two_headers)
+
+        return create_fastq_record(
+            name,
+            sequence,
+            qualities,
+            name_length,
+            sequence_length,
+            qualities_length,
+            two_headers,
+        )
 
     def fastq_bytes_two_headers(self):
         """
@@ -329,18 +376,19 @@ cdef class BytesSequenceRecord:
         return self.fastq_bytes(two_headers=True)
 
     def is_mate(self, BytesSequenceRecord other):
-        """Check whether this instance and other are part of the same read pair
+        """
+        Check whether this instance and another are part of the same read pair
 
         Checking is done by comparing IDs. The ID is the part of the name
-        before the first whitespace. Any 1,2 or 3 at the end of the IDs is
+        before the first whitespace. Any 1, 2 or 3 at the end of the IDs is
         excluded from the check as forward reads may have a 1 appended to their
         ID and reverse reads a 2 etc.
 
-        Args:
+        Arguments:
             other (BytesSequenceRecord): The object to compare to
 
         Returns:
-            bool: Whether this and other are part of the same read pair.
+            bool: Whether this and *other* are part of the same read pair.
         """
         # No need to check if type is bytes as it is guaranteed by the type.
         return record_ids_match(PyBytes_AS_STRING(self._name),

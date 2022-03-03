@@ -57,7 +57,7 @@ class BinaryFileReader:
 
 class FastaReader(BinaryFileReader, SingleEndReader):
     """
-    Reader for FASTA files.
+    Reader for FASTA files
     """
 
     def __init__(
