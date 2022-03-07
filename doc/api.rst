@@ -69,8 +69,6 @@ processed there.
 .. autofunction:: read_chunks
 .. autofunction:: read_paired_chunks
 
-.. autofunction:: record_names_match
-
 
 Exceptions
 ----------

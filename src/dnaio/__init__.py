@@ -24,7 +24,6 @@ __all__ = [
     'TwoFilePairedEndWriter',
     'read_chunks',
     'read_paired_chunks',
-    'record_names_match',
     '__version__',
 ]
 
@@ -33,7 +32,11 @@ from typing import Optional, Union, BinaryIO
 
 from xopen import xopen
 
-from ._core import SequenceRecord, BytesSequenceRecord, record_names_match
+from ._core import (
+    SequenceRecord,
+    BytesSequenceRecord,
+)
+from ._core import record_names_match  # noqa: F401  # deprecated
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .singleend import _open_single

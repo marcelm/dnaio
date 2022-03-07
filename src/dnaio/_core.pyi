@@ -34,8 +34,9 @@ class BytesSequenceRecord:
 # types that implement the buffer protocol, for which there is no type yet.
 # See: https://github.com/python/typing/issues/593
 def paired_fastq_heads(buf1: ByteString, buf2: ByteString, end1: int, end2: int) -> Tuple[int, int]: ...
+
+# Deprecated
 def record_names_match(header1: str, header2: str) -> bool: ...
-def record_names_match_bytes(header1: bytes, header2: bytes) -> bool: ...
 
 T = TypeVar("T")
 class FastqIter:
