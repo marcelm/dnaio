@@ -1,9 +1,10 @@
 # cython: language_level=3, emit_code_comments=False
 
 from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
+from cpython.object cimport Py_SIZE
 from cpython.ref cimport PyObject
 from libc.string cimport memcmp, memcpy, memchr, strcspn, memmove
 cimport cython
@@ -22,9 +23,9 @@ from ._util import shorten
 
 def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
     if length == -1:
-        length = PyBytes_GET_SIZE(string)
+        length = Py_SIZE(string)
     else:
-        length = min(length, PyBytes_GET_SIZE(string))
+        length = min(length, Py_SIZE(string))
     cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
     return ascii
 
@@ -348,11 +349,11 @@ cdef class BytesSequenceRecord:
 
         cdef:
             char * name = PyBytes_AS_STRING(self._name)
-            Py_ssize_t name_length = PyBytes_GET_SIZE(self._name)
+            Py_ssize_t name_length = Py_SIZE(self._name)
             char * sequence = PyBytes_AS_STRING(self._sequence)
-            Py_ssize_t sequence_length = PyBytes_GET_SIZE(self._sequence)
+            Py_ssize_t sequence_length = Py_SIZE(self._sequence)
             char * qualities = PyBytes_AS_STRING(self._qualities)
-            Py_ssize_t qualities_length = PyBytes_GET_SIZE(self._qualities)
+            Py_ssize_t qualities_length = Py_SIZE(self._qualities)
 
         return create_fastq_record(
             name,
@@ -389,7 +390,7 @@ cdef class BytesSequenceRecord:
         # No need to check if type is bytes as it is guaranteed by the type.
         return record_ids_match(PyBytes_AS_STRING(self._name),
                                 PyBytes_AS_STRING(other._name),
-                                PyBytes_GET_SIZE(self._name))
+                                Py_SIZE(self._name))
 
 
 cdef bytes create_fastq_record(
@@ -561,7 +562,7 @@ cdef class FastqIter:
         cdef object filechunk = self.file.read(empty_bytes_in_buffer)
         if not PyBytes_CheckExact(filechunk):
             raise TypeError("self.file is not a binary file reader.")
-        cdef Py_ssize_t filechunk_size = PyBytes_GET_SIZE(filechunk)
+        cdef Py_ssize_t filechunk_size = Py_SIZE(filechunk)
         if filechunk_size > empty_bytes_in_buffer:
             raise ValueError(f"read() returned too much data: "
                              f"{empty_bytes_in_buffer} bytes requested, "
@@ -768,7 +769,7 @@ def record_names_match_bytes(header1: bytes, header2: bytes):
                         "Got {} and {}".format(type(header1), type(header2)))
     return record_ids_match(PyBytes_AS_STRING(header1),
                             PyBytes_AS_STRING(header2),
-                            PyBytes_GET_SIZE(header1))
+                            Py_SIZE(header1))
 
 
 cdef bint record_ids_match(char *header1, char *header2, size_t header1_length):
