@@ -1,9 +1,20 @@
 from typing import Optional
 
 
+class UnknownFileFormat(Exception):
+    """
+    The file format could not be automatically detected
+    """
+
+
 class FileFormatError(Exception):
     """
     The file is not formatted correctly
+
+    Attributes:
+        line: If available, the number of the line at which the error occurred
+          or None if not.
+          The first line has index 0.
     """
     format = 'sequence'  # Something generic that works for both FASTA and FASTQ
 
@@ -29,9 +40,3 @@ class FastaFormatError(FileFormatError):
     The FASTA file is not formatted correctly
     """
     format = "FASTA"
-
-
-class UnknownFileFormat(Exception):
-    """
-    The file format could not be automatically detected
-    """

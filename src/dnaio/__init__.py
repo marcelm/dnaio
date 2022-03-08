@@ -4,8 +4,8 @@ Sequence I/O: Read and write FASTA and FASTQ files efficiently
 
 __all__ = [
     'open',
-    'Sequence',
-    'BytesSequence',
+    'SequenceRecord',
+    'BytesSequenceRecord',
     'SingleEndReader',
     'PairedEndReader',
     'SingleEndWriter',
@@ -24,7 +24,6 @@ __all__ = [
     'TwoFilePairedEndWriter',
     'read_chunks',
     'read_paired_chunks',
-    'record_names_match',
     '__version__',
 ]
 
@@ -33,7 +32,11 @@ from typing import Optional, Union, BinaryIO
 
 from xopen import xopen
 
-from ._core import Sequence, BytesSequence, record_names_match
+from ._core import (
+    SequenceRecord,
+    BytesSequenceRecord,
+)
+from ._core import record_names_match  # noqa: F401  # deprecated
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .singleend import _open_single
@@ -47,6 +50,11 @@ from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, Fa
 from .interfaces import SingleEndReader, PairedEndReader, SingleEndWriter, PairedEndWriter
 from .chunks import read_chunks, read_paired_chunks
 from ._version import version as __version__
+
+
+# Backwards compatibility aliases
+Sequence = SequenceRecord
+BytesSequence = BytesSequenceRecord
 
 
 def open(
@@ -80,8 +88,8 @@ def open(
       mode:
         Either ``'r'`` or ``'rb'`` for reading, ``'w'`` for writing
         or ``'a'`` for appending.
-        With mode ``'r'``, the returned Reader yields `Sequence` objects.
-        With mode ``'rb'``, the returned Reader yields `BytesSequence` objects.
+        With mode ``'r'``, the returned Reader yields `SequenceRecord` objects.
+        With mode ``'rb'``, the returned Reader yields `BytesSequenceRecord` objects.
 
       interleaved:
         If True, then file1 contains interleaved paired-end data.

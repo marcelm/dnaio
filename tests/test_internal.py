@@ -17,7 +17,7 @@ from dnaio import (
     FastaWriter, FastqWriter, InterleavedPairedEndWriter,
     TwoFilePairedEndReader,
 )
-from dnaio import record_names_match, Sequence, BytesSequence
+from dnaio import record_names_match, SequenceRecord, BytesSequenceRecord
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
@@ -25,177 +25,22 @@ TEST_DATA = Path(__file__).parent / "data"
 SIMPLE_FASTQ = str(TEST_DATA / "simple.fastq")
 # files tests/data/simple.fast{q,a}
 simple_fastq = [
-    Sequence("first_sequence", "SEQUENCE1", ":6;;8<=:<"),
-    Sequence("second_sequence", "SEQUENCE2", "83<??:(61")
+    SequenceRecord("first_sequence", "SEQUENCE1", ":6;;8<=:<"),
+    SequenceRecord("second_sequence", "SEQUENCE2", "83<??:(61")
 ]
 
 simple_fastq_bytes = [
-    BytesSequence(s.name.encode('ascii'),
-                  s.sequence.encode('ascii'),
-                  s.qualities.encode('ascii')) for s in simple_fastq]
+    BytesSequenceRecord(
+        s.name.encode('ascii'),
+        s.sequence.encode('ascii'),
+        s.qualities.encode('ascii')
+    )
+    for s in simple_fastq
+]
 
-simple_fasta = [Sequence(x.name, x.sequence, None) for x in simple_fastq]
+simple_fasta = [SequenceRecord(x.name, x.sequence, None) for x in simple_fastq]
 
 tiny_fastq = b'@r1\nACG\n+\nHHH\n@r2\nT\n+\n#\n'
-
-
-class TestSequence:
-    def test_too_many_qualities(self):
-        with raises(ValueError):
-            Sequence(name="name", sequence="ACGT", qualities="#####")
-
-    def test_fastq_bytes(self):
-        assert Sequence("name", "ACGT", "====").fastq_bytes() == \
-            b"@name\nACGT\n+\n====\n"
-
-    def test_fastq_bytes_two_headers(self):
-        assert Sequence("name", "ACGT", "====").fastq_bytes_two_headers() == \
-            b"@name\nACGT\n+name\n====\n"
-
-    def test_is_mate_succes(self):
-        assert Sequence("name1", "A", "=").is_mate(Sequence("name2", "GC", "FF"))
-
-    def test_init_name_bad(self):
-        with pytest.raises(ValueError) as error:
-            Sequence("nąme1", "A", "=")
-        error.match("ASCII")
-
-    def test_init_name_none(self):
-        with pytest.raises(TypeError) as error:
-            Sequence(None, "A", "=")
-        error.match("str")
-
-    def test_init_sequence_bad(self):
-        with pytest.raises(ValueError) as error:
-            Sequence("name1", "Ä", "=")
-        error.match("ASCII")
-
-    def test_init_sequence_none(self):
-        with pytest.raises(TypeError) as error:
-            Sequence("name1", None, "=")
-        error.match("str")
-
-    def test_init_qualities_bad(self):
-        with pytest.raises(ValueError) as error:
-            Sequence("name1", "A", "ä")
-        error.match("ASCII")
-
-    def test_init_qualities_none(self):
-        seq = Sequence("name1", "A", None)
-        assert seq.qualities is None
-
-    def test_set_name_bad(self):
-        seq = Sequence("name1", "A", "=")
-        with pytest.raises(ValueError) as error:
-            seq.name = "näme1"
-        error.match("ASCII")
-
-    def test_set_name_none(self):
-        seq = Sequence("name1", "A", "=")
-        with pytest.raises(TypeError) as error:
-            seq.name = None
-        error.match("str")
-
-    def test_set_sequence_bad(self):
-        seq = Sequence("name1", "A", "=")
-        with pytest.raises(ValueError) as error:
-            seq.sequence = "Ä"
-        error.match("ASCII")
-
-    def test_set_sequence_none(self):
-        seq = Sequence("name1", "A", "=")
-        with pytest.raises(TypeError) as error:
-            seq.sequence = None
-        error.match("str")
-
-    def test_set_qualities_bad(self):
-        seq = Sequence("name1", "A", "=")
-        with pytest.raises(ValueError) as error:
-            seq.qualities = "Ä"
-        error.match("ASCII")
-
-    def test_set_qualities_none(self):
-        seq = Sequence("name1", "A", "=")
-        seq.qualities = None
-        assert seq.qualities is None
-
-
-class TestBytesSequence:
-    def test_too_many_qualities(self):
-        with raises(ValueError):
-            BytesSequence(name=b"name", sequence=b"ACGT", qualities=b"#####")
-
-    def test_fastq_bytes(self):
-        assert BytesSequence(b"name", b"ACGT", b"====").fastq_bytes() == \
-            b"@name\nACGT\n+\n====\n"
-
-    def test_fastq_bytes_two_headers(self):
-        seq = BytesSequence(b"", b"", b"")
-        # Below creates an invalid sequence, but this is done to see if the
-        # underlying function properly takes into account lengths of the
-        # attributes.
-        seq.name = b"name"
-        seq.sequence = b"ACGTA"
-        seq.qualities = b"=="
-        assert seq.fastq_bytes_two_headers() == b"@name\nACGTA\n+name\n==\n"
-
-    def test_reference_counts(self):
-        # Make sure BytesSequence is properly implemented so there are no
-        # reference leaks.
-        name = b"name"
-        sequence = b"ACGT"
-        qualities = b"===="
-        name_ref = sys.getrefcount(name)
-        seq_ref = sys.getrefcount(sequence)
-        qual_ref = sys.getrefcount(qualities)
-        seqbytes = BytesSequence(name, sequence, qualities)
-        assert sys.getrefcount(name) == name_ref + 1
-        assert sys.getrefcount(sequence) == seq_ref + 1
-        assert sys.getrefcount(qualities) == qual_ref + 1
-        del seqbytes
-        assert sys.getrefcount(name) == name_ref
-        assert sys.getrefcount(sequence) == seq_ref
-        assert sys.getrefcount(qualities) == qual_ref
-
-    def test_is_mate_succes(self):
-        assert BytesSequence(b"name1", b"A", b"=").is_mate(
-            BytesSequence(b"name2", b"GC", b"FF"))
-
-    def test_init_name_none(self):
-        with pytest.raises(TypeError) as error:
-            BytesSequence(None, b"A", b"=")
-        error.match("bytes")
-
-    def test_init_sequence_none(self):
-        with pytest.raises(TypeError) as error:
-            BytesSequence(b"name1", None, b"=")
-        error.match("bytes")
-
-    def test_init_qualities_none(self):
-        seq = BytesSequence(b"name1", b"A", None)
-        assert seq.qualities is None
-
-    def test_init_qualities_wrong_tpye(self):
-        with pytest.raises(TypeError) as error:
-            BytesSequence(b"name1", b"A", "=")
-        error.match("bytes")
-
-    def test_set_name_none(self):
-        seq = BytesSequence(b"name1", b"A", b"=")
-        with pytest.raises(TypeError) as error:
-            seq.name = None
-        error.match("bytes")
-
-    def test_set_sequence_none(self):
-        seq = BytesSequence(b"name1", b"A", b"=")
-        with pytest.raises(TypeError) as error:
-            seq.sequence = None
-        error.match("bytes")
-
-    def test_set_qualities_none(self):
-        seq = BytesSequence(b"name1", b"A", b"=")
-        seq.qualities = None
-        assert seq.qualities is None
 
 
 class TestFastaReader:
@@ -263,8 +108,8 @@ class TestFastaReader:
 
 class TestFastqReader:
     @pytest.mark.parametrize(["sequence_class", "result"],
-                             [(Sequence, simple_fastq),
-                              (BytesSequence, simple_fastq_bytes)])
+                             [(SequenceRecord, simple_fastq),
+                              (BytesSequenceRecord, simple_fastq_bytes)])
     def test_fastqreader(self, sequence_class, result):
         with FastqReader(SIMPLE_FASTQ, sequence_class=sequence_class) as f:
             reads = list(f)
@@ -361,7 +206,7 @@ class TestFastqReader:
         fastq = BytesIO(b'@r1\nA\n+\nH')
         with dnaio.open(fastq) as f:
             records = list(f)
-        assert records == [Sequence('r1', 'A', 'H')]
+        assert records == [SequenceRecord('r1', 'A', 'H')]
 
     def test_non_ascii_in_record(self):
         # \xc4 -> Ä
@@ -494,12 +339,12 @@ class TestInterleavedReader:
     def test(self):
         expected = [
             (
-                Sequence('read1/1 some text', 'TTATTTGTCTCCAGC', '##HHHHHHHHHHHHH'),
-                Sequence('read1/2 other text', 'GCTGGAGACAAATAA', 'HHHHHHHHHHHHHHH')
+                SequenceRecord('read1/1 some text', 'TTATTTGTCTCCAGC', '##HHHHHHHHHHHHH'),
+                SequenceRecord('read1/2 other text', 'GCTGGAGACAAATAA', 'HHHHHHHHHHHHHHH')
             ),
             (
-                Sequence('read3/1', 'CCAACTTGATATTAATAACA', 'HHHHHHHHHHHHHHHHHHHH'),
-                Sequence('read3/2', 'TGTTATTAATATCAAGTTGG', '#HHHHHHHHHHHHHHHHHHH')
+                SequenceRecord('read3/1', 'CCAACTTGATATTAATAACA', 'HHHHHHHHHHHHHHHHHHHH'),
+                SequenceRecord('read3/2', 'TGTTATTAATATCAAGTTGG', '#HHHHHHHHHHHHHHHHHHH')
             ),
         ]
         with InterleavedPairedEndReader("tests/data/interleaved.fastq") as isr:
@@ -553,8 +398,8 @@ class TestFastaWriter:
 
     def test_write_sequence_object(self):
         with FastaWriter(self.path) as fw:
-            fw.write(Sequence("name", "CCATA"))
-            fw.write(Sequence("name2", "HELLO"))
+            fw.write(SequenceRecord("name", "CCATA"))
+            fw.write(SequenceRecord("name2", "HELLO"))
         assert fw._file.closed
         with open(self.path) as t:
             assert t.read() == '>name\nCCATA\n>name2\nHELLO\n'
@@ -562,16 +407,16 @@ class TestFastaWriter:
     def test_write_to_file_like_object(self):
         bio = BytesIO()
         with FastaWriter(bio) as fw:
-            fw.write(Sequence("name", "CCATA"))
-            fw.write(Sequence("name2", "HELLO"))
+            fw.write(SequenceRecord("name", "CCATA"))
+            fw.write(SequenceRecord("name2", "HELLO"))
         assert bio.getvalue() == b'>name\nCCATA\n>name2\nHELLO\n'
         assert not bio.closed
         assert not fw._file.closed
 
-    def test_write_zero_length_sequence(self):
+    def test_write_zero_length_sequence_record(self):
         bio = BytesIO()
         with FastaWriter(bio) as fw:
-            fw.write(Sequence("name", ""))
+            fw.write(SequenceRecord("name", ""))
         assert bio.getvalue() == b'>name\n\n', '{!r}'.format(bio.getvalue())
 
 
@@ -593,8 +438,8 @@ class TestFastqWriter:
 
     def test_twoheaders(self):
         with FastqWriter(self.path, two_headers=True) as fq:
-            fq.write(Sequence("name", "CCATA", "!#!#!"))
-            fq.write(Sequence("name2", "HELLO", "&&&!&"))
+            fq.write(SequenceRecord("name", "CCATA", "!#!#!"))
+            fq.write(SequenceRecord("name2", "HELLO", "&&&!&"))
         assert fq._file.closed
         with open(self.path) as t:
             assert t.read() == '@name\nCCATA\n+name\n!#!#!\n@name2\nHELLO\n+name2\n&&&!&\n'
@@ -611,12 +456,12 @@ class TestInterleavedWriter:
     def test(self):
         reads = [
             (
-                Sequence('A/1 comment', 'TTA', '##H'),
-                Sequence('A/2 comment', 'GCT', 'HH#')
+                SequenceRecord('A/1 comment', 'TTA', '##H'),
+                SequenceRecord('A/2 comment', 'GCT', 'HH#')
             ),
             (
-                Sequence('B/1', 'CC', 'HH'),
-                Sequence('B/2', 'TG', '#H')
+                SequenceRecord('B/1', 'CC', 'HH'),
+                SequenceRecord('B/2', 'TG', '#H')
             ),
         ]
         bio = BytesIO()
@@ -637,7 +482,7 @@ class TestPairedSequenceReader:
         s2 = BytesIO(b'@r2\nGTT\n+\n858\n')
         with TwoFilePairedEndReader(s1, s2) as psr:
             assert [
-                (Sequence("r1", "ACG", "HHH"), Sequence("r2", "GTT", "858")),
+                (SequenceRecord("r1", "ACG", "HHH"), SequenceRecord("r2", "GTT", "858")),
             ] == list(psr)
 
     def test_record_names_match(self):

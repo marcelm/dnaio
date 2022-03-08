@@ -4,7 +4,7 @@ from typing import Union, BinaryIO, Optional, Iterator, Tuple
 
 from xopen import xopen
 
-from ._core import Sequence
+from ._core import SequenceRecord
 from .exceptions import FileFormatError
 from .interfaces import PairedEndReader, PairedEndWriter
 from .readers import FastaReader, FastqReader
@@ -47,9 +47,12 @@ class TwoFilePairedEndReader(PairedEndReader):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(file1={self.reader1}, file2={self.reader2})"
 
-    def __iter__(self) -> Iterator[Tuple[Sequence, Sequence]]:
+    def __iter__(self) -> Iterator[Tuple[SequenceRecord, SequenceRecord]]:
         """
-        Iterate over the paired reads. Each item is a pair of Sequence objects.
+        Iterate over the paired reads.
+        Each yielded item is a pair of SequenceRecord objects.
+
+        Raises a `FileFormatError` if reads are improperly paired.
         """
         for r1, r2 in zip(self.reader1, self.reader2):
             if not r1.is_mate(r2):
@@ -116,7 +119,7 @@ class InterleavedPairedEndReader(PairedEndReader):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.reader})"
 
-    def __iter__(self) -> Iterator[Tuple[Sequence, Sequence]]:
+    def __iter__(self) -> Iterator[Tuple[SequenceRecord, SequenceRecord]]:
         it = iter(self.reader)
         for r1 in it:
             try:
@@ -222,7 +225,7 @@ class InterleavedPairedEndWriter(PairedEndWriter):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._writer})"
 
-    def write(self, read1: Sequence, read2: Sequence) -> None:
+    def write(self, read1: SequenceRecord, read2: SequenceRecord) -> None:
         self._writer.write(read1)
         self._writer.write(read2)
 

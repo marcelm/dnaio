@@ -8,7 +8,7 @@ from typing import Union, BinaryIO, Optional, Iterator, List
 
 from xopen import xopen
 
-from ._core import FastqIter, Sequence
+from ._core import FastqIter, SequenceRecord
 from ._util import shorten as _shorten
 from .exceptions import FastaFormatError
 from .interfaces import SingleEndReader
@@ -57,7 +57,7 @@ class BinaryFileReader:
 
 class FastaReader(BinaryFileReader, SingleEndReader):
     """
-    Reader for FASTA files.
+    Reader for FASTA files
     """
 
     def __init__(
@@ -65,7 +65,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
         file: Union[str, BinaryIO],
         *,
         keep_linebreaks: bool = False,
-        sequence_class=Sequence,
+        sequence_class=SequenceRecord,
         opener=xopen,
         _close_file: Optional[bool] = None,
     ):
@@ -81,7 +81,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
         self._delimiter = '\n' if keep_linebreaks else ''
         self.number_of_records = 0
 
-    def __iter__(self) -> Iterator[Sequence]:
+    def __iter__(self) -> Iterator[SequenceRecord]:
         """
         Read next entry from the file (single entry at a time).
         """
@@ -125,7 +125,7 @@ class FastqReader(BinaryFileReader, SingleEndReader):
         self,
         file: Union[str, BinaryIO],
         *,
-        sequence_class=Sequence,
+        sequence_class=SequenceRecord,
         buffer_size: int = 128 * 1024,  # Buffer size used by cat, pigz etc.
         opener=xopen,
         _close_file: Optional[bool] = None,
@@ -140,7 +140,7 @@ class FastqReader(BinaryFileReader, SingleEndReader):
         self.buffer_size = buffer_size
         # The first value yielded by FastqIter indicates
         # whether the file has repeated headers
-        self._iter: Iterator[Sequence] = FastqIter(self._file, self.sequence_class, self.buffer_size)
+        self._iter: Iterator[SequenceRecord] = FastqIter(self._file, self.sequence_class, self.buffer_size)
         try:
             th = next(self._iter)
             assert isinstance(th, bool)
@@ -153,7 +153,7 @@ class FastqReader(BinaryFileReader, SingleEndReader):
             self.close()
             raise
 
-    def __iter__(self) -> Iterator[Sequence]:
+    def __iter__(self) -> Iterator[SequenceRecord]:
         return self._iter
 
     @property

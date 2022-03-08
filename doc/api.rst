@@ -7,19 +7,19 @@ The dnaio API
 The open function
 -----------------
 
-.. autofunction:: dnaio.open
+.. autofunction:: open
 
 
-The ``Sequence`` classes
-------------------------
+The ``SequenceRecord`` classes
+------------------------------
 
-.. autoclass:: dnaio.Sequence
+.. autoclass:: dnaio.SequenceRecord
    :members:
    :special-members: __len__, __getitem__
 
    .. automethod:: __init__(name: str, sequence: str, qualities: Optional[str] = None)
 
-.. autoclass:: dnaio.BytesSequence
+.. autoclass:: dnaio.BytesSequenceRecord
    :members:
    :special-members: __len__, __getitem__
 
@@ -39,9 +39,9 @@ Reader and writer classes
 .. autoclass:: FastqWriter
    :members: writeseq
 
-   .. py:method:: write(record: Sequence) -> None:
+   .. py:method:: write(record: SequenceRecord) -> None:
 
-      Write a Sequence record to the FASTQ file.
+      Write a SequenceRecord to the FASTQ file.
 
 .. autoclass:: InterleavedPairedEndReader
 
@@ -58,12 +58,16 @@ Reader and writer classes
    :members: write
 
 
-Functions
----------
+Chunked reading of sequence records
+-----------------------------------
+
+The following functions can be used to very quickly split up the input file(s)
+into similarly-sized chunks without actually parsing the records. The chunks
+can then be distributed to worker threads or subprocesses and be parsed and
+processed there.
 
 .. autofunction:: read_chunks
 .. autofunction:: read_paired_chunks
-.. autofunction:: record_names_match
 
 
 Exceptions
@@ -74,5 +78,7 @@ Exceptions
 .. autoexception:: FileFormatError
 
 .. autoexception:: FastaFormatError
+   :show-inheritance:
 
 .. autoexception:: FastqFormatError
+   :show-inheritance:
