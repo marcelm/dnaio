@@ -1,24 +1,20 @@
 # cython: language_level=3, emit_code_comments=False
 
 from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_Check, PyBytes_GET_SIZE, PyBytes_CheckExact
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
-from cpython.unicode cimport PyUnicode_DecodeLatin1, PyUnicode_Check, PyUnicode_GET_LENGTH
+from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
 from cpython.ref cimport PyObject
-from libc.string cimport strncmp, memcmp, memcpy, memchr, strcspn, memmove
+from libc.string cimport memcmp, memcpy, memchr, strcspn, memmove
 cimport cython
 
 cdef extern from "Python.h":
     unsigned char * PyUnicode_1BYTE_DATA(object o)
-    int PyUnicode_KIND(object o)
-    int PyUnicode_1BYTE_KIND
     bint PyUnicode_IS_COMPACT_ASCII(object o)
     object PyUnicode_New(Py_ssize_t size, Py_UCS4 maxchar)
 
 cdef extern from "ascii_check.h":
     int string_is_ascii(char * string, size_t length)
-
-from typing import Union
 
 from .exceptions import FastqFormatError
 from ._util import shorten
@@ -62,16 +58,16 @@ cdef class SequenceRecord:
 
     def __init__(self, object name, object sequence, object qualities = None):
         # __cinit__ is called first and sets all the variables.
-        if not PyUnicode_Check(name):
+        if not PyUnicode_CheckExact(name):
             raise TypeError(f"name should be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
             raise ValueError("name must be a valid ASCII-string.")
-        if not PyUnicode_Check(sequence):
+        if not PyUnicode_CheckExact(sequence):
             raise TypeError(f"sequence should be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
             raise ValueError("sequence must be a valid ASCII-string.")
         if qualities is not None:
-            if not PyUnicode_Check(qualities):
+            if not PyUnicode_CheckExact(qualities):
                 raise TypeError(f"qualities should be of type str, got {type(qualities)}")
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
                 raise ValueError("qualities must be a valid ASCII-string.")
@@ -87,7 +83,7 @@ cdef class SequenceRecord:
 
     @name.setter
     def name(self, name):
-        if not PyUnicode_Check(name):
+        if not PyUnicode_CheckExact(name):
             raise TypeError(f"name must be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
             raise ValueError("name must be a valid ASCII-string.")
@@ -99,7 +95,7 @@ cdef class SequenceRecord:
 
     @sequence.setter
     def sequence(self, sequence):
-        if not PyUnicode_Check(sequence):
+        if not PyUnicode_CheckExact(sequence):
             raise TypeError(f"sequence must be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
             raise ValueError("sequence must be a valid ASCII-string.")
@@ -111,7 +107,7 @@ cdef class SequenceRecord:
 
     @qualities.setter
     def qualities(self, qualities):
-        if PyUnicode_Check(qualities):
+        if PyUnicode_CheckExact(qualities):
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
                 raise ValueError("qualities must be a valid ASCII-string.")
         elif qualities is None:
@@ -675,7 +671,7 @@ cdef class FastqIter:
 
             if second_header_length:  # should be 0 when only + is present
                 if (name_length != second_header_length or
-                        strncmp(self.buffer+second_header_start,
+                        memcmp(self.buffer+second_header_start,
                             self.buffer + name_start, second_header_length) != 0):
                     raise FastqFormatError(
                         "Sequence descriptions don't match ('{}' != '{}').\n"
@@ -715,7 +711,7 @@ cdef class FastqIter:
                 memcpy(PyUnicode_1BYTE_DATA(name), self.buffer + name_start, name_length)
                 memcpy(PyUnicode_1BYTE_DATA(sequence), self.buffer + sequence_start, sequence_length)
                 memcpy(PyUnicode_1BYTE_DATA(qualities), self.buffer + qualities_start, qualities_length)
-                
+
                 if self.use_custom_class:
                     ret_val = self.sequence_class(name, sequence, qualities)
                 else:
@@ -741,24 +737,21 @@ def record_names_match(header1: str, header2: str):
         char * header1_chars = NULL
         char * header2_chars = NULL
         size_t header1_length
-    if PyUnicode_Check(header1):
-        if PyUnicode_KIND(header1) == PyUnicode_1BYTE_KIND:
+    if PyUnicode_CheckExact(header1):
+        if PyUnicode_IS_COMPACT_ASCII(header1):
             header1_chars = <char *>PyUnicode_1BYTE_DATA(header1)
             header1_length = <size_t> PyUnicode_GET_LENGTH(header1)
         else:
-            header1 = header1.encode('latin1')
-            header1_chars = PyBytes_AS_STRING(header1)
-            header1_length = PyBytes_GET_SIZE(header1)
+            raise ValueError("header1 must be a valid ASCII-string.")
     else:
         raise TypeError(f"Header 1 is the wrong type. Expected bytes or string, "
                         f"got: {type(header1)}")
 
-    if PyUnicode_Check(header2):
-        if PyUnicode_KIND(header2) == PyUnicode_1BYTE_KIND:
+    if PyUnicode_CheckExact(header2):
+        if PyUnicode_IS_COMPACT_ASCII(header2):
             header2_chars = <char *>PyUnicode_1BYTE_DATA(header2)
         else:
-            header2 = header2.encode('latin1')
-            header2_chars = PyBytes_AS_STRING(header2)
+            raise ValueError("header2 must be a valid ASCII-string.")
     else:
         raise TypeError(f"Header 2 is the wrong type. Expected bytes or string, "
                         f"got: {type(header2)}")
@@ -770,7 +763,7 @@ def record_names_match_bytes(header1: bytes, header2: bytes):
     """
     Deprecated, use `BytesSequenceRecord.is_mate` instead
     """
-    if not (PyBytes_Check(header1) and PyBytes_Check(header2)):
+    if not (PyBytes_CheckExact(header1) and PyBytes_CheckExact(header2)):
         raise TypeError("Header1 and header2 should both be bytes objects. "
                         "Got {} and {}".format(type(header1), type(header2)))
     return record_ids_match(PyBytes_AS_STRING(header1),
