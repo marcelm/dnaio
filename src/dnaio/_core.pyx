@@ -734,6 +734,8 @@ def record_names_match(header1: str, header2: str):
     paired-end reads that have IDs ending in '/1' and '/2'. Also, the
     fastq-dump tool (used for converting SRA files to FASTQ) appends '.1', '.2'
     and sometimes '.3' to paired-end reads if option -I is used.
+
+    Deprecated, use `SequenceRecord.is_mate` instead
     """
     cdef:
         char * header1_chars = NULL
@@ -765,6 +767,9 @@ def record_names_match(header1: str, header2: str):
 
 
 def record_names_match_bytes(header1: bytes, header2: bytes):
+    """
+    Deprecated, use `BytesSequenceRecord.is_mate` instead
+    """
     if not (PyBytes_Check(header1) and PyBytes_Check(header2)):
         raise TypeError("Header1 and header2 should both be bytes objects. "
                         "Got {} and {}".format(type(header1), type(header2)))
