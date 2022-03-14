@@ -567,6 +567,12 @@ cdef class FastqIter:
                              f"{empty_bytes_in_buffer} bytes requested, "
                              f"{filechunk_size} bytes returned.")
         memcpy(self.buffer + self.bytes_in_buffer, PyBytes_AS_STRING(filechunk), filechunk_size)
+        if not self.save_as_bytes:
+            # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
+            if not string_is_ascii(self.buffer + self.bytes_in_buffer,
+                                   filechunk_size):
+                raise FastqFormatError(
+                    "Non-ASCII characters found in record.", None)
         self.bytes_in_buffer += filechunk_size
 
         if filechunk_size == 0:  # End of file
@@ -695,12 +701,6 @@ cdef class FastqIter:
                 qualities = PyBytes_FromStringAndSize(self.buffer + qualities_start, qualities_length)
                 ret_val = BytesSequenceRecord.__new__(BytesSequenceRecord, name, sequence, qualities)
             else:
-                # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
-                if not string_is_ascii(self.buffer + self.record_start,
-                                       qualities_end - self.record_start):
-                    raise FastqFormatError(
-                        "Non-ASCII characters found in record.",
-                        line=self.number_of_records * 4)
                 # Constructing objects with PyUnicode_New and memcpy bypasses some of
                 # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
                 name = PyUnicode_New(name_length, 127)

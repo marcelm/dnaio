@@ -211,8 +211,8 @@ class TestFastqReader:
     def test_non_ascii_in_record(self):
         # \xc4 -> Ä
         fastq = BytesIO(b'@r1\n\xc4\n+\nH')
-        with dnaio.open(fastq) as f:
-            with pytest.raises(FastqFormatError) as e:
+        with pytest.raises(FastqFormatError) as e:
+            with dnaio.open(fastq) as f:
                 list(f)
             e.match("Non-ASCII")
 
