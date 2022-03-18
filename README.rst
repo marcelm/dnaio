@@ -13,7 +13,7 @@
 dnaio processes FASTQ and FASTA files
 =====================================
 
-``dnaio`` is a Python 3.6+ library for very efficient parsing and writing of FASTQ and also FASTA files. The code was previously part of the
+``dnaio`` is a Python 3.7+ library for very efficient parsing and writing of FASTQ and also FASTA files. The code was previously part of the
 `Cutadapt <https://cutadapt.readthedocs.io/>`_ tool and has been improved significantly since it has been split out.
 
 Example usage

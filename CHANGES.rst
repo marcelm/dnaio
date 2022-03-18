@@ -5,9 +5,10 @@ Changelog
 development version
 -------------------
 
-* Renamed ``Sequence`` to ``SequenceRecord`` and ``BytesSequence`` to ``BytesSequenceRecord``.
+* Renamed ``Sequence`` to `SequenceRecord` and ``BytesSequence`` to `BytesSequenceRecord`.
   The previous names are still available as aliases so existing code will continue to work.
 * Function ``record_names_match`` is deprecated, use `SequenceRecord.is_mate` instead.
+* Dropped Python 3.6 support as it is end-of-life.
 
 v0.7.1 (2022-01-26)
 -------------------
