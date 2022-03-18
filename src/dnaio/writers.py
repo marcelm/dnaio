@@ -152,7 +152,7 @@ class FastqWriter(FileWriter, SingleEndWriter):
         Write a record to the FASTQ file, repeating the header
         in the third line after the "+" .
         """
-        self._file.write(record.fastq_bytes_two_headers())
+        self._file.write(record.fastq_bytes(two_headers=True))
 
     def writeseq(self, name: str, sequence: str, qualities: str) -> None:
         self._file.write(f"@{name:s}\n{sequence:s}\n+\n{qualities:s}\n".encode("ascii"))

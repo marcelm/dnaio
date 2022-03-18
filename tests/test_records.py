@@ -15,7 +15,7 @@ class TestSequenceRecord:
             b"@name\nACGT\n+\n====\n"
 
     def test_fastq_bytes_two_headers(self):
-        assert SequenceRecord("name", "ACGT", "====").fastq_bytes_two_headers() == \
+        assert SequenceRecord("name", "ACGT", "====").fastq_bytes(two_headers=True) == \
             b"@name\nACGT\n+name\n====\n"
 
     def test_is_mate_succes(self):
@@ -103,7 +103,7 @@ class TestBytesSequenceRecord:
         seq.name = b"name"
         seq.sequence = b"ACGTA"
         seq.qualities = b"=="
-        assert seq.fastq_bytes_two_headers() == b"@name\nACGTA\n+name\n==\n"
+        assert seq.fastq_bytes(two_headers=True) == b"@name\nACGTA\n+name\n==\n"
 
     def test_reference_counts(self):
         # Make sure BytesSequence is properly implemented so there are no
