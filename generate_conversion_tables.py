@@ -36,12 +36,6 @@ def nucleotide_complements_table():
     table[ord('V')] = "'B'"
     table[ord('v')] = "'b'"
 
-    # B, not A, vs V, not T
-    table[ord('B')] = "'V'"
-    table[ord('b')] = "'v'"
-    table[ord('V')] = "'B'"
-    table[ord('v')] = "'b'"
-
     # D, not C vs H, not G
     table[ord('D')] = "'H'"
     table[ord('d')] = "'h'"
