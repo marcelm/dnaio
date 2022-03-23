@@ -10,6 +10,7 @@ cimport cython
 
 cdef extern from "Python.h":
     unsigned char * PyUnicode_1BYTE_DATA(object o)
+    void * PyUnicode_DATA(object o)
     bint PyUnicode_IS_COMPACT_ASCII(object o)
     object PyUnicode_New(Py_ssize_t size, Py_UCS4 maxchar)
 
@@ -28,7 +29,7 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
     cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
     return ascii
 
-cdef void reverse(char *src, char *dest, size_t length):
+cdef void _reverse(char *src, char *dest, Py_ssize_t length):
     cdef size_t cursor
     cdef size_t reverse_cursor = length
     for cursor in range(length):
@@ -37,7 +38,7 @@ cdef void reverse(char *src, char *dest, size_t length):
     return
 
 
-cdef void reverse_complement(char *src, char *dest, size_t length):
+cdef void _reverse_complement(char *src, char *dest, Py_ssize_t length):
     cdef size_t cursor
     cdef size_t reverse_cursor = length
     cdef char nucleotide
@@ -249,6 +250,19 @@ cdef class SequenceRecord:
             size_t header1_length = <size_t> PyUnicode_GET_LENGTH(self._name)
             char * header2_chars = <char *>PyUnicode_1BYTE_DATA(other._name)
         return record_ids_match(header1_chars, header2_chars, header1_length)
+
+    def reverse_complement(self):
+        name = self._name
+        cdef Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(self._sequence)
+        cdef object reversed_sequence = PyUnicode_New(sequence_length, 127)
+        cdef object reversed_qualities = PyUnicode_New(sequence_length, 127)
+        _reverse_complement(<char *>PyUnicode_DATA(self._sequence),
+                            <char *>PyUnicode_DATA(reversed_sequence),
+                            sequence_length)
+        _reverse(<char *>PyUnicode_DATA(self._qualities),
+                 <char *>PyUnicode_DATA(reversed_qualities),
+                 sequence_length)
+        return SequenceRecord.__new__(name, reversed_sequence, reversed_qualities)
 
 
 cdef class BytesSequenceRecord:
