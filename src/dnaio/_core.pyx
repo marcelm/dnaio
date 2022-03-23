@@ -17,6 +17,9 @@ cdef extern from "Python.h":
 cdef extern from "ascii_check.h":
     int string_is_ascii(char * string, size_t length)
 
+cdef extern from "_conversions.h":
+    const char NUCLEOTIDE_COMPLEMENTS[256]
+
 from .exceptions import FastqFormatError
 from ._util import shorten
 
@@ -30,8 +33,8 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
     return ascii
 
 cdef void _reverse(char *src, char *dest, Py_ssize_t length):
-    cdef size_t cursor
-    cdef size_t reverse_cursor = length
+    cdef Py_ssize_t cursor
+    cdef Py_ssize_t reverse_cursor = length
     for cursor in range(length):
         reverse_cursor -= 1
         dest[reverse_cursor] = src[cursor]
@@ -39,9 +42,9 @@ cdef void _reverse(char *src, char *dest, Py_ssize_t length):
 
 
 cdef void _reverse_complement(char *src, char *dest, Py_ssize_t length):
-    cdef size_t cursor
-    cdef size_t reverse_cursor = length
-    cdef char nucleotide
+    cdef Py_ssize_t cursor
+    cdef Py_ssize_t reverse_cursor = length
+    cdef unsigned char nucleotide
     for cursor in range(length):
         reverse_cursor -= 1
         nucleotide = src[cursor]
