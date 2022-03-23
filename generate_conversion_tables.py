@@ -42,6 +42,8 @@ def nucleotide_complements_table():
     table[ord('H')] = "'D'"
     table[ord('h')] = "'d'"
 
+    # S, W and N's complements are the same. So they are not explicitly
+    # included above.
     return table
 
 
