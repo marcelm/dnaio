@@ -22,8 +22,8 @@ class TestSequenceRecord:
         assert SequenceRecord("name1", "A", "=").is_mate(SequenceRecord("name2", "GC", "FF"))
 
     def test_reverse_complement(self):
-        assert SequenceRecord("name1", "GATTACA", "FFHHFH").reverse_complement() == \
-               SequenceRecord("name1", "TGTAATC", "HFHHFF")
+        assert SequenceRecord("name1", "GATTACA", "FFHHHFH").reverse_complement() == \
+               SequenceRecord("name1", "TGTAATC", "HFHHHFF")
 
     def test_init_name_bad(self):
         with pytest.raises(ValueError) as error:
@@ -132,8 +132,8 @@ class TestBytesSequenceRecord:
             BytesSequenceRecord(b"name2", b"GC", b"FF"))
 
     def test_reverse_complement(self):
-        assert BytesSequenceRecord(b"name1", b"GATTACA", b"FFHHFH").reverse_complement() == \
-               BytesSequenceRecord(b"name1", b"TGTAATC", b"HFHHFF")
+        assert BytesSequenceRecord(b"name1", b"GATTACA", b"FFHHHFH").reverse_complement() == \
+               BytesSequenceRecord(b"name1", b"TGTAATC", b"HFHHHFF")
 
     def test_init_name_none(self):
         with pytest.raises(TypeError) as error:

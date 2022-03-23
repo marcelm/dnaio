@@ -265,7 +265,7 @@ cdef class SequenceRecord:
         _reverse(<char *>PyUnicode_DATA(self._qualities),
                  <char *>PyUnicode_DATA(reversed_qualities),
                  sequence_length)
-        return SequenceRecord.__new__(name, reversed_sequence, reversed_qualities)
+        return SequenceRecord.__new__(SequenceRecord, name, reversed_sequence, reversed_qualities)
 
 
 cdef class BytesSequenceRecord:
