@@ -28,6 +28,25 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
     cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
     return ascii
 
+cdef void reverse(char *src, char *dest, size_t length):
+    cdef size_t cursor
+    cdef size_t reverse_cursor = length
+    for cursor in range(length):
+        reverse_cursor -= 1
+        dest[reverse_cursor] = src[cursor]
+    return
+
+
+cdef void reverse_complement(char *src, char *dest, size_t length):
+    cdef size_t cursor
+    cdef size_t reverse_cursor = length
+    cdef char nucleotide
+    for cursor in range(length):
+        reverse_cursor -= 1
+        nucleotide = src[cursor]
+        dest[reverse_cursor] = NUCLEOTIDE_COMPLEMENTS[nucleotide]
+    return
+
 
 cdef class SequenceRecord:
     """
