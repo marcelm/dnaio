@@ -427,6 +427,19 @@ cdef class BytesSequenceRecord:
                                 PyBytes_AS_STRING(other._name),
                                 PyBytes_GET_SIZE(self._name))
 
+    def reverse_complement(self):
+        name = self._name
+        cdef Py_ssize_t sequence_length = PyBytes_GET_SIZE(self._sequence)
+        cdef object reversed_sequence = PyBytes_FromStringAndSize(NULL, sequence_length)
+        cdef object reversed_qualities = PyBytes_FromStringAndSize(NULL, sequence_length)
+        _reverse_complement(<char *>PyBytes_AS_STRING(self._sequence),
+                            <char *>PyBytes_AS_STRING(reversed_sequence),
+                            sequence_length)
+        _reverse(<char *>PyBytes_AS_STRING(self._qualities),
+                 <char *>PyBytes_AS_STRING(reversed_qualities),
+                 sequence_length)
+        return BytesSequenceRecord.__new__(BytesSequenceRecord, name, reversed_sequence, reversed_qualities)
+
 
 cdef bytes create_fastq_record(
     char * name,
