@@ -279,184 +279,6 @@ cdef class SequenceRecord:
             SequenceRecord, self._name, reversed_sequence, reversed_qualities)
 
 
-cdef class BytesSequenceRecord:
-    """
-    A named sequence with optional quality values.
-    This typically represents a record from a FASTA or FASTQ file.
-    The difference to `SequenceRecord` is that all attributes are
-    bytes objects instead of str, which for some applications
-    gives a speedup.
-    The readers returned by `dnaio.open` yield objects of this type
-    when mode is set to ``"rb"``
-
-    Attributes:
-        name (bytes): The read header
-        sequence (bytes): The nucleotide (or amino acid) sequence
-        qualities (bytes): None if no quality values are available
-            (such as when the record comes from a FASTA file).
-            If quality values are available, this is a bytes object
-            that contains the Phred-scaled qualities encoded as
-            ASCII(qual+33) (as in FASTQ).
-    """
-    cdef:
-        object _name
-        object _sequence
-        object _qualities
-
-    def __cinit__(self, object name, object sequence, object qualities):
-        """Set qualities to None if there are no quality values"""
-        self._name = name
-        self._sequence = sequence
-        self._qualities = qualities
-
-    def __init__(self, object name, object sequence, object qualities = None):
-        # __cinit__ is called first and sets all the variables.
-        if not PyBytes_CheckExact(name):
-            raise TypeError(f"name should be of type bytes, got {type(name)}")
-        if not PyBytes_CheckExact(sequence):
-            raise TypeError(f"sequence should be of type bytes, got {type(sequence)}")
-        if qualities is not None:
-            if not PyBytes_CheckExact(qualities):
-                raise TypeError(f"qualities should be of type bytes, got {type(qualities)}")
-            if len(qualities) != len(sequence):
-                rname = shorten(name)
-                raise ValueError("In read named {!r}: length of quality sequence "
-                                 "({}) and length of read ({}) do not match".format(
-                    rname, len(qualities), len(sequence)))
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name):
-        if not PyBytes_CheckExact(name):
-            raise TypeError(f"name must be of type bytes, got {type(name)}")
-        self._name = name
-
-    @property
-    def sequence(self):
-        return self._sequence
-
-    @sequence.setter
-    def sequence(self, sequence):
-        if not PyBytes_CheckExact(sequence):
-            raise TypeError(f"sequence must be of type bytes, got {type(sequence)}")
-        self._sequence = sequence
-
-    @property
-    def qualities(self):
-        return self._qualities
-
-    @qualities.setter
-    def qualities(self, qualities):
-        if not (PyBytes_CheckExact(qualities) or qualities is None):
-            raise TypeError(f"qualities must be of type bytes or None, "
-                            f"got {type(qualities)}.")
-        self._qualities = qualities
-
-    def __repr__(self):
-        return '<BytesSequenceRecord(name={!r}, sequence={!r}, qualities={!r})>'.format(
-            shorten(self._name), shorten(self._sequence), shorten(self._qualities))
-
-    def __len__(self):
-        """
-        Returns:
-           The number of nucleotides in this sequence
-        """
-        return len(self.sequence)
-
-    def __richcmp__(self, BytesSequenceRecord other, int op):
-        if 2 <= op <= 3:
-            eq = self._name == other._name and \
-                self._sequence == other._sequence and \
-                self._qualities == other._qualities
-            if op == 2:
-                return eq
-            else:
-                return not eq
-        else:
-            raise NotImplementedError()
-
-    def fastq_bytes(self, two_headers=False):
-        """
-        Format this record in FASTQ format
-
-        Arguments:
-            two_headers (bool): If True, repeat the header (after the ``@``)
-            on the third line (after the ``+``)
-
-        Returns:
-            A bytes object with the formatted record.
-            This can be written directly to a file.
-        """
-        if self._qualities is None:
-            raise ValueError("Cannot create a FASTQ record when qualities is not set.")
-
-        cdef:
-            char * name = PyBytes_AS_STRING(self._name)
-            Py_ssize_t name_length = PyBytes_GET_SIZE(self._name)
-            char * sequence = PyBytes_AS_STRING(self._sequence)
-            Py_ssize_t sequence_length = PyBytes_GET_SIZE(self._sequence)
-            char * qualities = PyBytes_AS_STRING(self._qualities)
-            Py_ssize_t qualities_length = PyBytes_GET_SIZE(self._qualities)
-
-        return create_fastq_record(
-            name,
-            sequence,
-            qualities,
-            name_length,
-            sequence_length,
-            qualities_length,
-            two_headers,
-        )
-
-    def fastq_bytes_two_headers(self):
-        """
-        Return this record in FASTQ format as a bytes object where the header (after the @) is
-        repeated on the third line.
-        """
-        return self.fastq_bytes(two_headers=True)
-
-    def is_mate(self, BytesSequenceRecord other):
-        """
-        Check whether this instance and another are part of the same read pair
-
-        Checking is done by comparing IDs. The ID is the part of the name
-        before the first whitespace. Any 1, 2 or 3 at the end of the IDs is
-        excluded from the check as forward reads may have a 1 appended to their
-        ID and reverse reads a 2 etc.
-
-        Arguments:
-            other (BytesSequenceRecord): The object to compare to
-
-        Returns:
-            bool: Whether this and *other* are part of the same read pair.
-        """
-        # No need to check if type is bytes as it is guaranteed by the type.
-        return record_ids_match(PyBytes_AS_STRING(self._name),
-                                PyBytes_AS_STRING(other._name),
-                                PyBytes_GET_SIZE(self._name))
-
-    def reverse_complement(self):
-        """Return a copy of the record representing the reverse-complemented sequence"""
-        cdef Py_ssize_t sequence_length = PyBytes_GET_SIZE(self._sequence)
-        cdef object reversed_sequence = PyBytes_FromStringAndSize(NULL, sequence_length)
-        cdef object reversed_qualities = PyBytes_FromStringAndSize(NULL, sequence_length)
-        _reverse_complement_copy(
-            <char *>PyBytes_AS_STRING(reversed_sequence),
-            <char *>PyBytes_AS_STRING(self._sequence),
-            sequence_length
-        )
-        _reverse_copy(
-            <char *>PyBytes_AS_STRING(reversed_qualities),
-            <char *>PyBytes_AS_STRING(self._qualities),
-            sequence_length
-        )
-        return BytesSequenceRecord.__new__(
-            BytesSequenceRecord, self._name, reversed_sequence, reversed_qualities)
-
-
 cdef bytes create_fastq_record(
     char * name,
     char * sequence,
@@ -565,7 +387,6 @@ cdef class FastqIter:
         char *buffer
         Py_ssize_t bytes_in_buffer
         type sequence_class
-        bint save_as_bytes
         bint use_custom_class
         bint extra_newline
         bint yielded_two_headers
@@ -581,11 +402,7 @@ cdef class FastqIter:
             raise MemoryError()
         self.bytes_in_buffer = 0
         self.sequence_class = sequence_class
-        self.save_as_bytes = sequence_class is BytesSequenceRecord
-        self.use_custom_class = (
-            sequence_class is not SequenceRecord
-            and sequence_class is not BytesSequenceRecord
-        )
+        self.use_custom_class = sequence_class is not SequenceRecord
         self.number_of_records = 0
         self.extra_newline = False
         self.yielded_two_headers = False
@@ -632,12 +449,11 @@ cdef class FastqIter:
                              f"{empty_bytes_in_buffer} bytes requested, "
                              f"{filechunk_size} bytes returned.")
         memcpy(self.buffer + self.bytes_in_buffer, PyBytes_AS_STRING(filechunk), filechunk_size)
-        if not self.save_as_bytes:
-            # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
-            if not string_is_ascii(self.buffer + self.bytes_in_buffer,
-                                   filechunk_size):
-                raise FastqFormatError(
-                    "Non-ASCII characters found in record.", None)
+        # Strings are tested for ASCII as FASTQ should only contain ASCII characters.
+        if not string_is_ascii(self.buffer + self.bytes_in_buffer,
+                               filechunk_size):
+            raise FastqFormatError(
+                "Non-ASCII characters found in record.", None)
         self.bytes_in_buffer += filechunk_size
 
         if filechunk_size == 0:  # End of file
@@ -760,27 +576,21 @@ cdef class FastqIter:
                 self.yielded_two_headers = True
                 return bool(second_header_length)  # first yielded value is special
 
-            if self.save_as_bytes:
-                name = PyBytes_FromStringAndSize(self.buffer + name_start, name_length)
-                sequence = PyBytes_FromStringAndSize(self.buffer + sequence_start, sequence_length)
-                qualities = PyBytes_FromStringAndSize(self.buffer + qualities_start, qualities_length)
-                ret_val = BytesSequenceRecord.__new__(BytesSequenceRecord, name, sequence, qualities)
-            else:
-                # Constructing objects with PyUnicode_New and memcpy bypasses some of
-                # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
-                name = PyUnicode_New(name_length, 127)
-                sequence = PyUnicode_New(sequence_length, 127)
-                qualities = PyUnicode_New(qualities_length, 127)
-                if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
-                    raise MemoryError()
-                memcpy(PyUnicode_1BYTE_DATA(name), self.buffer + name_start, name_length)
-                memcpy(PyUnicode_1BYTE_DATA(sequence), self.buffer + sequence_start, sequence_length)
-                memcpy(PyUnicode_1BYTE_DATA(qualities), self.buffer + qualities_start, qualities_length)
+            # Constructing objects with PyUnicode_New and memcpy bypasses some of
+            # the checks otherwise done when using PyUnicode_DecodeLatin1 or similar
+            name = PyUnicode_New(name_length, 127)
+            sequence = PyUnicode_New(sequence_length, 127)
+            qualities = PyUnicode_New(qualities_length, 127)
+            if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
+                raise MemoryError()
+            memcpy(PyUnicode_1BYTE_DATA(name), self.buffer + name_start, name_length)
+            memcpy(PyUnicode_1BYTE_DATA(sequence), self.buffer + sequence_start, sequence_length)
+            memcpy(PyUnicode_1BYTE_DATA(qualities), self.buffer + qualities_start, qualities_length)
 
-                if self.use_custom_class:
-                    ret_val = self.sequence_class(name, sequence, qualities)
-                else:
-                    ret_val = SequenceRecord.__new__(SequenceRecord, name, sequence, qualities)
+            if self.use_custom_class:
+                ret_val = self.sequence_class(name, sequence, qualities)
+            else:
+                ret_val = SequenceRecord.__new__(SequenceRecord, name, sequence, qualities)
 
             # Advance record to next position
             self.number_of_records += 1
@@ -822,18 +632,6 @@ def record_names_match(header1: str, header2: str):
                         f"got: {type(header2)}")
 
     return record_ids_match(header1_chars, header2_chars, header1_length)
-
-
-def record_names_match_bytes(header1: bytes, header2: bytes):
-    """
-    Deprecated, use `BytesSequenceRecord.is_mate` instead
-    """
-    if not (PyBytes_CheckExact(header1) and PyBytes_CheckExact(header2)):
-        raise TypeError("Header1 and header2 should both be bytes objects. "
-                        "Got {} and {}".format(type(header1), type(header2)))
-    return record_ids_match(PyBytes_AS_STRING(header1),
-                            PyBytes_AS_STRING(header2),
-                            PyBytes_GET_SIZE(header1))
 
 
 cdef bint record_ids_match(char *header1, char *header2, size_t header1_length):
