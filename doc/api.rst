@@ -10,7 +10,7 @@ The open function
 .. autofunction:: open
 
 
-The ``SequenceRecord`` classes
+The ``SequenceRecord`` class
 ------------------------------
 
 .. autoclass:: dnaio.SequenceRecord
@@ -18,12 +18,6 @@ The ``SequenceRecord`` classes
    :special-members: __len__, __getitem__
 
    .. automethod:: __init__(name: str, sequence: str, qualities: Optional[str] = None)
-
-.. autoclass:: dnaio.BytesSequenceRecord
-   :members:
-   :special-members: __len__, __getitem__
-
-   .. automethod:: __init__(name: bytes, sequence: bytes, qualities: Optional[bytes] = None)
 
 
 Reader and writer classes
