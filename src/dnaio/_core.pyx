@@ -258,7 +258,6 @@ cdef class SequenceRecord:
         return record_ids_match(header1_chars, header2_chars, header1_length)
 
     def reverse_complement(self):
-        name = self._name
         cdef Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(self._sequence)
         cdef object reversed_sequence = PyUnicode_New(sequence_length, 127)
         cdef object reversed_qualities = PyUnicode_New(sequence_length, 127)
@@ -272,7 +271,8 @@ cdef class SequenceRecord:
             <char *>PyUnicode_DATA(self._qualities),
             sequence_length
         )
-        return SequenceRecord.__new__(SequenceRecord, name, reversed_sequence, reversed_qualities)
+        return SequenceRecord.__new__(
+            SequenceRecord, self._name, reversed_sequence, reversed_qualities)
 
 
 cdef class BytesSequenceRecord:
@@ -435,7 +435,6 @@ cdef class BytesSequenceRecord:
                                 PyBytes_GET_SIZE(self._name))
 
     def reverse_complement(self):
-        name = self._name
         cdef Py_ssize_t sequence_length = PyBytes_GET_SIZE(self._sequence)
         cdef object reversed_sequence = PyBytes_FromStringAndSize(NULL, sequence_length)
         cdef object reversed_qualities = PyBytes_FromStringAndSize(NULL, sequence_length)
@@ -449,7 +448,8 @@ cdef class BytesSequenceRecord:
             <char *>PyBytes_AS_STRING(self._qualities),
             sequence_length
         )
-        return BytesSequenceRecord.__new__(BytesSequenceRecord, name, reversed_sequence, reversed_qualities)
+        return BytesSequenceRecord.__new__(
+            BytesSequenceRecord, self._name, reversed_sequence, reversed_qualities)
 
 
 cdef bytes create_fastq_record(
