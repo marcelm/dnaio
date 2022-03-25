@@ -30,6 +30,15 @@ class TestSequenceRecord:
                               "nvhdbmrswykaacgtNVHDBMRSWYKAACGT",
                               "/E///AEEEE/EEEEEEEEEEEE/E6/AAAA/")
 
+    def test_reverse_complement_none_qualities(self):
+        assert SequenceRecord("name1",
+                              "GATTACA",
+                              None
+                              ).reverse_complement() == \
+               SequenceRecord("name1",
+                              "TGTAATC",
+                              None)
+
     def test_init_name_bad(self):
         with pytest.raises(ValueError) as error:
             SequenceRecord("nąme1", "A", "=")

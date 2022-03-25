@@ -260,17 +260,21 @@ cdef class SequenceRecord:
     def reverse_complement(self):
         cdef Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(self._sequence)
         cdef object reversed_sequence = PyUnicode_New(sequence_length, 127)
-        cdef object reversed_qualities = PyUnicode_New(sequence_length, 127)
+        cdef object reversed_qualities
         _reverse_complement_copy(
             <char *>PyUnicode_DATA(reversed_sequence),
             <char *>PyUnicode_DATA(self._sequence),
             sequence_length
         )
-        _reverse_copy(
-            <char *>PyUnicode_DATA(reversed_qualities),
-            <char *>PyUnicode_DATA(self._qualities),
-            sequence_length
-        )
+        if self._qualities is not None:
+            reversed_qualities = PyUnicode_New(sequence_length, 127)
+            _reverse_copy(
+                <char *>PyUnicode_DATA(reversed_qualities),
+                <char *>PyUnicode_DATA(self._qualities),
+                sequence_length
+            )
+        else:
+            reversed_qualities = None
         return SequenceRecord.__new__(
             SequenceRecord, self._name, reversed_sequence, reversed_qualities)
 
