@@ -47,12 +47,12 @@ def nucleotide_complements_table():
     return table
 
 
-def make_table(variable_name, table, row_size=16):
+def make_table(variable_name, table, columns=16):
     out = io.StringIO()
     out.write(variable_name + ' = {\n    ')
     i = 0
     for i, literal in enumerate(table):
-        if i % row_size == 0 and i != 0:
+        if i % columns == 0 and i != 0:
             out.write("\n    ")
         out.write(str(literal).rjust(3, " ") + ", ")
     out.write("\n")
