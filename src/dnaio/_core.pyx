@@ -439,6 +439,7 @@ cdef class BytesSequenceRecord:
                                 PyBytes_GET_SIZE(self._name))
 
     def reverse_complement(self):
+        """Return a copy of the record representing the reverse-complemented sequence"""
         cdef Py_ssize_t sequence_length = PyBytes_GET_SIZE(self._sequence)
         cdef object reversed_sequence = PyBytes_FromStringAndSize(NULL, sequence_length)
         cdef object reversed_qualities = PyBytes_FromStringAndSize(NULL, sequence_length)
