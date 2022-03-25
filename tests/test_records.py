@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from dnaio import SequenceRecord, BytesSequenceRecord
+from dnaio import SequenceRecord
 
 
 class TestSequenceRecord:
@@ -104,100 +104,7 @@ class TestSequenceRecord:
         assert seq.qualities is None
 
 
-class TestBytesSequenceRecord:
-    def test_too_many_qualities(self):
-        with pytest.raises(ValueError):
-            BytesSequenceRecord(name=b"name", sequence=b"ACGT", qualities=b"#####")
-
-    def test_fastq_bytes(self):
-        assert BytesSequenceRecord(b"name", b"ACGT", b"====").fastq_bytes() == \
-            b"@name\nACGT\n+\n====\n"
-
-    def test_fastq_bytes_two_headers(self):
-        seq = BytesSequenceRecord(b"", b"", b"")
-        # Below creates an invalid sequence, but this is done to see if the
-        # underlying function properly takes into account lengths of the
-        # attributes.
-        seq.name = b"name"
-        seq.sequence = b"ACGTA"
-        seq.qualities = b"=="
-        assert seq.fastq_bytes(two_headers=True) == b"@name\nACGTA\n+name\n==\n"
-
-    def test_reference_counts(self):
-        # Make sure BytesSequence is properly implemented so there are no
-        # reference leaks.
-        name = b"name"
-        sequence = b"ACGT"
-        qualities = b"===="
-        name_ref = sys.getrefcount(name)
-        seq_ref = sys.getrefcount(sequence)
-        qual_ref = sys.getrefcount(qualities)
-        seqbytes = BytesSequenceRecord(name, sequence, qualities)
-        assert sys.getrefcount(name) == name_ref + 1
-        assert sys.getrefcount(sequence) == seq_ref + 1
-        assert sys.getrefcount(qualities) == qual_ref + 1
-        del seqbytes
-        assert sys.getrefcount(name) == name_ref
-        assert sys.getrefcount(sequence) == seq_ref
-        assert sys.getrefcount(qualities) == qual_ref
-
-    def test_is_mate_succes(self):
-        assert BytesSequenceRecord(b"name1", b"A", b"=").is_mate(
-            BytesSequenceRecord(b"name2", b"GC", b"FF"))
-
-    def test_reverse_complement(self):
-        assert BytesSequenceRecord(b"name1",
-                                   b"ACGTUMRWSYKVHDBNacgtumrwsykvhdbn",
-                                   b"/AAAA/6E/EEEEEEEEEEEE/EEEEA///E/"
-                                   ).reverse_complement() == \
-               BytesSequenceRecord(b"name1",
-                                   b"nvhdbmrswykaacgtNVHDBMRSWYKAACGT",
-                                   b"/E///AEEEE/EEEEEEEEEEEE/E6/AAAA/")
-
-    def test_init_name_none(self):
-        with pytest.raises(TypeError) as error:
-            BytesSequenceRecord(None, b"A", b"=")
-        error.match("bytes")
-
-    def test_init_sequence_none(self):
-        with pytest.raises(TypeError) as error:
-            BytesSequenceRecord(b"name1", None, b"=")
-        error.match("bytes")
-
-    def test_init_qualities_none(self):
-        seq = BytesSequenceRecord(b"name1", b"A", None)
-        assert seq.qualities is None
-
-    def test_init_qualities_wrong_tpye(self):
-        with pytest.raises(TypeError) as error:
-            BytesSequenceRecord(b"name1", b"A", "=")
-        error.match("bytes")
-
-    def test_set_name_none(self):
-        seq = BytesSequenceRecord(b"name1", b"A", b"=")
-        with pytest.raises(TypeError) as error:
-            seq.name = None
-        error.match("bytes")
-
-    def test_set_sequence_none(self):
-        seq = BytesSequenceRecord(b"name1", b"A", b"=")
-        with pytest.raises(TypeError) as error:
-            seq.sequence = None
-        error.match("bytes")
-
-    def test_set_qualities_none(self):
-        seq = BytesSequenceRecord(b"name1", b"A", b"=")
-        seq.qualities = None
-        assert seq.qualities is None
-
-
 def test_legacy_sequence():
     from dnaio import Sequence
     s = Sequence("name", "ACGT", "####")
     assert isinstance(s, SequenceRecord)
-
-
-def test_legacy_bytes_sequence():
-    from dnaio import BytesSequence
-    s = BytesSequence(b"name", b"ACGT", b"####")
-    assert isinstance(s, BytesSequenceRecord)

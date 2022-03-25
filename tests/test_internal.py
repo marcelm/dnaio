@@ -17,7 +17,7 @@ from dnaio import (
     FastaWriter, FastqWriter, InterleavedPairedEndWriter,
     TwoFilePairedEndReader,
 )
-from dnaio import record_names_match, SequenceRecord, BytesSequenceRecord
+from dnaio import record_names_match, SequenceRecord
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
@@ -27,15 +27,6 @@ SIMPLE_FASTQ = str(TEST_DATA / "simple.fastq")
 simple_fastq = [
     SequenceRecord("first_sequence", "SEQUENCE1", ":6;;8<=:<"),
     SequenceRecord("second_sequence", "SEQUENCE2", "83<??:(61")
-]
-
-simple_fastq_bytes = [
-    BytesSequenceRecord(
-        s.name.encode('ascii'),
-        s.sequence.encode('ascii'),
-        s.qualities.encode('ascii')
-    )
-    for s in simple_fastq
 ]
 
 simple_fasta = [SequenceRecord(x.name, x.sequence, None) for x in simple_fastq]
@@ -107,13 +98,10 @@ class TestFastaReader:
 
 
 class TestFastqReader:
-    @pytest.mark.parametrize(["sequence_class", "result"],
-                             [(SequenceRecord, simple_fastq),
-                              (BytesSequenceRecord, simple_fastq_bytes)])
-    def test_fastqreader(self, sequence_class, result):
-        with FastqReader(SIMPLE_FASTQ, sequence_class=sequence_class) as f:
+    def test_fastqreader(self):
+        with FastqReader(SIMPLE_FASTQ) as f:
             reads = list(f)
-        assert reads == result
+        assert reads == simple_fastq
 
     @mark.parametrize("buffer_size", [1, 2, 3, 5, 7, 10, 20])
     def test_fastqreader_buffersize(self, buffer_size):
