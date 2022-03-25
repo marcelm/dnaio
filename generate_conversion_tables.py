@@ -4,46 +4,34 @@ import io
 def nucleotide_complements_table():
     # A nice list of complements can be found at:
     # http://www.reverse-complement.com/ambiguity.html
-    table = list(range(256))
+    complements = dict(
+        A="T", C="G", G="C", T="A",
+        a="t", c="g", g="c", t="a",
+        U="A", u="a",
 
-    table[ord('A')] = "'T'"
-    table[ord('a')] = "'t'"
-    table[ord('C')] = "'G'"
-    table[ord('c')] = "'g'"
-    table[ord('G')] = "'C'"
-    table[ord('g')] = "'c'"
-    table[ord('T')] = "'A'"
-    table[ord('t')] = "'a'"
+        # R, purine (A, G) vs Y, pyrimidine (C, T)
+        R="Y", Y="R", r="y", y="r",
 
-    table[ord('U')] = "'A'"
-    table[ord('u')] = "'a'"
+        # K, keto (G, T) vs A, amino (A, C)
+        K="M", M="K", k="m", m="k",
 
-    # R, purine (A, G) vs Y, pyrimidine (C, T)
-    table[ord('R')] = "'Y'"
-    table[ord('r')] = "'y'"
-    table[ord('Y')] = "'R'"
-    table[ord('y')] = "'r'"
+        # B, not A, vs V, not T
+        B="V", V="B", b="v", v="b",
 
-    # K, keto (G, T) vs A, amino (A, C)
-    table[ord('K')] = "'M'"
-    table[ord('k')] = "'m'"
-    table[ord('M')] = "'K'"
-    table[ord('m')] = "'k'"
+        # D, not C vs H, not G
+        D="H", H="D", d="h", h="d",
 
-    # B, not A, vs V, not T
-    table[ord('B')] = "'V'"
-    table[ord('b')] = "'v'"
-    table[ord('V')] = "'B'"
-    table[ord('v')] = "'b'"
+        # S, W and N's complements are the same. So they are not explicitly
+        # included above
+    )
 
-    # D, not C vs H, not G
-    table[ord('D')] = "'H'"
-    table[ord('d')] = "'h'"
-    table[ord('H')] = "'D'"
-    table[ord('h')] = "'d'"
-
-    # S, W and N's complements are the same. So they are not explicitly
-    # included above.
+    table = []
+    for i in range(256):
+        c = chr(i)
+        if c in complements:
+            table.append(f"'{complements[c]}'")
+        else:
+            table.append(i)
     return table
 
 
