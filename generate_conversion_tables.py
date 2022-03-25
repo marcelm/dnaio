@@ -37,10 +37,9 @@ def nucleotide_complements_table():
 
 def make_table(variable_name, table, columns=16):
     out = io.StringIO()
-    out.write(variable_name + ' = {\n    ')
-    i = 0
+    out.write(variable_name + ' = {')
     for i, literal in enumerate(table):
-        if i % columns == 0 and i != 0:
+        if i % columns == 0:
             out.write("\n    ")
         out.write(str(literal).rjust(3, " ") + ", ")
     out.write("\n")
@@ -56,7 +55,6 @@ def main():
             "static const char NUCLEOTIDE_COMPLEMENTS[256]",
             nucleotide_complements_table())
         )
-        out.write('\n')
 
 
 if __name__ == "__main__":
