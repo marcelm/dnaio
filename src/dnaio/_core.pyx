@@ -10,11 +10,15 @@ cimport cython
 
 cdef extern from "Python.h":
     unsigned char * PyUnicode_1BYTE_DATA(object o)
+    void * PyUnicode_DATA(object o)
     bint PyUnicode_IS_COMPACT_ASCII(object o)
     object PyUnicode_New(Py_ssize_t size, Py_UCS4 maxchar)
 
 cdef extern from "ascii_check.h":
     int string_is_ascii(char * string, size_t length)
+
+cdef extern from "_conversions.h":
+    const char NUCLEOTIDE_COMPLEMENTS[256]
 
 from .exceptions import FastqFormatError
 from ._util import shorten
@@ -27,6 +31,28 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
         length = min(length, PyBytes_GET_SIZE(string))
     cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
     return ascii
+
+cdef void _reverse_copy(char *dest, char *src, Py_ssize_t length):
+    """Copies from src to dest in reversed order."""
+    cdef Py_ssize_t cursor
+    cdef Py_ssize_t reverse_cursor = length
+    for cursor in range(length):
+        reverse_cursor -= 1
+        dest[reverse_cursor] = src[cursor]
+    return
+
+
+cdef void _reverse_complement_copy(char *dest, char *src, Py_ssize_t length):
+    """Copies from src to dest in reversed order whilst converting the src
+    nucleotides to their IUPAC complement"""
+    cdef Py_ssize_t cursor
+    cdef Py_ssize_t reverse_cursor = length
+    cdef unsigned char nucleotide
+    for cursor in range(length):
+        reverse_cursor -= 1
+        nucleotide = src[cursor]
+        dest[reverse_cursor] = NUCLEOTIDE_COMPLEMENTS[nucleotide]
+    return
 
 
 cdef class SequenceRecord:
@@ -231,6 +257,27 @@ cdef class SequenceRecord:
             char * header2_chars = <char *>PyUnicode_1BYTE_DATA(other._name)
         return record_ids_match(header1_chars, header2_chars, header1_length)
 
+    def reverse_complement(self):
+        cdef Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(self._sequence)
+        cdef object reversed_sequence = PyUnicode_New(sequence_length, 127)
+        cdef object reversed_qualities
+        _reverse_complement_copy(
+            <char *>PyUnicode_DATA(reversed_sequence),
+            <char *>PyUnicode_DATA(self._sequence),
+            sequence_length
+        )
+        if self._qualities is not None:
+            reversed_qualities = PyUnicode_New(sequence_length, 127)
+            _reverse_copy(
+                <char *>PyUnicode_DATA(reversed_qualities),
+                <char *>PyUnicode_DATA(self._qualities),
+                sequence_length
+            )
+        else:
+            reversed_qualities = None
+        return SequenceRecord.__new__(
+            SequenceRecord, self._name, reversed_sequence, reversed_qualities)
+
 
 cdef class BytesSequenceRecord:
     """
@@ -390,6 +437,24 @@ cdef class BytesSequenceRecord:
         return record_ids_match(PyBytes_AS_STRING(self._name),
                                 PyBytes_AS_STRING(other._name),
                                 PyBytes_GET_SIZE(self._name))
+
+    def reverse_complement(self):
+        """Return a copy of the record representing the reverse-complemented sequence"""
+        cdef Py_ssize_t sequence_length = PyBytes_GET_SIZE(self._sequence)
+        cdef object reversed_sequence = PyBytes_FromStringAndSize(NULL, sequence_length)
+        cdef object reversed_qualities = PyBytes_FromStringAndSize(NULL, sequence_length)
+        _reverse_complement_copy(
+            <char *>PyBytes_AS_STRING(reversed_sequence),
+            <char *>PyBytes_AS_STRING(self._sequence),
+            sequence_length
+        )
+        _reverse_copy(
+            <char *>PyBytes_AS_STRING(reversed_qualities),
+            <char *>PyBytes_AS_STRING(self._qualities),
+            sequence_length
+        )
+        return BytesSequenceRecord.__new__(
+            BytesSequenceRecord, self._name, reversed_sequence, reversed_qualities)
 
 
 cdef bytes create_fastq_record(
