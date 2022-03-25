@@ -1,5 +1,3 @@
-import sys
-
 import pytest
 
 from dnaio import SequenceRecord
