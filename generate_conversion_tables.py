@@ -41,7 +41,7 @@ def make_table(variable_name, table, columns=16):
     for i, literal in enumerate(table):
         if i % columns == 0:
             out.write("\n    ")
-        out.write(str(literal).rjust(3, " ") + ", ")
+        out.write(f"{literal:3}, ")
     out.write("\n")
     out.write("};\n")
     return out.getvalue()
