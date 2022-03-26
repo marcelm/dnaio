@@ -2,11 +2,16 @@
 Changelog
 =========
 
-development version
+v0.8.0 (2022-03-26)
 -------------------
 
-* Renamed ``Sequence`` to `SequenceRecord` and ``BytesSequence`` to `BytesSequenceRecord`.
-  The previous names are still available as aliases so existing code will continue to work.
+* Preliminary documentation is available at
+  <https://dnaio.readthedocs.io/>.
+* :pr:`53`: Renamed ``Sequence`` to `SequenceRecord`.
+  The previous name is still available as an alias
+  so that existing code will continue to work.
+* When reading a FASTQ file, there is now a check that ensures that
+  all characters are ASCII.
 * Function ``record_names_match`` is deprecated, use `SequenceRecord.is_mate` instead.
 * Dropped Python 3.6 support as it is end-of-life.
 
