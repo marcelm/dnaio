@@ -5,7 +5,6 @@ from .exceptions import UnknownFileFormat
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from ._util import _is_path
-from ._core import SequenceRecord, BytesSequenceRecord
 
 
 def _open_single(
@@ -19,8 +18,8 @@ def _open_single(
     """
     Open a single sequence file. See description of open() above.
     """
-    if mode not in ("r", "rb", "w", "a"):
-        raise ValueError("Mode must be 'r', 'rb', 'w' or 'a'")
+    if mode not in ("r", "w", "a"):
+        raise ValueError("Mode must be 'r', 'w' or 'a'")
 
     path: Optional[str]
     if _is_path(file_or_path):
@@ -68,29 +67,17 @@ def _open_single(
         )
 
     if fileformat == "fasta":
-        return _open_fasta(file, mode, close_file)
+        if "r" in mode:
+            return FastaReader(file, _close_file=close_file)
+        return FastaWriter(file, _close_file=close_file)
     elif fileformat == "fastq":
-        return _open_fastq(file, mode, close_file)
+        if "r" in mode:
+            return FastqReader(file, _close_file=close_file)
+        return FastqWriter(file, _close_file=close_file)
 
     raise UnknownFileFormat(
         f"File format '{fileformat}' is unknown (expected 'fasta' or 'fastq')."
     )
-
-
-def _open_fasta(file, mode, close_file):
-    if "r" in mode:
-        if "b" in mode:
-            raise ValueError("'rb' mode only available for fastq files.")
-        return FastaReader(file, _close_file=close_file)
-    return FastaWriter(file, _close_file=close_file)
-
-
-def _open_fastq(file, mode, close_file):
-    if "r" in mode:
-        sequence_class = BytesSequenceRecord if "b" in mode else SequenceRecord
-        return FastqReader(file, sequence_class=sequence_class,
-                           _close_file=close_file)
-    return FastqWriter(file, _close_file=close_file)
 
 
 def _detect_format_from_name(name: str) -> Optional[str]:
