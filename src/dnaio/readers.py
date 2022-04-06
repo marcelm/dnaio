@@ -136,10 +136,16 @@ class FastqReader(BinaryFileReader, SingleEndReader):
         self.sequence_class = sequence_class
         self.delivers_qualities = True
         self.buffer_size = buffer_size
-        # The first value yielded by FastqIter indicates
-        # whether the file has repeated headers
-        self._iter: Iterator[SequenceRecord] = FastqIter(self._file, self.sequence_class, self.buffer_size)
         try:
+            self._iter: Iterator[SequenceRecord] = FastqIter(
+                self._file, self.sequence_class, self.buffer_size
+            )
+        except Exception:
+            self.close()
+            raise
+        try:
+            # The first value yielded by FastqIter indicates
+            # whether the file has repeated headers
             th = next(self._iter)
             assert isinstance(th, bool)
             self.two_headers: bool = th
