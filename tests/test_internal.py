@@ -82,7 +82,8 @@ class TestFastaReader:
         filename = "tests/data/simple.fasta"
         with open(filename, 'rb') as f:
             assert not f.closed
-            _ = list(dnaio.open(f))
+            with dnaio.open(f) as inner_f:
+                list(inner_f)
             assert not f.closed
         assert f.closed
 
