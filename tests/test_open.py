@@ -97,6 +97,12 @@ def test_read_opener(fileformat, extension):
     assert records[0].sequence == "ACG"
 
 
+def test_read_paired_fasta():
+    path = "tests/data/simple.fasta"
+    with dnaio.open(file1=path, file2=path) as f:
+        list(f)
+
+
 @pytest.mark.parametrize("interleaved", [False, True])
 def test_paired_opener(fileformat, extension, interleaved):
     def my_opener(_path, _mode):
