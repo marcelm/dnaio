@@ -20,7 +20,7 @@ The code was previously part of the
 Example usage
 =============
 
-The main interface is the `dnaio.open` function::
+The main interface is the `dnaio.open <https://dnaio.readthedocs.io/en/latest/api.html>`_ function::
 
     import dnaio
 
