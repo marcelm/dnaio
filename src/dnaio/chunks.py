@@ -20,10 +20,10 @@ def _fasta_head(buf: bytes, end: Optional[int] = None) -> int:
     Return an integer length such that buf[:length] contains the highest
     possible number of complete FASTA records.
     """
-    pos = buf.rfind(b'\n>', 0, end)
+    pos = buf.rfind(b"\n>", 0, end)
     if pos != -1:
         return pos + 1
-    if buf[0:1] == b'>' or buf[0:1] == b'#':
+    if buf[0:1] == b">" or buf[0:1] == b"#":
         return 0
     if len(buf) == 0:
         return 0
@@ -41,10 +41,10 @@ def _fastq_head(buf: bytes, end: Optional[int] = None) -> int:
     Two FASTQ records are required to ensure that read pairs in interleaved
     paired-end data are not split.
     """
-    linebreaks = buf.count(b'\n', 0, end)
+    linebreaks = buf.count(b"\n", 0, end)
     right = end
     for _ in range(linebreaks % 8 + 1):
-        right = buf.rfind(b'\n', 0, right)
+        right = buf.rfind(b"\n", 0, right)
     # Note that this works even if linebreaks == 0:
     # rfind() returns -1 and adding 1 gives index 0,
     # which is correct.
@@ -81,9 +81,9 @@ def read_chunks(f: RawIOBase, buffer_size: int = 4 * 1024**2) -> Iterator[memory
         # Empty file
         return
     assert start == 1
-    if buf[0:1] == b'@':
+    if buf[0:1] == b"@":
         head = _fastq_head
-    elif buf[0:1] == b'#' or buf[0:1] == b'>':
+    elif buf[0:1] == b"#" or buf[0:1] == b">":
         head = _fasta_head
     else:
         raise UnknownFileFormat(
@@ -106,7 +106,7 @@ def read_chunks(f: RawIOBase, buffer_size: int = 4 * 1024**2) -> Iterator[memory
 
     while True:
         if start == len(buf):
-            raise OverflowError('FASTA/FASTQ record does not fit into buffer')
+            raise OverflowError("FASTA/FASTQ record does not fit into buffer")
         bufend = f.readinto(memoryview(buf)[start:]) + start  # type: ignore
         if start == bufend:
             # End of file
@@ -160,9 +160,11 @@ def read_paired_chunks(
     # Read one byte to make sure we are processing FASTQ
     start1 = f.readinto(memoryview(buf1)[0:1])  # type: ignore
     start2 = f2.readinto(memoryview(buf2)[0:1])  # type: ignore
-    if (start1 == 1 and buf1[0:1] != b'@') or (start2 == 1 and buf2[0:1] != b'@'):
+    if (start1 == 1 and buf1[0:1] != b"@") or (start2 == 1 and buf2[0:1] != b"@"):
         raise FileFormatError(
-            "Paired-end data must be in FASTQ format when using multiple cores", line=None)
+            "Paired-end data must be in FASTQ format when using multiple cores",
+            line=None,
+        )
 
     while True:
         if start1 == len(buf1) or start2 == len(buf2):
