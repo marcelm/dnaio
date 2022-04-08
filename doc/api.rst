@@ -37,6 +37,10 @@ Reader and writer classes
 
       Write a SequenceRecord to the FASTQ file.
 
+.. autoclass:: TwoFilePairedEndReader
+
+.. autoclass:: TwoFilePairedEndWriter
+
 .. autoclass:: InterleavedPairedEndReader
 
 .. autoclass:: InterleavedPairedEndWriter

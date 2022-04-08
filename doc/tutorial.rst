@@ -26,8 +26,8 @@ the input file is gzip-compressed.
 `dnaio.open` detects and handles this automatically by opening the file with
 `xopen <https://github.com/pycompression/xopen/>`_.
 
-Here, the call to `dnaio.open` returns a `FastqReader` object.
-Iterating over it in the ``for`` loop results in `SequenceRecord` objects.
+Here, the call to `dnaio.open` returns a `~dnaio.FastqReader` object.
+Iterating over it in the ``for`` loop results in `~dnaio.SequenceRecord` objects.
 Calling ``len()`` on a ``SequenceRecord`` returns the number of
 nucleotides in the record.
 
@@ -58,8 +58,8 @@ pass the ``mode="w"`` argument to ``dnaio.open``::
     with dnaio.open("onerecord.fastq.gz", mode="w") as writer:
         write.write(dnaio.SequenceRecord("name", "ACGT", "#B!#"))
 
-Here, a `FastqWriter`` object is returned by ``dnaio.open``,
-which has a ``.write()`` method that accepts a ``SequenceRecord``.
+Here, a `~dnaio.FastqWriter` object is returned by ``dnaio.open``,
+which has a ``~dnaio.FastqWriter.write()`` method that accepts a ``SequenceRecord``.
 
 Instead of constructing a single record from scratch,
 it may be more realistic to take input reads,
@@ -74,7 +74,7 @@ and writes them to another file::
             record = record[:30]
             writer.write(record)
 
-This also shows that `SequenceRecord` objects support slicing:
+This also shows that `~dnaio.SequenceRecord` objects support slicing:
 ``record[:30]`` returns a new ``SequenceRecord`` object with the sequence and qualities
 trimmed to the first 30 characters (leaving the name unchanged).
 
@@ -96,7 +96,7 @@ with the name of the second file to ``dnaio.open``::
         print(f"The paired-end input contains {bp/1E6:.1f} Mbp")
 
 Note that ``file2`` is a keyword-only argument, so you need to write the ``file2=`` part.
-In this example, ``dnaio.open`` returns a `TwoFilePairedEndReader`.
+In this example, ``dnaio.open`` returns a `~dnaio.TwoFilePairedEndReader`.
 It also supports iteration, but instead of a single ``SequenceRecord``,
 it returns a pair of them.
 
@@ -127,5 +127,6 @@ to R2::
             r2 = record[-30:]
             writer.write(r1, r2)
 
-The ``writer`` in this case is a `TwoFilePairedEndWriter`
-and its ``write()`` method expects two ``SequenceRecord`` arguments.
+The ``writer`` in this case is a `~dnaio.TwoFilePairedEndWriter`
+and its `~dnaio.TwoFilePairedEndWriter.write()` method
+expects two ``SequenceRecord`` arguments.
