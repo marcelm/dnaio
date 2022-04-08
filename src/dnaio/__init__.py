@@ -73,7 +73,7 @@ def open(
     mode: str = "r",
     qualities: Optional[bool] = None,
     opener=xopen
-) -> Union[SingleEndReader, PairedEndReader, SingleEndWriter, PairedEndWriter,]:
+) -> Union[SingleEndReader, PairedEndReader, SingleEndWriter, PairedEndWriter]:
     """
     Open sequence files in FASTA or FASTQ format for reading or writing.
 

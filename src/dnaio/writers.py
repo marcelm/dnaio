@@ -124,7 +124,8 @@ class FastqWriter(FileWriter, SingleEndWriter):
         """
         Arguments:
             file: A path or an open file-like object
-            two_headers: If True, the header is repeated on the third line of each record after the "+".
+            two_headers: If True, the header is repeated on the third line
+                of each record after the "+".
             opener: If *file* is a path, this function is called to open it.
         """
         super().__init__(file, opener=opener, _close_file=_close_file)
