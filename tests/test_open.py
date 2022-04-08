@@ -84,13 +84,16 @@ def test_read_pathlib_path(fileformat, extension):
 def test_read_opener(fileformat, extension):
     def my_opener(path, mode):
         import io
+
         if fileformat == "fasta":
             data = b">read\nACG\n"
         else:
             data = b"@read\nACG\n+\nHHH\n"
         return io.BytesIO(data)
 
-    with dnaio.open("totally-ignored-filename." + fileformat + extension, opener=my_opener) as f:
+    with dnaio.open(
+        "totally-ignored-filename." + fileformat + extension, opener=my_opener
+    ) as f:
         records = list(f)
     assert len(records) == 1
     assert records[0].name == "read"
@@ -107,6 +110,7 @@ def test_read_paired_fasta():
 def test_paired_opener(fileformat, extension, interleaved):
     def my_opener(_path, _mode):
         import io
+
         if fileformat == "fasta":
             data = b">read\nACG\n"
         else:
@@ -132,31 +136,31 @@ def test_paired_opener(fileformat, extension, interleaved):
 
 def test_detect_fastq_from_content():
     """FASTQ file that is not named .fastq"""
-    with dnaio.open('tests/data/missingextension') as f:
+    with dnaio.open("tests/data/missingextension") as f:
         record = next(iter(f))
-        assert record.name == 'prefix:1_13_573/1'
+        assert record.name == "prefix:1_13_573/1"
 
 
 def test_detect_compressed_fastq_from_content():
     """Compressed FASTQ file that is not named .fastq.gz"""
-    with dnaio.open('tests/data/missingextension.gz') as f:
+    with dnaio.open("tests/data/missingextension.gz") as f:
         record = next(iter(f))
-    assert record.name == 'prefix:1_13_573/1'
+    assert record.name == "prefix:1_13_573/1"
 
 
 def test_write(tmp_path, extension):
     out_fastq = tmp_path / ("out.fastq" + extension)
-    with dnaio.open(str(out_fastq), mode='w') as f:
-        f.write(dnaio.SequenceRecord('name', 'ACGT', 'HHHH'))
+    with dnaio.open(str(out_fastq), mode="w") as f:
+        f.write(dnaio.SequenceRecord("name", "ACGT", "HHHH"))
     with xopen(out_fastq) as f:
-        assert f.read() == '@name\nACGT\n+\nHHHH\n'
+        assert f.read() == "@name\nACGT\n+\nHHHH\n"
 
 
 def test_write_with_xopen(tmp_path, fileformat, extension):
-    s = dnaio.SequenceRecord('name', 'ACGT', 'HHHH')
+    s = dnaio.SequenceRecord("name", "ACGT", "HHHH")
     out_fastq = tmp_path / ("out." + fileformat + extension)
-    with xopen(out_fastq, 'wb') as outer_f:
-        with dnaio.open(outer_f, mode='w', fileformat=fileformat) as f:
+    with xopen(out_fastq, "wb") as outer_f:
+        with dnaio.open(outer_f, mode="w", fileformat=fileformat) as f:
             f.write(s)
 
     with xopen(out_fastq) as f:
@@ -283,6 +287,7 @@ def test_append_interleaved(tmp_path, fileformat, extension):
 
 def make_random_fasta(path, n_records):
     from random import choice
+
     with xopen(path, "w") as f:
         for i in range(n_records):
             name = "sequence_{}".format(i)

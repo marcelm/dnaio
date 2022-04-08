@@ -9,33 +9,37 @@ class TestSequenceRecord:
             SequenceRecord(name="name", sequence="ACGT", qualities="#####")
 
     def test_fastq_bytes(self):
-        assert SequenceRecord("name", "ACGT", "====").fastq_bytes() == \
-            b"@name\nACGT\n+\n====\n"
+        assert (
+            SequenceRecord("name", "ACGT", "====").fastq_bytes()
+            == b"@name\nACGT\n+\n====\n"
+        )
 
     def test_fastq_bytes_two_headers(self):
-        assert SequenceRecord("name", "ACGT", "====").fastq_bytes(two_headers=True) == \
-            b"@name\nACGT\n+name\n====\n"
+        assert (
+            SequenceRecord("name", "ACGT", "====").fastq_bytes(two_headers=True)
+            == b"@name\nACGT\n+name\n====\n"
+        )
 
     def test_is_mate_succes(self):
-        assert SequenceRecord("name1", "A", "=").is_mate(SequenceRecord("name2", "GC", "FF"))
+        assert SequenceRecord("name1", "A", "=").is_mate(
+            SequenceRecord("name2", "GC", "FF")
+        )
 
     def test_reverse_complement(self):
-        assert SequenceRecord("name1",
-                              "ACGTUMRWSYKVHDBNacgtumrwsykvhdbn",
-                              "/AAAA/6E/EEEEEEEEEEEE/EEEEA///E/"
-                              ).reverse_complement() == \
-               SequenceRecord("name1",
-                              "nvhdbmrswykaacgtNVHDBMRSWYKAACGT",
-                              "/E///AEEEE/EEEEEEEEEEEE/E6/AAAA/")
+        assert SequenceRecord(
+            "name1",
+            "ACGTUMRWSYKVHDBNacgtumrwsykvhdbn",
+            "/AAAA/6E/EEEEEEEEEEEE/EEEEA///E/",
+        ).reverse_complement() == SequenceRecord(
+            "name1",
+            "nvhdbmrswykaacgtNVHDBMRSWYKAACGT",
+            "/E///AEEEE/EEEEEEEEEEEE/E6/AAAA/",
+        )
 
     def test_reverse_complement_none_qualities(self):
-        assert SequenceRecord("name1",
-                              "GATTACA",
-                              None
-                              ).reverse_complement() == \
-               SequenceRecord("name1",
-                              "TGTAATC",
-                              None)
+        assert SequenceRecord(
+            "name1", "GATTACA", None
+        ).reverse_complement() == SequenceRecord("name1", "TGTAATC", None)
 
     def test_init_name_bad(self):
         with pytest.raises(ValueError) as error:
@@ -104,5 +108,6 @@ class TestSequenceRecord:
 
 def test_legacy_sequence():
     from dnaio import Sequence
+
     s = Sequence("name", "ACGT", "####")
     assert isinstance(s, SequenceRecord)

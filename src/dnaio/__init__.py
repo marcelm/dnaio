@@ -3,27 +3,27 @@ Sequence I/O: Read and write FASTA and FASTQ files efficiently
 """
 
 __all__ = [
-    'open',
-    'SequenceRecord',
-    'SingleEndReader',
-    'PairedEndReader',
-    'SingleEndWriter',
-    'PairedEndWriter',
-    'FastaReader',
-    'FastaWriter',
-    'FastqReader',
-    'FastqWriter',
-    'UnknownFileFormat',
-    'FileFormatError',
-    'FastaFormatError',
-    'FastqFormatError',
-    'InterleavedPairedEndReader',
-    'InterleavedPairedEndWriter',
-    'TwoFilePairedEndReader',
-    'TwoFilePairedEndWriter',
-    'read_chunks',
-    'read_paired_chunks',
-    '__version__',
+    "open",
+    "SequenceRecord",
+    "SingleEndReader",
+    "PairedEndReader",
+    "SingleEndWriter",
+    "PairedEndWriter",
+    "FastaReader",
+    "FastaWriter",
+    "FastqReader",
+    "FastqWriter",
+    "UnknownFileFormat",
+    "FileFormatError",
+    "FastaFormatError",
+    "FastqFormatError",
+    "InterleavedPairedEndReader",
+    "InterleavedPairedEndWriter",
+    "TwoFilePairedEndReader",
+    "TwoFilePairedEndWriter",
+    "read_chunks",
+    "read_paired_chunks",
+    "__version__",
 ]
 
 from os import PathLike
@@ -44,8 +44,18 @@ from .pairedend import (
     InterleavedPairedEndReader,
     InterleavedPairedEndWriter,
 )
-from .exceptions import UnknownFileFormat, FileFormatError, FastaFormatError, FastqFormatError
-from .interfaces import SingleEndReader, PairedEndReader, SingleEndWriter, PairedEndWriter
+from .exceptions import (
+    UnknownFileFormat,
+    FileFormatError,
+    FastaFormatError,
+    FastqFormatError,
+)
+from .interfaces import (
+    SingleEndReader,
+    PairedEndReader,
+    SingleEndWriter,
+    PairedEndWriter,
+)
 from .chunks import read_chunks, read_paired_chunks
 from ._version import version as __version__
 
@@ -63,12 +73,7 @@ def open(
     mode: str = "r",
     qualities: Optional[bool] = None,
     opener=xopen
-) -> Union[
-    SingleEndReader,
-    PairedEndReader,
-    SingleEndWriter,
-    PairedEndWriter,
-]:
+) -> Union[SingleEndReader, PairedEndReader, SingleEndWriter, PairedEndWriter]:
     """
     Open sequence files in FASTA or FASTQ format for reading or writing.
 
@@ -122,19 +127,34 @@ def open(
         if mode in "wa" and file1 == file2:
             raise ValueError("The paired-end output files are identical")
         if "r" in mode:
-            return TwoFilePairedEndReader(file1, file2, fileformat=fileformat, opener=opener, mode=mode)
+            return TwoFilePairedEndReader(
+                file1, file2, fileformat=fileformat, opener=opener, mode=mode
+            )
         append = mode == "a"
         return TwoFilePairedEndWriter(
-            file1, file2, fileformat=fileformat, qualities=qualities, opener=opener, append=append
+            file1,
+            file2,
+            fileformat=fileformat,
+            qualities=qualities,
+            opener=opener,
+            append=append,
         )
     if interleaved:
         if "r" in mode:
-            return InterleavedPairedEndReader(file1, fileformat=fileformat, opener=opener, mode=mode)
+            return InterleavedPairedEndReader(
+                file1, fileformat=fileformat, opener=opener, mode=mode
+            )
         append = mode == "a"
         return InterleavedPairedEndWriter(
-            file1, fileformat=fileformat, qualities=qualities, opener=opener, append=append)
+            file1,
+            fileformat=fileformat,
+            qualities=qualities,
+            opener=opener,
+            append=append,
+        )
 
     # The multi-file options have been dealt with, delegate rest to the
     # single-file function.
     return _open_single(
-        file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities)
+        file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities
+    )

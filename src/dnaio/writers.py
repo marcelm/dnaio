@@ -89,14 +89,14 @@ class FastaWriter(FileWriter, SingleEndWriter):
             name = name_or_record
 
         if self.line_length is not None:
-            self._file.write(('>' + name + '\n').encode('ascii'))
+            self._file.write((">" + name + "\n").encode("ascii"))
             s = []
             for i in range(0, len(sequence), self.line_length):
-                s.append(sequence[i:i + self.line_length] + '\n')
-            self._file.write(''.join(s).encode('ascii'))
+                s.append(sequence[i : i + self.line_length] + "\n")
+            self._file.write("".join(s).encode("ascii"))
         else:
-            text = '>' + name + '\n' + sequence + '\n'
-            self._file.write(text.encode('ascii'))
+            text = ">" + name + "\n" + sequence + "\n"
+            self._file.write(text.encode("ascii"))
 
 
 class FastqWriter(FileWriter, SingleEndWriter):
@@ -110,7 +110,8 @@ class FastqWriter(FileWriter, SingleEndWriter):
         +
         FF,:F,,F
     """
-    file_mode = 'wb'
+
+    file_mode = "wb"
 
     def __init__(
         self,
@@ -123,13 +124,16 @@ class FastqWriter(FileWriter, SingleEndWriter):
         """
         Arguments:
             file: A path or an open file-like object
-            two_headers: If True, the header is repeated on the third line of each record after the "+".
+            two_headers: If True, the header is repeated on the third line
+                of each record after the "+".
             opener: If *file* is a path, this function is called to open it.
         """
         super().__init__(file, opener=opener, _close_file=_close_file)
         self._two_headers = two_headers
         # setattr avoids a complaint from Mypy
-        setattr(self, "write", self._write_two_headers if self._two_headers else self._write)
+        setattr(
+            self, "write", self._write_two_headers if self._two_headers else self._write
+        )
 
     def __repr__(self) -> str:
         return f"FastqWriter('{getattr(self._file, 'name', self._file)}')"

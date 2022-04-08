@@ -34,12 +34,10 @@ class TwoFilePairedEndReader(PairedEndReader):
         self.mode = mode
         with ExitStack() as stack:
             self.reader1 = stack.enter_context(
-                _open_single(file1, opener=opener, fileformat=fileformat,
-                             mode=mode)
+                _open_single(file1, opener=opener, fileformat=fileformat, mode=mode)
             )
             self.reader2 = stack.enter_context(
-                _open_single(file2, opener=opener, fileformat=fileformat,
-                             mode=mode)
+                _open_single(file2, opener=opener, fileformat=fileformat, mode=mode)
             )
             self._close = stack.pop_all().close
         self.delivers_qualities = self.reader1.delivers_qualities

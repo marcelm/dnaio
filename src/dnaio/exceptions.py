@@ -16,7 +16,8 @@ class FileFormatError(Exception):
           or None if not.
           The first line has index 0.
     """
-    format = 'sequence'  # Something generic that works for both FASTA and FASTQ
+
+    format = "sequence"  # Something generic that works for both FASTA and FASTQ
 
     def __init__(self, msg: str, line: Optional[int]):
         super().__init__(msg, line)
@@ -32,6 +33,7 @@ class FastqFormatError(FileFormatError):
     """
     The FASTQ file is not formatted correctly
     """
+
     format = "FASTQ"
 
 
@@ -39,4 +41,5 @@ class FastaFormatError(FileFormatError):
     """
     The FASTA file is not formatted correctly
     """
+
     format = "FASTA"

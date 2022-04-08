@@ -1,7 +1,7 @@
 """
 Classes for reading FASTA and FASTQ files
 """
-__all__ = ['FastaReader', 'FastqReader']
+__all__ = ["FastaReader", "FastqReader"]
 
 import io
 from typing import Union, BinaryIO, Optional, Iterator, List
@@ -18,12 +18,17 @@ class BinaryFileReader:
     """
     A mixin for readers that ensures that a file or a path can be passed in to the constructor.
     """
+
     _close_on_exit = False
     paired: bool = False
-    mode: str = 'rb'
+    mode: str = "rb"
 
     def __init__(
-        self, file: Union[str, BinaryIO], *, opener=xopen, _close_file: Optional[bool] = None
+        self,
+        file: Union[str, BinaryIO],
+        *,
+        opener=xopen,
+        _close_file: Optional[bool] = None,
     ):
         """
         The file is a path or a file-like object. In both cases, the file may
@@ -78,7 +83,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
         super().__init__(file, opener=opener, _close_file=_close_file)
         self.sequence_class = sequence_class
         self.delivers_qualities = False
-        self._delimiter = '\n' if keep_linebreaks else ''
+        self._delimiter = "\n" if keep_linebreaks else ""
         self.number_of_records = 0
         self._file = io.TextIOWrapper(self._file)
 
@@ -95,19 +100,21 @@ class FastaReader(BinaryFileReader, SingleEndReader):
             line = line.strip()
             if not line:
                 continue
-            if line and line[0] == '>':
+            if line and line[0] == ">":
                 if name is not None:
                     self.number_of_records += 1
                     yield self.sequence_class(name, self._delimiter.join(seq), None)
                 name = line[1:]
                 seq = []
-            elif line and line[0] == '#':
+            elif line and line[0] == "#":
                 continue
             elif name is not None:
                 seq.append(line)
             else:
                 raise FastaFormatError(
-                    f"Expected '>' at beginning of record, but got '{_shorten(line)}'.", line=i)
+                    f"Expected '>' at beginning of record, but got '{_shorten(line)}'.",
+                    line=i,
+                )
 
         if name is not None:
             self.number_of_records += 1
