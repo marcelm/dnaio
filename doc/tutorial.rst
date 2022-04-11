@@ -56,7 +56,7 @@ pass the ``mode="w"`` argument to ``dnaio.open``::
     import dnaio
 
     with dnaio.open("onerecord.fastq.gz", mode="w") as writer:
-        write.write(dnaio.SequenceRecord("name", "ACGT", "#B!#"))
+        writer.write(dnaio.SequenceRecord("name", "ACGT", "#B!#"))
 
 Here, a `~dnaio.FastqWriter` object is returned by ``dnaio.open``,
 which has a ``~dnaio.FastqWriter.write()`` method that accepts a ``SequenceRecord``.
