@@ -392,7 +392,7 @@ cdef class FastqIter:
         bint yielded_two_headers
         bint eof
         object file
-        Py_ssize_t record_start
+        char *record_start
     cdef readonly Py_ssize_t number_of_records
 
     def __cinit__(self, file, sequence_class, Py_ssize_t buffer_size):
@@ -407,7 +407,7 @@ cdef class FastqIter:
         self.extra_newline = False
         self.yielded_two_headers = False
         self.eof = False
-        self.record_start = 0
+        self.record_start = self.buffer
         self.file = file
         if buffer_size < 1:
             raise ValueError("Starting buffer size too small")
@@ -424,7 +424,7 @@ cdef class FastqIter:
         cdef char *tmp
         cdef Py_ssize_t remaining_bytes
 
-        if self.record_start == 0 and self.bytes_in_buffer == self.buffer_size:
+        if self.record_start == self.buffer and self.bytes_in_buffer == self.buffer_size:
             # buffer too small, double it
             self.buffer_size *= 2
             tmp = <char *>PyMem_Realloc(self.buffer, self.buffer_size)
@@ -433,11 +433,11 @@ cdef class FastqIter:
             self.buffer = tmp
         else:
             # Move the incomplete record from the end of the buffer to the beginning.
-            remaining_bytes = self.bytes_in_buffer - self.record_start
+            remaining_bytes = self.bytes_in_buffer - (self.record_start - self.buffer)
             # Memmove copies safely when dest and src overlap.
-            memmove(self.buffer, self.buffer + self.record_start, remaining_bytes)
+            memmove(self.buffer, self.record_start, remaining_bytes)
             self.bytes_in_buffer = remaining_bytes
-            self.record_start = 0
+        self.record_start = self.buffer
 
         cdef Py_ssize_t empty_bytes_in_buffer = self.buffer_size - self.bytes_in_buffer
         cdef object filechunk = self.file.read(empty_bytes_in_buffer)
@@ -471,11 +471,11 @@ cdef class FastqIter:
                     # Do not report the linefeed that was added by dnaio but
                     # was not present in the original input.
                     self.bytes_in_buffer -= 1
-                lines = self.buffer[self.record_start:self.bytes_in_buffer].count(b'\n')
+                lines = self.record_start[:self.bytes_in_buffer].count(b'\n')
                 raise FastqFormatError(
                     'Premature end of file encountered. The incomplete final record was: '
                     '{!r}'.format(
-                        shorten(self.buffer[self.record_start:self.bytes_in_buffer].decode('latin-1'),
+                        shorten(self.record_start[:self.bytes_in_buffer].decode('latin-1'),
                                 500)),
                     line=self.number_of_records * 4 + lines)
 
@@ -485,17 +485,20 @@ cdef class FastqIter:
     def __next__(self):
         cdef:
             object ret_val
-            Py_ssize_t name_start, name_end, name_length
-            Py_ssize_t sequence_start, sequence_end, sequence_length
-            Py_ssize_t second_header_start, second_header_end, second_header_length
-            Py_ssize_t qualities_start, qualities_end, qualities_length
-            char *name_end_ptr
-            char *sequence_end_ptr
-            char *second_header_end_ptr
-            char *qualities_end_ptr
+            char * name_start
+            char * name_end
+            char * sequence_start
+            char * sequence_end
+            char * second_header_start
+            char * second_header_end
+            char * qualities_start
+            char * qualities_end
+            char * buffer_end
+            Py_ssize_t name_length, sequence_length, second_header_length, qualities_length
         # Repeatedly attempt to parse the buffer until we have found a full record.
         # If an attempt fails, we read more data before retrying.
         while True:
+            buffer_end = self.buffer + self.bytes_in_buffer
             if self.eof:
                 raise StopIteration()
             ### Check for a complete record (i.e 4 newlines are present)
@@ -503,40 +506,36 @@ cdef class FastqIter:
             # using 64-bit integers. See:
             # https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=string/memchr.c;hb=HEAD
             # void *memchr(const void *str, int c, size_t n)
-            name_end_ptr = <char *>memchr(self.buffer + self.record_start, b'\n', <size_t>(self.bytes_in_buffer - self.record_start))
-            if name_end_ptr == NULL:
+            name_end = <char *>memchr(self.record_start, b'\n', <size_t>(buffer_end - self.record_start))
+            if name_end == NULL:
                 self._read_into_buffer()
                 continue
             # self.bytes_in_buffer - sequence_start is always nonnegative:
             # - name_end is at most self.bytes_in_buffer - 1
             # - thus sequence_start is at most self.bytes_in_buffer
-            name_end = name_end_ptr - self.buffer
             sequence_start = name_end + 1
-            sequence_end_ptr = <char *>memchr(self.buffer + sequence_start, b'\n', <size_t>(self.bytes_in_buffer - sequence_start))
-            if sequence_end_ptr == NULL:
+            sequence_end = <char *>memchr(sequence_start, b'\n', <size_t>(buffer_end - sequence_start))
+            if sequence_end == NULL:
                 self._read_into_buffer()
                 continue
-            sequence_end = sequence_end_ptr - self.buffer
             second_header_start = sequence_end + 1
-            second_header_end_ptr = <char *>memchr(self.buffer + second_header_start, b'\n', <size_t>(self.bytes_in_buffer - second_header_start))
-            if second_header_end_ptr == NULL:
+            second_header_end = <char *>memchr(second_header_start, b'\n', <size_t>(buffer_end - second_header_start))
+            if second_header_end == NULL:
                 self._read_into_buffer()
                 continue
-            second_header_end = second_header_end_ptr - self.buffer
             qualities_start = second_header_end + 1
-            qualities_end_ptr = <char *>memchr(self.buffer + qualities_start, b'\n', <size_t>(self.bytes_in_buffer - qualities_start))
-            if qualities_end_ptr == NULL:
+            qualities_end = <char *>memchr(qualities_start, b'\n', <size_t>(buffer_end - qualities_start))
+            if qualities_end == NULL:
                 self._read_into_buffer()
                 continue
-            qualities_end = qualities_end_ptr - self.buffer
 
-            if self.buffer[self.record_start] != b'@':
+            if self.record_start[0] != b'@':
                 raise FastqFormatError("Line expected to "
-                    "start with '@', but found {!r}".format(chr(self.buffer[self.record_start])),
+                    "start with '@', but found {!r}".format(chr(self.record_start[0])),
                     line=self.number_of_records * 4)
-            if self.buffer[second_header_start] != b'+':
+            if second_header_start[0] != b'+':
                 raise FastqFormatError("Line expected to "
-                    "start with '+', but found {!r}".format(chr(self.buffer[second_header_start])),
+                    "start with '+', but found {!r}".format(chr(second_header_start[0])),
                     line=self.number_of_records * 4 + 2)
 
             name_start = self.record_start + 1  # Skip @
@@ -547,25 +546,24 @@ cdef class FastqIter:
             qualities_length = qualities_end - qualities_start
 
             # Check for \r\n line-endings and compensate
-            if self.buffer[name_end - 1] == b'\r':
+            if (name_end - 1)[0] == b'\r':
                 name_length -= 1
-            if self.buffer[sequence_end - 1] == b'\r':
+            if (sequence_end - 1)[0] == b'\r':
                 sequence_length -= 1
-            if self.buffer[second_header_end - 1] == b'\r':
+            if (second_header_end - 1)[0] == b'\r':
                 second_header_length -= 1
-            if self.buffer[qualities_end - 1] == b'\r':
+            if (qualities_end - 1)[0] == b'\r':
                 qualities_length -= 1
 
             if second_header_length:  # should be 0 when only + is present
                 if (name_length != second_header_length or
-                        memcmp(self.buffer+second_header_start,
-                            self.buffer + name_start, second_header_length) != 0):
+                        memcmp(second_header_start, name_start, second_header_length) != 0):
                     raise FastqFormatError(
                         "Sequence descriptions don't match ('{}' != '{}').\n"
                         "The second sequence description must be either "
                         "empty or equal to the first description.".format(
-                            self.buffer[name_start:name_end].decode('latin-1'),
-                            self.buffer[second_header_start:second_header_end]
+                            name_start[:name_length].decode('latin-1'),
+                            second_header_start[:second_header_length]
                             .decode('latin-1')), line=self.number_of_records * 4 + 2)
 
             if qualities_length != sequence_length:
@@ -583,9 +581,9 @@ cdef class FastqIter:
             qualities = PyUnicode_New(qualities_length, 127)
             if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
                 raise MemoryError()
-            memcpy(PyUnicode_1BYTE_DATA(name), self.buffer + name_start, name_length)
-            memcpy(PyUnicode_1BYTE_DATA(sequence), self.buffer + sequence_start, sequence_length)
-            memcpy(PyUnicode_1BYTE_DATA(qualities), self.buffer + qualities_start, qualities_length)
+            memcpy(PyUnicode_1BYTE_DATA(name), name_start, name_length)
+            memcpy(PyUnicode_1BYTE_DATA(sequence), sequence_start, sequence_length)
+            memcpy(PyUnicode_1BYTE_DATA(qualities), qualities_start, qualities_length)
 
             if self.use_custom_class:
                 ret_val = self.sequence_class(name, sequence, qualities)
