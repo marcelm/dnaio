@@ -31,27 +31,6 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
     cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
     return ascii
 
-cdef void _reverse_copy(char *dest, char *src, Py_ssize_t length):
-    """Copies from src to dest in reversed order."""
-    cdef Py_ssize_t cursor
-    cdef Py_ssize_t reverse_cursor = length
-    for cursor in range(length):
-        reverse_cursor -= 1
-        dest[reverse_cursor] = src[cursor]
-    return
-
-
-cdef void _reverse_complement_copy(char *dest, char *src, Py_ssize_t length):
-    """Copies from src to dest in reversed order whilst converting the src
-    nucleotides to their IUPAC complement"""
-    cdef Py_ssize_t cursor
-    cdef Py_ssize_t reverse_cursor = length
-    cdef unsigned char nucleotide
-    for cursor in range(length):
-        reverse_cursor -= 1
-        nucleotide = src[cursor]
-        dest[reverse_cursor] = NUCLEOTIDE_COMPLEMENTS[nucleotide]
-    return
 
 
 cdef class SequenceRecord:
@@ -279,25 +258,34 @@ cdef class SequenceRecord:
         return record_ids_match(header1_chars, header2_chars, header1_length)
 
     def reverse_complement(self):
-        cdef Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(self._sequence)
-        cdef object reversed_sequence = PyUnicode_New(sequence_length, 127)
-        cdef object reversed_qualities
-        _reverse_complement_copy(
-            <char *>PyUnicode_DATA(reversed_sequence),
-            <char *>PyUnicode_DATA(self._sequence),
-            sequence_length
-        )
+        cdef:
+            Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(self._sequence)
+            object reversed_sequence_obj = PyUnicode_New(sequence_length, 127)
+            object reversed_qualities_obj
+            char * reversed_sequence = <char *>PyUnicode_DATA(reversed_sequence_obj)
+            char * sequence = <char *>PyUnicode_DATA(self._sequence),
+            char * reversed_qualities
+            char * qualities
+            Py_ssize_t cursor, reverse_cursor
+            unsigned char nucleotide
+        reverse_cursor = sequence_length
+        for cursor in range(sequence_length):
+            reverse_cursor -= 1
+            nucleotide = sequence[cursor]
+            reversed_sequence[reverse_cursor] = NUCLEOTIDE_COMPLEMENTS[nucleotide]
+
         if self._qualities is not None:
-            reversed_qualities = PyUnicode_New(sequence_length, 127)
-            _reverse_copy(
-                <char *>PyUnicode_DATA(reversed_qualities),
-                <char *>PyUnicode_DATA(self._qualities),
-                sequence_length
-            )
+            reverse_cursor = sequence_length
+            reversed_qualities_obj = PyUnicode_New(sequence_length, 127)
+            reversed_qualities = <char *>PyUnicode_DATA(reversed_qualities_obj)
+            qualities = <char *>PyUnicode_DATA(self._qualities)
+            for cursor in range(sequence_length):
+                reverse_cursor -= 1
+                reversed_qualities[reverse_cursor] = qualities[cursor]
         else:
-            reversed_qualities = None
+            reversed_qualities_obj = None
         return SequenceRecord.__new__(
-            SequenceRecord, self._name, reversed_sequence, reversed_qualities)
+            SequenceRecord, self._name, reversed_sequence_obj, reversed_qualities_obj)
 
 
 def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
