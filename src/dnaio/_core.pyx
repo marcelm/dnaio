@@ -3,7 +3,7 @@
 from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
-from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
+from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH, PyUnicode_DecodeASCII
 from cpython.ref cimport PyObject
 from libc.string cimport memcmp, memcpy, memchr, strcspn, memmove
 cimport cython
@@ -471,12 +471,11 @@ cdef class FastqIter:
                     # Do not report the linefeed that was added by dnaio but
                     # was not present in the original input.
                     self.bytes_in_buffer -= 1
-                lines = self.record_start[:self.bytes_in_buffer].count(b'\n')
+                record = PyUnicode_DecodeASCII(self.record_start, self.bytes_in_buffer, NULL)
+                lines = record.count('\n')
                 raise FastqFormatError(
                     'Premature end of file encountered. The incomplete final record was: '
-                    '{!r}'.format(
-                        shorten(self.record_start[:self.bytes_in_buffer].decode('latin-1'),
-                                500)),
+                    '{!r}'.format(shorten(record, 500)),
                     line=self.number_of_records * 4 + lines)
 
     def __iter__(self):
@@ -562,9 +561,9 @@ cdef class FastqIter:
                         "Sequence descriptions don't match ('{}' != '{}').\n"
                         "The second sequence description must be either "
                         "empty or equal to the first description.".format(
-                            name_start[:name_length].decode('latin-1'),
-                            second_header_start[:second_header_length]
-                            .decode('latin-1')), line=self.number_of_records * 4 + 2)
+                            PyUnicode_DecodeASCII(name_start, name_length, NULL),
+                            PyUnicode_DecodeASCII(second_header_start, second_header_length, NULL)),
+                        line=self.number_of_records * 4 + 2)
 
             if qualities_length != sequence_length:
                 raise FastqFormatError(
