@@ -3,14 +3,13 @@
 from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
-from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
+from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH, PyUnicode_DecodeASCII
 from cpython.ref cimport PyObject
 from libc.string cimport memcmp, memcpy, memchr, strcspn, memmove
 cimport cython
 
 cdef extern from "Python.h":
-    unsigned char * PyUnicode_1BYTE_DATA(object o)
-    void * PyUnicode_DATA(object o)
+    void *PyUnicode_DATA(object o)
     bint PyUnicode_IS_COMPACT_ASCII(object o)
     object PyUnicode_New(Py_ssize_t size, Py_UCS4 maxchar)
 
@@ -22,7 +21,7 @@ cdef extern from *:
       #include "ascii_check.h"
     #endif
     """
-    int string_is_ascii(char * string, size_t length)
+    int string_is_ascii(char *string, size_t length)
 
 cdef extern from "_conversions.h":
     const char NUCLEOTIDE_COMPLEMENTS[256]
@@ -39,27 +38,6 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
     cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
     return ascii
 
-cdef void _reverse_copy(char *dest, char *src, Py_ssize_t length):
-    """Copies from src to dest in reversed order."""
-    cdef Py_ssize_t cursor
-    cdef Py_ssize_t reverse_cursor = length
-    for cursor in range(length):
-        reverse_cursor -= 1
-        dest[reverse_cursor] = src[cursor]
-    return
-
-
-cdef void _reverse_complement_copy(char *dest, char *src, Py_ssize_t length):
-    """Copies from src to dest in reversed order whilst converting the src
-    nucleotides to their IUPAC complement"""
-    cdef Py_ssize_t cursor
-    cdef Py_ssize_t reverse_cursor = length
-    cdef unsigned char nucleotide
-    for cursor in range(length):
-        reverse_cursor -= 1
-        nucleotide = src[cursor]
-        dest[reverse_cursor] = NUCLEOTIDE_COMPLEMENTS[nucleotide]
-    return
 
 
 cdef class SequenceRecord:
@@ -203,7 +181,7 @@ cdef class SequenceRecord:
         """
         return self._qualities.encode('ascii')
 
-    def fastq_bytes(self, two_headers=False):
+    def fastq_bytes(self, bint two_headers=False):
         """
         Format this record in FASTQ format
 
@@ -219,22 +197,44 @@ cdef class SequenceRecord:
             raise ValueError("Cannot create a FASTQ record when qualities is not set.")
 
         cdef:
-            char * name = <char *>PyUnicode_1BYTE_DATA(self._name)
-            char * sequence = <char *>PyUnicode_1BYTE_DATA(self._sequence)
-            char * qualities = <char *>PyUnicode_1BYTE_DATA(self._qualities)
+            char *name = <char *>PyUnicode_DATA(self._name)
+            char *sequence = <char *>PyUnicode_DATA(self._sequence)
+            char *qualities = <char *>PyUnicode_DATA(self._qualities)
             size_t name_length = <size_t>PyUnicode_GET_LENGTH(self._name)
             size_t sequence_length = <size_t>PyUnicode_GET_LENGTH(self._sequence)
             size_t qualities_length = <size_t>PyUnicode_GET_LENGTH(self._qualities)
 
-        return create_fastq_record(
-            name,
-            sequence,
-            qualities,
-            name_length,
-            sequence_length,
-            qualities_length,
-            two_headers,
-        )
+        # Total size is name + sequence + qualities + 4 newlines + '+' and an
+        # '@' to be put in front of the name.
+        cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
+
+        if two_headers:
+            # We need space for the name after the +.
+            total_size += name_length
+
+        # This is the canonical way to create an uninitialized bytestring of given size
+        cdef bytes retval = PyBytes_FromStringAndSize(NULL, total_size)
+        cdef char *retval_ptr = PyBytes_AS_STRING(retval)
+
+        # Write the sequences into the bytestring at the correct positions.
+        cdef size_t cursor
+        retval_ptr[0] = b"@"
+        memcpy(retval_ptr + 1, name, name_length)
+        cursor = name_length + 1
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        memcpy(retval_ptr + cursor, sequence, sequence_length)
+        cursor += sequence_length
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        retval_ptr[cursor] = b"+"; cursor += 1
+        if two_headers:
+            memcpy(retval_ptr + cursor, name, name_length)
+            cursor += name_length
+        retval_ptr[cursor] = b"\n"; cursor += 1
+        memcpy(retval_ptr + cursor, qualities, qualities_length)
+        cursor += qualities_length
+        retval_ptr[cursor] = b"\n"
+        return retval
+
 
     def fastq_bytes_two_headers(self):
         """
@@ -259,72 +259,40 @@ cdef class SequenceRecord:
             bool: Whether this and *other* are part of the same read pair.
         """
         cdef:
-            char * header1_chars = <char *>PyUnicode_1BYTE_DATA(self._name)
+            char *header1_chars = <char *>PyUnicode_DATA(self._name)
             size_t header1_length = <size_t> PyUnicode_GET_LENGTH(self._name)
-            char * header2_chars = <char *>PyUnicode_1BYTE_DATA(other._name)
+            char *header2_chars = <char *>PyUnicode_DATA(other._name)
         return record_ids_match(header1_chars, header2_chars, header1_length)
 
     def reverse_complement(self):
-        cdef Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(self._sequence)
-        cdef object reversed_sequence = PyUnicode_New(sequence_length, 127)
-        cdef object reversed_qualities
-        _reverse_complement_copy(
-            <char *>PyUnicode_DATA(reversed_sequence),
-            <char *>PyUnicode_DATA(self._sequence),
-            sequence_length
-        )
+        cdef:
+            Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(self._sequence)
+            object reversed_sequence_obj = PyUnicode_New(sequence_length, 127)
+            object reversed_qualities_obj
+            char *reversed_sequence = <char *>PyUnicode_DATA(reversed_sequence_obj)
+            char *sequence = <char *>PyUnicode_DATA(self._sequence),
+            char *reversed_qualities
+            char *qualities
+            Py_ssize_t cursor, reverse_cursor
+            unsigned char nucleotide
+        reverse_cursor = sequence_length
+        for cursor in range(sequence_length):
+            reverse_cursor -= 1
+            nucleotide = sequence[cursor]
+            reversed_sequence[reverse_cursor] = NUCLEOTIDE_COMPLEMENTS[nucleotide]
+
         if self._qualities is not None:
-            reversed_qualities = PyUnicode_New(sequence_length, 127)
-            _reverse_copy(
-                <char *>PyUnicode_DATA(reversed_qualities),
-                <char *>PyUnicode_DATA(self._qualities),
-                sequence_length
-            )
+            reverse_cursor = sequence_length
+            reversed_qualities_obj = PyUnicode_New(sequence_length, 127)
+            reversed_qualities = <char *>PyUnicode_DATA(reversed_qualities_obj)
+            qualities = <char *>PyUnicode_DATA(self._qualities)
+            for cursor in range(sequence_length):
+                reverse_cursor -= 1
+                reversed_qualities[reverse_cursor] = qualities[cursor]
         else:
-            reversed_qualities = None
+            reversed_qualities_obj = None
         return SequenceRecord.__new__(
-            SequenceRecord, self._name, reversed_sequence, reversed_qualities)
-
-
-cdef bytes create_fastq_record(
-    char * name,
-    char * sequence,
-    char * qualities,
-    Py_ssize_t name_length,
-    Py_ssize_t sequence_length,
-    Py_ssize_t qualities_length,
-    bint two_headers = False
-):
-    # Total size is name + sequence + qualities + 4 newlines + '+' and an
-    # '@' to be put in front of the name.
-    cdef Py_ssize_t total_size = name_length + sequence_length + qualities_length + 6
-
-    if two_headers:
-        # We need space for the name after the +.
-        total_size += name_length
-
-    # This is the canonical way to create an uninitialized bytestring of given size
-    cdef bytes retval = PyBytes_FromStringAndSize(NULL, total_size)
-    cdef char * retval_ptr = PyBytes_AS_STRING(retval)
-
-    # Write the sequences into the bytestring at the correct positions.
-    cdef size_t cursor
-    retval_ptr[0] = b"@"
-    memcpy(retval_ptr + 1, name, name_length)
-    cursor = name_length + 1
-    retval_ptr[cursor] = b"\n"; cursor += 1
-    memcpy(retval_ptr + cursor, sequence, sequence_length)
-    cursor += sequence_length
-    retval_ptr[cursor] = b"\n"; cursor += 1
-    retval_ptr[cursor] = b"+"; cursor += 1
-    if two_headers:
-        memcpy(retval_ptr + cursor, name, name_length)
-        cursor += name_length
-    retval_ptr[cursor] = b"\n"; cursor += 1
-    memcpy(retval_ptr + cursor, qualities, qualities_length)
-    cursor += qualities_length
-    retval_ptr[cursor] = b"\n"
-    return retval
+            SequenceRecord, self._name, reversed_sequence_obj, reversed_qualities_obj)
 
 
 def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
@@ -343,15 +311,15 @@ def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
 
     cdef:
         Py_ssize_t linebreaks = 0
-        char * data1 = <char *>data1_buffer.buf
-        char * data2 = <char *>data2_buffer.buf
+        char *data1 = <char *>data1_buffer.buf
+        char *data2 = <char *>data2_buffer.buf
         # The min() function ensures we do not read beyond the size of the buffer.
-        char * data1_end = data1 + min(end1, data1_buffer.len)
-        char * data2_end = data2 + min(end2, data2_buffer.len)
-        char * pos1 = data1
-        char * pos2 = data2
-        char * record_start1 = data1
-        char * record_start2 = data2
+        char *data1_end = data1 + min(end1, data1_buffer.len)
+        char *data2_end = data2 + min(end2, data2_buffer.len)
+        char *pos1 = data1
+        char *pos2 = data2
+        char *record_start1 = data1
+        char *record_start2 = data2
 
     while True:
         pos1 = <char *>memchr(pos1, b'\n', data1_end - pos1)
@@ -399,7 +367,7 @@ cdef class FastqIter:
         bint yielded_two_headers
         bint eof
         object file
-        Py_ssize_t record_start
+        char *record_start
     cdef readonly Py_ssize_t number_of_records
 
     def __cinit__(self, file, sequence_class, Py_ssize_t buffer_size):
@@ -414,7 +382,7 @@ cdef class FastqIter:
         self.extra_newline = False
         self.yielded_two_headers = False
         self.eof = False
-        self.record_start = 0
+        self.record_start = self.buffer
         self.file = file
         if buffer_size < 1:
             raise ValueError("Starting buffer size too small")
@@ -431,7 +399,7 @@ cdef class FastqIter:
         cdef char *tmp
         cdef Py_ssize_t remaining_bytes
 
-        if self.record_start == 0 and self.bytes_in_buffer == self.buffer_size:
+        if self.record_start == self.buffer and self.bytes_in_buffer == self.buffer_size:
             # buffer too small, double it
             self.buffer_size *= 2
             tmp = <char *>PyMem_Realloc(self.buffer, self.buffer_size)
@@ -440,11 +408,11 @@ cdef class FastqIter:
             self.buffer = tmp
         else:
             # Move the incomplete record from the end of the buffer to the beginning.
-            remaining_bytes = self.bytes_in_buffer - self.record_start
+            remaining_bytes = self.bytes_in_buffer - (self.record_start - self.buffer)
             # Memmove copies safely when dest and src overlap.
-            memmove(self.buffer, self.buffer + self.record_start, remaining_bytes)
+            memmove(self.buffer, self.record_start, remaining_bytes)
             self.bytes_in_buffer = remaining_bytes
-            self.record_start = 0
+        self.record_start = self.buffer
 
         cdef Py_ssize_t empty_bytes_in_buffer = self.buffer_size - self.bytes_in_buffer
         cdef object filechunk = self.file.read(empty_bytes_in_buffer)
@@ -478,12 +446,11 @@ cdef class FastqIter:
                     # Do not report the linefeed that was added by dnaio but
                     # was not present in the original input.
                     self.bytes_in_buffer -= 1
-                lines = self.buffer[self.record_start:self.bytes_in_buffer].count(b'\n')
+                record = PyUnicode_DecodeASCII(self.record_start, self.bytes_in_buffer, NULL)
+                lines = record.count('\n')
                 raise FastqFormatError(
                     'Premature end of file encountered. The incomplete final record was: '
-                    '{!r}'.format(
-                        shorten(self.buffer[self.record_start:self.bytes_in_buffer].decode('latin-1'),
-                                500)),
+                    '{!r}'.format(shorten(record, 500)),
                     line=self.number_of_records * 4 + lines)
 
     def __iter__(self):
@@ -492,17 +459,20 @@ cdef class FastqIter:
     def __next__(self):
         cdef:
             object ret_val
-            Py_ssize_t name_start, name_end, name_length
-            Py_ssize_t sequence_start, sequence_end, sequence_length
-            Py_ssize_t second_header_start, second_header_end, second_header_length
-            Py_ssize_t qualities_start, qualities_end, qualities_length
-            char *name_end_ptr
-            char *sequence_end_ptr
-            char *second_header_end_ptr
-            char *qualities_end_ptr
+            char *name_start
+            char *name_end
+            char *sequence_start
+            char *sequence_end
+            char *second_header_start
+            char *second_header_end
+            char *qualities_start
+            char *qualities_end
+            char *buffer_end
+            Py_ssize_t name_length, sequence_length, second_header_length, qualities_length
         # Repeatedly attempt to parse the buffer until we have found a full record.
         # If an attempt fails, we read more data before retrying.
         while True:
+            buffer_end = self.buffer + self.bytes_in_buffer
             if self.eof:
                 raise StopIteration()
             ### Check for a complete record (i.e 4 newlines are present)
@@ -510,40 +480,36 @@ cdef class FastqIter:
             # using 64-bit integers. See:
             # https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=string/memchr.c;hb=HEAD
             # void *memchr(const void *str, int c, size_t n)
-            name_end_ptr = <char *>memchr(self.buffer + self.record_start, b'\n', <size_t>(self.bytes_in_buffer - self.record_start))
-            if name_end_ptr == NULL:
+            name_end = <char *>memchr(self.record_start, b'\n', <size_t>(buffer_end - self.record_start))
+            if name_end == NULL:
                 self._read_into_buffer()
                 continue
             # self.bytes_in_buffer - sequence_start is always nonnegative:
             # - name_end is at most self.bytes_in_buffer - 1
             # - thus sequence_start is at most self.bytes_in_buffer
-            name_end = name_end_ptr - self.buffer
             sequence_start = name_end + 1
-            sequence_end_ptr = <char *>memchr(self.buffer + sequence_start, b'\n', <size_t>(self.bytes_in_buffer - sequence_start))
-            if sequence_end_ptr == NULL:
+            sequence_end = <char *>memchr(sequence_start, b'\n', <size_t>(buffer_end - sequence_start))
+            if sequence_end == NULL:
                 self._read_into_buffer()
                 continue
-            sequence_end = sequence_end_ptr - self.buffer
             second_header_start = sequence_end + 1
-            second_header_end_ptr = <char *>memchr(self.buffer + second_header_start, b'\n', <size_t>(self.bytes_in_buffer - second_header_start))
-            if second_header_end_ptr == NULL:
+            second_header_end = <char *>memchr(second_header_start, b'\n', <size_t>(buffer_end - second_header_start))
+            if second_header_end == NULL:
                 self._read_into_buffer()
                 continue
-            second_header_end = second_header_end_ptr - self.buffer
             qualities_start = second_header_end + 1
-            qualities_end_ptr = <char *>memchr(self.buffer + qualities_start, b'\n', <size_t>(self.bytes_in_buffer - qualities_start))
-            if qualities_end_ptr == NULL:
+            qualities_end = <char *>memchr(qualities_start, b'\n', <size_t>(buffer_end - qualities_start))
+            if qualities_end == NULL:
                 self._read_into_buffer()
                 continue
-            qualities_end = qualities_end_ptr - self.buffer
 
-            if self.buffer[self.record_start] != b'@':
+            if self.record_start[0] != b'@':
                 raise FastqFormatError("Line expected to "
-                    "start with '@', but found {!r}".format(chr(self.buffer[self.record_start])),
+                    "start with '@', but found {!r}".format(chr(self.record_start[0])),
                     line=self.number_of_records * 4)
-            if self.buffer[second_header_start] != b'+':
+            if second_header_start[0] != b'+':
                 raise FastqFormatError("Line expected to "
-                    "start with '+', but found {!r}".format(chr(self.buffer[second_header_start])),
+                    "start with '+', but found {!r}".format(chr(second_header_start[0])),
                     line=self.number_of_records * 4 + 2)
 
             name_start = self.record_start + 1  # Skip @
@@ -554,26 +520,25 @@ cdef class FastqIter:
             qualities_length = qualities_end - qualities_start
 
             # Check for \r\n line-endings and compensate
-            if self.buffer[name_end - 1] == b'\r':
+            if (name_end - 1)[0] == b'\r':
                 name_length -= 1
-            if self.buffer[sequence_end - 1] == b'\r':
+            if (sequence_end - 1)[0] == b'\r':
                 sequence_length -= 1
-            if self.buffer[second_header_end - 1] == b'\r':
+            if (second_header_end - 1)[0] == b'\r':
                 second_header_length -= 1
-            if self.buffer[qualities_end - 1] == b'\r':
+            if (qualities_end - 1)[0] == b'\r':
                 qualities_length -= 1
 
             if second_header_length:  # should be 0 when only + is present
                 if (name_length != second_header_length or
-                        memcmp(self.buffer+second_header_start,
-                            self.buffer + name_start, second_header_length) != 0):
+                        memcmp(second_header_start, name_start, second_header_length) != 0):
                     raise FastqFormatError(
                         "Sequence descriptions don't match ('{}' != '{}').\n"
                         "The second sequence description must be either "
                         "empty or equal to the first description.".format(
-                            self.buffer[name_start:name_end].decode('latin-1'),
-                            self.buffer[second_header_start:second_header_end]
-                            .decode('latin-1')), line=self.number_of_records * 4 + 2)
+                            PyUnicode_DecodeASCII(name_start, name_length, NULL),
+                            PyUnicode_DecodeASCII(second_header_start, second_header_length, NULL)),
+                        line=self.number_of_records * 4 + 2)
 
             if qualities_length != sequence_length:
                 raise FastqFormatError(
@@ -590,9 +555,9 @@ cdef class FastqIter:
             qualities = PyUnicode_New(qualities_length, 127)
             if <PyObject*>name == NULL or <PyObject*>sequence == NULL or <PyObject*>qualities == NULL:
                 raise MemoryError()
-            memcpy(PyUnicode_1BYTE_DATA(name), self.buffer + name_start, name_length)
-            memcpy(PyUnicode_1BYTE_DATA(sequence), self.buffer + sequence_start, sequence_length)
-            memcpy(PyUnicode_1BYTE_DATA(qualities), self.buffer + qualities_start, qualities_length)
+            memcpy(PyUnicode_DATA(name), name_start, name_length)
+            memcpy(PyUnicode_DATA(sequence), sequence_start, sequence_length)
+            memcpy(PyUnicode_DATA(qualities), qualities_start, qualities_length)
 
             if self.use_custom_class:
                 ret_val = self.sequence_class(name, sequence, qualities)
@@ -616,12 +581,12 @@ def record_names_match(header1: str, header2: str):
     Deprecated, use `SequenceRecord.is_mate` instead
     """
     cdef:
-        char * header1_chars = NULL
-        char * header2_chars = NULL
+        char *header1_chars = NULL
+        char *header2_chars = NULL
         size_t header1_length
     if PyUnicode_CheckExact(header1):
         if PyUnicode_IS_COMPACT_ASCII(header1):
-            header1_chars = <char *>PyUnicode_1BYTE_DATA(header1)
+            header1_chars = <char *>PyUnicode_DATA(header1)
             header1_length = <size_t> PyUnicode_GET_LENGTH(header1)
         else:
             raise ValueError("header1 must be a valid ASCII-string.")
@@ -631,7 +596,7 @@ def record_names_match(header1: str, header2: str):
 
     if PyUnicode_CheckExact(header2):
         if PyUnicode_IS_COMPACT_ASCII(header2):
-            header2_chars = <char *>PyUnicode_1BYTE_DATA(header2)
+            header2_chars = <char *>PyUnicode_DATA(header2)
         else:
             raise ValueError("header2 must be a valid ASCII-string.")
     else:
