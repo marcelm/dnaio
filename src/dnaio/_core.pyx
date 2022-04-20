@@ -13,7 +13,14 @@ cdef extern from "Python.h":
     bint PyUnicode_IS_COMPACT_ASCII(object o)
     object PyUnicode_New(Py_ssize_t size, Py_UCS4 maxchar)
 
-cdef extern from "ascii_check.h":
+cdef extern from *:
+    """
+    #if defined(USE_SSE2)
+      #include "ascii_check_sse2.h"
+    #else
+      #include "ascii_check.h"
+    #endif
+    """
     int string_is_ascii(char *string, size_t length)
 
 cdef extern from "_conversions.h":
