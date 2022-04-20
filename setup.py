@@ -4,7 +4,6 @@ import sys
 from setuptools import setup, Extension
 import setuptools_scm  # noqa  Ensure it’s installed
 
-# Check for 64-bit
 if platform.machine() == "x86_64" or platform.machine() == "AMD64":
     DEFINE_MACROS = [("USE_SSE2", None)]
 else:
