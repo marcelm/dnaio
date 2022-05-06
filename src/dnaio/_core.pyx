@@ -651,7 +651,6 @@ def records_are_mates(*args):
     Returns: True or False
     """
     cdef Py_ssize_t args_length = len(args)
-    cdef Py_ssize_t i
     if args_length < 2:
         raise TypeError("records_are_mates requires at least two arguments")
 
@@ -675,8 +674,8 @@ def records_are_mates(*args):
         char end_char
         bint are_mates
 
-    for i in range(1, args_length):
-        other = <SequenceRecord>args[i]
+    for arg in args[1:]:
+        other = <SequenceRecord>arg
         other_name_obj = other._name
         other_name = <char *>PyUnicode_DATA(other._name)
         other_name_length = PyUnicode_GET_LENGTH(other._name)
