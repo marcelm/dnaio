@@ -23,6 +23,7 @@ __all__ = [
     "TwoFilePairedEndWriter",
     "read_chunks",
     "read_paired_chunks",
+    "records_are_mates",
     "__version__",
 ]
 
@@ -35,6 +36,7 @@ from ._core import (
     SequenceRecord,
 )
 from ._core import record_names_match  # noqa: F401  # deprecated
+from ._core import records_are_mates
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .singleend import _open_single

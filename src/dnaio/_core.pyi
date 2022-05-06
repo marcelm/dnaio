@@ -26,6 +26,7 @@ def paired_fastq_heads(
 
 # Deprecated
 def record_names_match(header1: str, header2: str) -> bool: ...
+def records_are_mates(*args) -> bool: ...
 
 T = TypeVar("T")
 

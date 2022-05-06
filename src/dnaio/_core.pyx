@@ -653,7 +653,7 @@ def records_are_mates(*args):
     cdef Py_ssize_t args_length = len(args)
     cdef Py_ssize_t i
     if args_length < 2:
-        raise TypeError("are_mates requires at least two arguments")
+        raise TypeError("records_are_mates requires at least two arguments")
 
 
     for arg in args:
