@@ -673,6 +673,7 @@ def records_are_mates(*args):
         Py_ssize_t other_name_length
         bint other_id_ends_with_number
         char end_char
+        bint are_mates
 
     for i in range(1, args_length):
         other = <SequenceRecord>args[i]
@@ -689,5 +690,11 @@ def records_are_mates(*args):
         other_id_ends_with_number =  b'1' <= other_name[id_length - 1] <= b'3'
 
         if id_ends_with_number and other_id_ends_with_number:
-            return memcmp(<void *>first_name, <void *>other_name, id_length - 1) == 0
-        return memcmp(<void *>first_name, <void *>other_name, id_length) == 0
+            are_mates = memcmp(<void *>first_name, <void *>other_name, id_length - 1) == 0
+        else:
+            are_mates = memcmp(<void *>first_name, <void *>other_name, id_length) == 0
+        if not are_mates:
+            return False
+
+    # All sequence records checked, no mismatches found.
+    return True
