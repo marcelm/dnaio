@@ -633,3 +633,61 @@ cdef bint record_ids_match(char *header1, char *header2, size_t header1_length):
 
     # Compare the strings up to the ID end position.
     return memcmp(<void *>header1, <void *>header2, id2_length) == 0
+
+
+def records_are_mates(*args):
+    """
+    Check if provided SequenceRecord objects are all mates of each other. 
+    Accepts 2 or more SequenceRecord objects.
+    
+    Example usage: 
+    for records in zip(*all_my_fastq_readers):
+        if not records_are_mates(*records):
+            raise MateError(f"Ids do not match for {records}")
+     
+    Args:
+        *args: 2 or more SequenceRecord objects
+
+    Returns: True or False
+    """
+    cdef Py_ssize_t args_length = len(args)
+    cdef Py_ssize_t i
+    if args_length < 2:
+        raise TypeError("are_mates requires at least two arguments")
+
+
+    for arg in args:
+        if not isinstance(arg, SequenceRecord):
+            raise TypeError(f"{arg:r} is not a SequenceRecord object")
+
+    cdef:
+        SequenceRecord first = <SequenceRecord>args[0]
+        object first_name_obj = first._name
+        char *first_name = <char *>PyUnicode_DATA(first_name_obj)
+        Py_ssize_t first_name_length = PyUnicode_GET_LENGTH(first_name_obj)
+        Py_ssize_t id_length = strcspn(first_name, b' \t')
+        bint id_ends_with_number = b'1' <= first_name[id_length - 1] <= b'3'
+        SequenceRecord other
+        object other_name_obj
+        char *other_name
+        Py_ssize_t other_name_length
+        bint other_id_ends_with_number
+        char end_char
+
+    for i in range(1, args_length):
+        other = <SequenceRecord>args[i]
+        other_name_obj = other._name
+        other_name = <char *>PyUnicode_DATA(other._name)
+        other_name_length = PyUnicode_GET_LENGTH(other._name)
+
+        if other_name_length < id_length:
+            return False
+
+        end_char = other_name[id_length]
+        if end_char != b'\000' and end_char != b' ' and end_char != b'\t':
+            return False
+        other_id_ends_with_number =  b'1' <= other_name[id_length - 1] <= b'3'
+
+        if id_ends_with_number and other_id_ends_with_number:
+            return memcmp(<void *>first_name, <void *>other_name, id_length - 1) == 0
+        return memcmp(<void *>first_name, <void *>other_name, id_length) == 0
