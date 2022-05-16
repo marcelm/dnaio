@@ -688,8 +688,8 @@ def records_are_mates(*args):
     for i in range(1, args_length):
         other = <SequenceRecord>PyTuple_GET_ITEM(args, i)
         other_name_obj = other._name
-        other_name = <char *>PyUnicode_DATA(other._name)
-        other_name_length = PyUnicode_GET_LENGTH(other._name)
+        other_name = <char *>PyUnicode_DATA(other_name_obj)
+        other_name_length = PyUnicode_GET_LENGTH(other_name_obj)
         are_mates = record_ids_match(first_name, other_name, id_length,
                                      other_name_length, id_ends_with_number)
         if not are_mates:
