@@ -611,11 +611,11 @@ def record_names_match(header1: str, header2: str):
                             header2_length, id1_ends_with_number)
 
 
-cdef bint record_ids_match(char *header1,
-                           char *header2,
-                           size_t id1_length,
-                           size_t header2_length,
-                           bint id1_ends_with_number):
+cdef inline bint record_ids_match(char *header1,
+                                  char *header2,
+                                  size_t id1_length,
+                                  size_t header2_length,
+                                  bint id1_ends_with_number):
     """
     Check whether the ASCII-encoded IDs match. 
     
