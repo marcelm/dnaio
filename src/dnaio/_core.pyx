@@ -656,7 +656,7 @@ def records_are_mates(*args):
             raise MateError(f"Ids do not match for {records}")
      
     Args:
-        *args: 2 or more SequenceRecord objects
+        *args: two or more SequenceRecord objects
 
     Returns: True or False
     """
