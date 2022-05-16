@@ -4,7 +4,9 @@ from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH, PyUnicode_DecodeASCII
+from cpython.object cimport Py_TYPE, PyTypeObject
 from cpython.ref cimport PyObject
+from cpython.tuple cimport PyTuple_GET_ITEM
 from libc.string cimport memcmp, memcpy, memchr, strcspn, memmove
 cimport cython
 
@@ -662,12 +664,14 @@ def records_are_mates(*args):
     if args_length < 2:
         raise TypeError("records_are_mates requires at least two arguments")
 
-    for arg in args:
-        if not isinstance(arg, SequenceRecord):
-            raise TypeError(f"{arg:r} is not a SequenceRecord object")
-
+    cdef Py_ssize_t i
+    cdef object item
+    for i in range(args_length):
+        item = <object>PyTuple_GET_ITEM(args, i)
+        if Py_TYPE(item) != <PyTypeObject *>SequenceRecord:
+            raise TypeError(f"{item:r} is not a SequenceRecord object")
     cdef:
-        SequenceRecord first = <SequenceRecord>args[0]
+        SequenceRecord first = <SequenceRecord>PyTuple_GET_ITEM(args, 0)
         object first_name_obj = first._name
         char *first_name = <char *>PyUnicode_DATA(first_name_obj)
         Py_ssize_t first_name_length = PyUnicode_GET_LENGTH(first_name_obj)
@@ -681,8 +685,8 @@ def records_are_mates(*args):
         char end_char
         bint are_mates
 
-    for arg in args[1:]:
-        other = <SequenceRecord>arg
+    for i in range(1, args_length):
+        other = <SequenceRecord>PyTuple_GET_ITEM(args, i)
         other_name_obj = other._name
         other_name = <char *>PyUnicode_DATA(other._name)
         other_name_length = PyUnicode_GET_LENGTH(other._name)
