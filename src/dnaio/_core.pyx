@@ -644,8 +644,9 @@ cdef inline bint record_ids_match(char *header1,
 
 def records_are_mates(*args):
     """
-    Check if provided SequenceRecord objects are all mates of each other. 
-    Accepts 2 or more SequenceRecord objects.
+    Check if provided SequenceRecord objects are all mates of each other by
+    comparing their record IDs.
+    Accepts two or more SequenceRecord objects.
     
     Example usage: 
     for records in zip(*all_my_fastq_readers):
@@ -660,7 +661,6 @@ def records_are_mates(*args):
     cdef Py_ssize_t args_length = len(args)
     if args_length < 2:
         raise TypeError("records_are_mates requires at least two arguments")
-
 
     for arg in args:
         if not isinstance(arg, SequenceRecord):
