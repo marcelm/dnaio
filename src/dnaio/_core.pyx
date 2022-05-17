@@ -664,14 +664,11 @@ def records_are_mates(*args):
     if args_length < 2:
         raise TypeError("records_are_mates requires at least two arguments")
 
-    cdef Py_ssize_t i
-    cdef object item
-    for i in range(args_length):
-        item = <object>PyTuple_GET_ITEM(args, i)
-        if Py_TYPE(item) != <PyTypeObject *>SequenceRecord:
-            raise TypeError(f"{item:r} is not a SequenceRecord object")
+    cdef SequenceRecord first = <SequenceRecord>PyTuple_GET_ITEM(args, 0)
+    if Py_TYPE(first) != <PyTypeObject *> SequenceRecord:
+        raise TypeError(f"{first:r} is not a SequenceRecord object")
+
     cdef:
-        SequenceRecord first = <SequenceRecord>PyTuple_GET_ITEM(args, 0)
         object first_name_obj = first._name
         char *first_name = <char *>PyUnicode_DATA(first_name_obj)
         Py_ssize_t first_name_length = PyUnicode_GET_LENGTH(first_name_obj)
@@ -683,17 +680,17 @@ def records_are_mates(*args):
         Py_ssize_t other_name_length
         bint other_id_ends_with_number
         char end_char
-        bint are_mates
+        bint are_mates = True
+        Py_ssize_t i
 
     for i in range(1, args_length):
         other = <SequenceRecord>PyTuple_GET_ITEM(args, i)
+        if Py_TYPE(other) != <PyTypeObject *>SequenceRecord:
+            raise TypeError(f"{other:r} is not a SequenceRecord object")
         other_name_obj = other._name
         other_name = <char *>PyUnicode_DATA(other_name_obj)
         other_name_length = PyUnicode_GET_LENGTH(other_name_obj)
-        are_mates = record_ids_match(first_name, other_name, id_length,
-                                     other_name_length, id_ends_with_number)
-        if not are_mates:
-            return False
-
-    # All sequence records checked, no mismatches found.
-    return True
+        # If a match is false, are_mates will stay false regardless of any true checks afterward.
+        are_mates &= record_ids_match(first_name, other_name, id_length,
+                                      other_name_length, id_ends_with_number)
+    return are_mates
