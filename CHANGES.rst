@@ -2,6 +2,15 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* :pr:`79`: Added a `records_are_mates` function to be used for checking whether
+  three or more records are mates of each other (by checking the ID).
+* :pr:`74`, :pr:`68`: Made FASTQ parsing faster by implementing the check for
+  ASCII using SSE vector instructions.
+* :pr:`72`: Added a `tutorial <https://dnaio.readthedocs.io/en/latest/tutorial.html>`_.
+
 v0.8.0 (2022-03-26)
 -------------------
 
