@@ -2,7 +2,7 @@
 Changelog
 =========
 
-development version
+v0.9.0 (2022-05-17)
 -------------------
 
 * :pr:`79`: Added a `records_are_mates` function to be used for checking whether
