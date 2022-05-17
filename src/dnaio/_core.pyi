@@ -23,9 +23,11 @@ class SequenceRecord:
 def paired_fastq_heads(
     buf1: ByteString, buf2: ByteString, end1: int, end2: int
 ) -> Tuple[int, int]: ...
-
-# Deprecated
-def record_names_match(header1: str, header2: str) -> bool: ...
+def records_are_mates(
+    __first_record: SequenceRecord,
+    __second_record: SequenceRecord,
+    *__other_records: SequenceRecord
+) -> bool: ...
 
 T = TypeVar("T")
 
@@ -37,3 +39,6 @@ class FastqIter:
     def __next__(self) -> T: ...
     @property
     def n_records(self) -> int: ...
+
+# Deprecated
+def record_names_match(header1: str, header2: str) -> bool: ...

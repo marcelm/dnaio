@@ -4,7 +4,9 @@ from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH, PyUnicode_DecodeASCII
+from cpython.object cimport Py_TYPE, PyTypeObject
 from cpython.ref cimport PyObject
+from cpython.tuple cimport PyTuple_GET_ITEM
 from libc.string cimport memcmp, memcpy, memchr, strcspn, memmove
 cimport cython
 
@@ -260,9 +262,12 @@ cdef class SequenceRecord:
         """
         cdef:
             char *header1_chars = <char *>PyUnicode_DATA(self._name)
-            size_t header1_length = <size_t> PyUnicode_GET_LENGTH(self._name)
             char *header2_chars = <char *>PyUnicode_DATA(other._name)
-        return record_ids_match(header1_chars, header2_chars, header1_length)
+            size_t header2_length = <size_t>PyUnicode_GET_LENGTH(other._name)
+            size_t id1_length = strcspn(header1_chars, ' \t')
+            bint id1_ends_with_number = b'1' <= header1_chars[id1_length - 1] <= b'3'
+        return record_ids_match(header1_chars, header2_chars, id1_length,
+                                header2_length, id1_ends_with_number)
 
     def reverse_complement(self):
         cdef:
@@ -587,7 +592,6 @@ def record_names_match(header1: str, header2: str):
     if PyUnicode_CheckExact(header1):
         if PyUnicode_IS_COMPACT_ASCII(header1):
             header1_chars = <char *>PyUnicode_DATA(header1)
-            header1_length = <size_t> PyUnicode_GET_LENGTH(header1)
         else:
             raise ValueError("header1 must be a valid ASCII-string.")
     else:
@@ -597,39 +601,99 @@ def record_names_match(header1: str, header2: str):
     if PyUnicode_CheckExact(header2):
         if PyUnicode_IS_COMPACT_ASCII(header2):
             header2_chars = <char *>PyUnicode_DATA(header2)
+            header2_length = <size_t> PyUnicode_GET_LENGTH(header2)
         else:
             raise ValueError("header2 must be a valid ASCII-string.")
     else:
         raise TypeError(f"Header 2 is the wrong type. Expected bytes or string, "
                         f"got: {type(header2)}")
+    cdef size_t id1_length = strcspn(header1_chars, ' \t')
+    cdef bint id1_ends_with_number =  b'1' <= header1_chars[id1_length - 1] <= b'3'
+    return record_ids_match(header1_chars, header2_chars, id1_length,
+                            header2_length, id1_ends_with_number)
 
-    return record_ids_match(header1_chars, header2_chars, header1_length)
 
-
-cdef bint record_ids_match(char *header1, char *header2, size_t header1_length):
+cdef inline bint record_ids_match(char *header1,
+                                  char *header2,
+                                  size_t id1_length,
+                                  size_t header2_length,
+                                  bint id1_ends_with_number):
     """
-    Check whether the ASCII-encoded IDs match. Only header1_length is needed.
+    Check whether the ASCII-encoded IDs match. 
+    
+    header1, header2 pointers to the ASCII-encoded headers
+    id1_length, the length of header1 before the first whitespace
+    header2_length, the full length of header2. 
+    id1_ends_with_number, whether id1 ends with a 1,2 or 3.
     """
-    # Only the read ID is of interest.
-    # Find the first tab or space, if not present, strcspn will return the
-    # position of the terminating NULL byte. (I.e. the length).
-    # Header1 is not searched because we can reuse the end of ID position of
-    # header2 as header1's ID should end at the same position.
-    cdef size_t id2_length = strcspn(header2, b' \t')
 
-    if header1_length < id2_length:
+    if header2_length < id1_length:
         return False
 
-    cdef char end = header1[id2_length]
+    cdef char end = header2[id1_length]
     if end != b'\000' and end != b' ' and end != b'\t':
         return False
 
     # Check if the IDs end with 1, 2 or 3. This is the read pair number
     # which should not be included in the comparison.
-    cdef bint id1endswithnumber = b'1' <= header1[id2_length - 1] <= b'3'
-    cdef bint id2endswithnumber = b'1' <= header2[id2_length - 1] <= b'3'
-    if id1endswithnumber and id2endswithnumber:
-        id2_length -= 1
+    cdef bint id2_ends_with_number = b'1' <= header2[id1_length - 1] <= b'3'
+    if id1_ends_with_number and id2_ends_with_number:
+        id1_length -= 1
 
     # Compare the strings up to the ID end position.
-    return memcmp(<void *>header1, <void *>header2, id2_length) == 0
+    return memcmp(<void *>header1, <void *>header2, id1_length) == 0
+
+
+def records_are_mates(*args):
+    """
+    Check if provided SequenceRecord objects are all mates of each other by
+    comparing their record IDs.
+    Accepts two or more SequenceRecord objects.
+    
+    Example usage: 
+    for records in zip(*all_my_fastq_readers):
+        if not records_are_mates(*records):
+            raise MateError(f"Ids do not match for {records}")
+     
+    Args:
+        *args: two or more SequenceRecord objects
+
+    Returns: True or False
+    """
+    cdef Py_ssize_t args_length = len(args)
+    if args_length < 2:
+        raise TypeError("records_are_mates requires at least two arguments")
+
+    cdef Py_ssize_t i
+    cdef object item
+    for i in range(args_length):
+        item = <object>PyTuple_GET_ITEM(args, i)
+        if Py_TYPE(item) != <PyTypeObject *>SequenceRecord:
+            raise TypeError(f"{item:r} is not a SequenceRecord object")
+    cdef:
+        SequenceRecord first = <SequenceRecord>PyTuple_GET_ITEM(args, 0)
+        object first_name_obj = first._name
+        char *first_name = <char *>PyUnicode_DATA(first_name_obj)
+        Py_ssize_t first_name_length = PyUnicode_GET_LENGTH(first_name_obj)
+        Py_ssize_t id_length = strcspn(first_name, b' \t')
+        bint id_ends_with_number = b'1' <= first_name[id_length - 1] <= b'3'
+        SequenceRecord other
+        object other_name_obj
+        char *other_name
+        Py_ssize_t other_name_length
+        bint other_id_ends_with_number
+        char end_char
+        bint are_mates
+
+    for i in range(1, args_length):
+        other = <SequenceRecord>PyTuple_GET_ITEM(args, i)
+        other_name_obj = other._name
+        other_name = <char *>PyUnicode_DATA(other_name_obj)
+        other_name_length = PyUnicode_GET_LENGTH(other_name_obj)
+        are_mates = record_ids_match(first_name, other_name, id_length,
+                                     other_name_length, id_ends_with_number)
+        if not are_mates:
+            return False
+
+    # All sequence records checked, no mismatches found.
+    return True

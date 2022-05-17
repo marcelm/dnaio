@@ -23,7 +23,7 @@ from dnaio import (
     InterleavedPairedEndWriter,
     TwoFilePairedEndReader,
 )
-from dnaio import record_names_match, SequenceRecord
+from dnaio import records_are_mates, record_names_match, SequenceRecord
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
@@ -670,3 +670,34 @@ class TestAsciiCheck:
         for i in range(1, len(self.ASCII_STRING) + 1):
             test_string = self.ASCII_STRING[:i] + (non_ascii_char * 8)
             assert self.bytes_ascii_check(test_string, i - 1)
+
+
+class TestRecordsAreMates:
+    def test_records_are_mates(self):
+        assert records_are_mates(
+            SequenceRecord("same_name1 some_comment", "A", "H"),
+            SequenceRecord("same_name2 other_comment", "A", "H"),
+            SequenceRecord("same_name3", "A", "H"),
+        )
+
+    @pytest.mark.parametrize("number_of_mates", list(range(2, 11)))
+    def test_lots_of_records_are_mates(self, number_of_mates):
+        mates = [SequenceRecord("name", "A", "H") for _ in range(number_of_mates)]
+        assert records_are_mates(*mates)
+
+    def test_records_are_not_mates(self):
+        assert not records_are_mates(
+            SequenceRecord("same_name1 some_comment", "A", "H"),
+            SequenceRecord("same_name2 other_comment", "A", "H"),
+            SequenceRecord("shame_name3 different_comment", "A", "H"),
+        )
+
+    def test_records_are_mates_zero_arguments(self):
+        with pytest.raises(TypeError) as error:
+            records_are_mates()
+        error.match("records_are_mates requires at least two arguments")
+
+    def test_records_are_mates_one_argument(self):
+        with pytest.raises(TypeError) as error:
+            records_are_mates(SequenceRecord("A", "A", "A"))
+        error.match("records_are_mates requires at least two arguments")
