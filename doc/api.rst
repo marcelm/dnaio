@@ -4,6 +4,7 @@ The dnaio API
 
 .. module:: dnaio
 
+
 The open function
 -----------------
 
@@ -20,40 +21,52 @@ The ``SequenceRecord`` class
    .. automethod:: __init__(name: str, sequence: str, qualities: Optional[str] = None)
 
 
-Reader and writer classes
--------------------------
-
-.. autoclass:: FastaReader
-
-.. autoclass:: FastaWriter
-   :members: write
-
-.. autoclass:: FastqReader
-
-.. autoclass:: FastqWriter
-   :members: writeseq
-
-   .. py:method:: write(record: SequenceRecord) -> None:
-
-      Write a SequenceRecord to the FASTQ file.
-
-.. autoclass:: TwoFilePairedEndReader
-
-.. autoclass:: TwoFilePairedEndWriter
-
-.. autoclass:: InterleavedPairedEndReader
-
-.. autoclass:: InterleavedPairedEndWriter
-   :members: write
+Reader and writer interfaces
+----------------------------
 
 .. autoclass:: SingleEndReader
+   :members: __iter__
 
 .. autoclass:: PairedEndReader
+   :members: __iter__
 
 .. autoclass:: SingleEndWriter
+   :members: write
 
 .. autoclass:: PairedEndWriter
    :members: write
+
+
+Reader and writer classes
+-------------------------
+
+The `dnaio.open` function returns an instance of one of the following classes.
+They can also be used directly if needed.
+
+
+.. autoclass:: FastaReader
+   :show-inheritance:
+
+.. autoclass:: FastaWriter
+   :show-inheritance:
+
+.. autoclass:: FastqReader
+   :show-inheritance:
+
+.. autoclass:: FastqWriter
+   :show-inheritance:
+
+.. autoclass:: TwoFilePairedEndReader
+   :show-inheritance:
+
+.. autoclass:: TwoFilePairedEndWriter
+   :show-inheritance:
+
+.. autoclass:: InterleavedPairedEndReader
+   :show-inheritance:
+
+.. autoclass:: InterleavedPairedEndWriter
+   :show-inheritance:
 
 
 Chunked reading of sequence records
@@ -66,6 +79,12 @@ processed there.
 
 .. autofunction:: read_chunks
 .. autofunction:: read_paired_chunks
+
+
+Functions
+---------
+
+.. autofunction:: records_are_mates
 
 
 Exceptions

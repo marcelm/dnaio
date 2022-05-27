@@ -616,11 +616,11 @@ cdef inline bint record_ids_match(char *header1,
                                   size_t header2_length,
                                   bint id1_ends_with_number):
     """
-    Check whether the ASCII-encoded IDs match. 
-    
+    Check whether the ASCII-encoded IDs match.
+
     header1, header2 pointers to the ASCII-encoded headers
     id1_length, the length of header1 before the first whitespace
-    header2_length, the full length of header2. 
+    header2_length, the full length of header2.
     id1_ends_with_number, whether id1 ends with a 1,2 or 3.
     """
 
@@ -641,19 +641,26 @@ cdef inline bint record_ids_match(char *header1,
     return memcmp(<void *>header1, <void *>header2, id1_length) == 0
 
 
-def records_are_mates(*args):
+def records_are_mates(*args) -> bool:
     """
-    Check if provided SequenceRecord objects are all mates of each other by
+    Check if the provided `SequenceRecord` objects are all mates of each other by
     comparing their record IDs.
-    Accepts two or more SequenceRecord objects.
-    
-    Example usage: 
-    for records in zip(*all_my_fastq_readers):
-        if not records_are_mates(*records):
-            raise MateError(f"Ids do not match for {records}")
-     
+    Accepts two or more `SequenceRecord` objects.
+
+    This is the same as `SequenceRecord.is_mate` in the case of only two records,
+    but allows for for cases where information is split into three records or more
+    (such as UMI, R1, R2 or index, R1, R2).
+
+    If there are only two records to check, prefer `SequenceRecord.is_mate`.
+
+    Example usage::
+
+        for records in zip(*all_my_fastq_readers):
+            if not records_are_mates(*records):
+                raise MateError(f"IDs do not match for {records}")
+
     Args:
-        *args: two or more SequenceRecord objects
+        *args: two or more `~dnaio.SequenceRecord` objects
 
     Returns: True or False
     """

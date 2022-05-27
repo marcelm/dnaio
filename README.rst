@@ -30,7 +30,8 @@ The main interface is the `dnaio.open <https://dnaio.readthedocs.io/en/latest/ap
             bp += len(record)
     print(f"The input file contains {bp/1E6:.1f} Mbp")
 
-See the `documentation <https://dnaio.readthedocs.io/>`_ for more.
+For more, see the `tutorial <https://dnaio.readthedocs.io/en/latest/tutorial.html>`_ and
+`API documentation <https://dnaio.readthedocs.io/en/latest/api.html>`_.
 
 Features and supported file types
 =================================
@@ -43,13 +44,11 @@ Features and supported file types
 - Files with DOS/Windows linebreaks can be read
 - FASTQ files with a second header line (after the ``+``) are supported
 
-
 Limitations
 ===========
 
 - Multi-line FASTQ files are not supported.
 - FASTQ parsing is the focus of this library. The FASTA parser is not as optimized.
-
 
 Links
 =====

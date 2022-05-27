@@ -140,9 +140,10 @@ class FastqWriter(FileWriter, SingleEndWriter):
 
     def write(self, record: SequenceRecord) -> None:
         """
-        Dummy method to make it possible to instantiate this class.
-        The correct write method is assigned in the constructor.
+        Write a record to the FASTQ file.
         """
+        # The 'write' attribute is overwritten in the constructor with the correct
+        # write method (_write or _write_two_headers)
         assert False
 
     def _write(self, record: SequenceRecord) -> None:
@@ -159,4 +160,5 @@ class FastqWriter(FileWriter, SingleEndWriter):
         self._file.write(record.fastq_bytes(two_headers=True))
 
     def writeseq(self, name: str, sequence: str, qualities: str) -> None:
+        # Deprecated
         self._file.write(f"@{name:s}\n{sequence:s}\n+\n{qualities:s}\n".encode("ascii"))

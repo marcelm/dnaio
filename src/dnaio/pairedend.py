@@ -62,9 +62,6 @@ def _open_paired(
 class TwoFilePairedEndReader(PairedEndReader):
     """
     Read paired-end reads from two files.
-
-    Wraps two BinaryFileReader instances, making sure that reads are properly
-    paired.
     """
 
     paired = True

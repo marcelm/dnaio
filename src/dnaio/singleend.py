@@ -16,7 +16,7 @@ def _open_single(
     qualities: Optional[bool] = None,
 ) -> Union[FastaReader, FastaWriter, FastqReader, FastqWriter]:
     """
-    Open a single sequence file. See description of open() above.
+    Open a single sequence file.
     """
     if mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")

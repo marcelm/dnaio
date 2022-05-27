@@ -89,7 +89,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
 
     def __iter__(self) -> Iterator[SequenceRecord]:
         """
-        Read next entry from the file (single entry at a time).
+        Iterate over the records in this FASTA file.
         """
         name = None
         seq: List[str] = []
@@ -165,6 +165,7 @@ class FastqReader(BinaryFileReader, SingleEndReader):
             raise
 
     def __iter__(self) -> Iterator[SequenceRecord]:
+        """Iterate over the records in this FASTQ file."""
         return self._iter
 
     @property
