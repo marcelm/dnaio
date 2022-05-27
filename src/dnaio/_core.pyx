@@ -239,10 +239,7 @@ cdef class SequenceRecord:
 
 
     def fastq_bytes_two_headers(self):
-        """
-        Return this record in FASTQ format as a bytes object where the header (after the @) is
-        repeated on the third line.
-        """
+        # Deprecated, use ``.fastq_bytes(two_headers=True)`` instead.
         return self.fastq_bytes(two_headers=True)
 
     def is_mate(self, SequenceRecord other):
