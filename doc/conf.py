@@ -36,3 +36,6 @@ default_role = "obj"  # (or "any")
 
 issues_uri = "https://github.com/marcelm/dnaio/issues/{issue}"
 issues_pr_uri = "https://github.com/marcelm/dnaio/pull/{pr}"
+
+autodoc_typehints = "description"
+python_use_unqualified_type_names = True
