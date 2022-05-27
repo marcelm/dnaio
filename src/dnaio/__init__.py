@@ -41,6 +41,7 @@ from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .singleend import _open_single
 from .pairedend import (
+    _open_paired,
     TwoFilePairedEndReader,
     TwoFilePairedEndWriter,
     InterleavedPairedEndReader,
@@ -77,7 +78,7 @@ def open(
     opener=xopen
 ) -> Union[SingleEndReader, PairedEndReader, SingleEndWriter, PairedEndWriter]:
     """
-    Open sequence files in FASTA or FASTQ format for reading or writing.
+    Open one or two files in FASTA or FASTQ format for reading or writing.
 
     Parameters:
 
@@ -104,14 +105,15 @@ def open(
       qualities:
         When mode is ``'w'`` and fileformat is *None*, this can be set
         to *True* or *False* to specify whether the written sequences will have
-        quality values. This is is used in two ways:
+        quality values. This is used in two ways:
 
         - If the output format cannot be determined (unrecognized extension
-          etc), no exception is raised, but fasta or fastq format is chosen
+          etc.), no exception is raised, but FASTA or FASTQ format is chosen
           appropriately.
 
         - When False (no qualities available), an exception is raised when the
           auto-detected output format is FASTQ.
+
       opener: A function that is used to open file1 and file2 if they are not
         already open file-like objects. By default, ``xopen`` is used, which can
         also open compressed file formats.
@@ -122,41 +124,19 @@ def open(
     """
     if mode not in ("r", "rb", "w", "a"):
         raise ValueError("Mode must be 'r', 'rb', 'w' or 'a'")
-    if interleaved and file2 is not None:
-        raise ValueError("When interleaved is set, file2 must be None")
-
-    if file2 is not None:
-        if mode in "wa" and file1 == file2:
-            raise ValueError("The paired-end output files are identical")
-        if "r" in mode:
-            return TwoFilePairedEndReader(
-                file1, file2, fileformat=fileformat, opener=opener, mode=mode
-            )
-        append = mode == "a"
-        return TwoFilePairedEndWriter(
+    elif interleaved and file2 is not None:
+        raise ValueError("When interleaved is True, file2 must be None")
+    elif interleaved or file2 is not None:
+        return _open_paired(
             file1,
-            file2,
-            fileformat=fileformat,
-            qualities=qualities,
+            file2=file2,
             opener=opener,
-            append=append,
-        )
-    if interleaved:
-        if "r" in mode:
-            return InterleavedPairedEndReader(
-                file1, fileformat=fileformat, opener=opener, mode=mode
-            )
-        append = mode == "a"
-        return InterleavedPairedEndWriter(
-            file1,
             fileformat=fileformat,
+            interleaved=interleaved,
+            mode=mode,
             qualities=qualities,
-            opener=opener,
-            append=append,
         )
-
-    # The multi-file options have been dealt with, delegate rest to the
-    # single-file function.
-    return _open_single(
-        file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities
-    )
+    else:
+        return _open_single(
+            file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities
+        )
