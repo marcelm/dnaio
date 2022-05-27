@@ -4,6 +4,7 @@ Classes for reading FASTA and FASTQ files
 __all__ = ["FastaReader", "FastqReader"]
 
 import io
+from os import PathLike
 from typing import Union, BinaryIO, Optional, Iterator, List
 
 from xopen import xopen
@@ -25,7 +26,7 @@ class BinaryFileReader:
 
     def __init__(
         self,
-        file: Union[str, BinaryIO],
+        file: Union[PathLike, str, BinaryIO],
         *,
         opener=xopen,
         _close_file: Optional[bool] = None,
@@ -67,7 +68,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
 
     def __init__(
         self,
-        file: Union[str, BinaryIO],
+        file: Union[PathLike, str, BinaryIO],
         *,
         keep_linebreaks: bool = False,
         sequence_class=SequenceRecord,
@@ -128,7 +129,7 @@ class FastqReader(BinaryFileReader, SingleEndReader):
 
     def __init__(
         self,
-        file: Union[str, BinaryIO],
+        file: Union[PathLike, str, BinaryIO],
         *,
         sequence_class=SequenceRecord,
         buffer_size: int = 128 * 1024,  # Buffer size used by cat, pigz etc.
