@@ -63,7 +63,7 @@ which has a `~dnaio.FastqWriter.write()` method that accepts a ``SequenceRecord`
 
 Instead of constructing a single record from scratch,
 in practice it is more realistic to take input reads,
-process them somehow and write them to a new output file.
+process them, and write them to a new output file.
 The following example program shows how that can be done.
 It truncates all reads in the input file to a length of 30 nt
 and writes them to another file::
