@@ -3,7 +3,7 @@ Tutorial
 
 This should get you started with using ``dnaio``.
 The only essential concepts to know about are
-the `dnaio.open` function and the `SequenceRecord` object.
+the `dnaio.open` function and the `~dnaio.SequenceRecord` object.
 
 
 Reading
@@ -35,7 +35,7 @@ A ``SequenceRecord`` has the attributes ``name``, ``sequence``
 and ``qualities``. All of these are ``str`` objects.
 The ``qualities`` attribute is ``None`` when reading FASTA files.
 
-This program uses the ``name`` attribute
+The following program uses the ``name`` attribute
 to check whether any sequence names are duplicated in a FASTA file::
 
     import dnaio
@@ -59,12 +59,13 @@ pass the ``mode="w"`` argument to ``dnaio.open``::
         writer.write(dnaio.SequenceRecord("name", "ACGT", "#B!#"))
 
 Here, a `~dnaio.FastqWriter` object is returned by ``dnaio.open``,
-which has a ``~dnaio.FastqWriter.write()`` method that accepts a ``SequenceRecord``.
+which has a `~dnaio.FastqWriter.write()` method that accepts a ``SequenceRecord``.
 
 Instead of constructing a single record from scratch,
-it may be more realistic to take input reads,
-process them somehow and write them to a new output file.
-The following program truncates all reads in the input file to a length of 30 nt
+in practice it is more realistic to take input reads,
+process them, and write them to a new output file.
+The following example program shows how that can be done.
+It truncates all reads in the input file to a length of 30 nt
 and writes them to another file::
 
     import dnaio
@@ -76,7 +77,7 @@ and writes them to another file::
 
 This also shows that `~dnaio.SequenceRecord` objects support slicing:
 ``record[:30]`` returns a new ``SequenceRecord`` object with the sequence and qualities
-trimmed to the first 30 characters (leaving the name unchanged).
+trimmed to the first 30 characters, leaving the name unchanged.
 
 
 Paired-end data
@@ -100,7 +101,7 @@ In this example, ``dnaio.open`` returns a `~dnaio.TwoFilePairedEndReader`.
 It also supports iteration, but instead of a single ``SequenceRecord``,
 it returns a pair of them.
 
-To read from interleaved paired-end data, the only change needed is to
+To read from interleaved paired-end data,
 pass ``interleaved=True`` to ``dnaio.open`` instead of a second file name::
 
     ...
@@ -110,11 +111,11 @@ pass ``interleaved=True`` to ``dnaio.open`` instead of a second file name::
 The ``PairedEndReader`` classes check whether the input files are properly paired,
 that is, whether they have the same number of reads in both inputs and whether the
 read names match.
-For this reason, always use a single call to ``dnaio.open`` to open paired-end files.
-(Avoid opening them as two single-end files.)
+For this reason, always use a single call to ``dnaio.open`` to open paired-end files
+(that is, avoid opening them as two single-end files.)
 
 To demonstrate how to write paired-end data,
-we show a program that reads from a single-end FASTQ file and converts them to
+we show a program that reads from a single-end FASTQ file and converts the records to
 simulated paired-end reads by writing the first 30 nt to R1 and the last 30 nt
 to R2::
 

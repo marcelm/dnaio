@@ -12,12 +12,56 @@ from .writers import FastaWriter, FastqWriter
 from .singleend import _open_single
 
 
+def _open_paired(
+    file1: Union[str, PathLike, BinaryIO],
+    *,
+    file2: Optional[Union[str, PathLike, BinaryIO]] = None,
+    fileformat: Optional[str] = None,
+    interleaved: bool = False,
+    mode: str = "r",
+    qualities: Optional[bool] = None,
+    opener=xopen,
+) -> Union[PairedEndReader, PairedEndWriter]:
+    """
+    Open paired-end reads
+    """
+    if interleaved and file2 is not None:
+        raise ValueError("When interleaved is True, file2 must be None")
+    if file2 is not None:
+        if mode in "wa" and file1 == file2:
+            raise ValueError("The paired-end output files are identical")
+        if "r" in mode:
+            return TwoFilePairedEndReader(
+                file1, file2, fileformat=fileformat, opener=opener, mode=mode
+            )
+        append = mode == "a"
+        return TwoFilePairedEndWriter(
+            file1,
+            file2,
+            fileformat=fileformat,
+            qualities=qualities,
+            opener=opener,
+            append=append,
+        )
+    if interleaved:
+        if "r" in mode:
+            return InterleavedPairedEndReader(
+                file1, fileformat=fileformat, opener=opener, mode=mode
+            )
+        append = mode == "a"
+        return InterleavedPairedEndWriter(
+            file1,
+            fileformat=fileformat,
+            qualities=qualities,
+            opener=opener,
+            append=append,
+        )
+    assert False
+
+
 class TwoFilePairedEndReader(PairedEndReader):
     """
     Read paired-end reads from two files.
-
-    Wraps two BinaryFileReader instances, making sure that reads are properly
-    paired.
     """
 
     paired = True
