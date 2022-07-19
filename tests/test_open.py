@@ -1,4 +1,3 @@
-import itertools
 import os
 from pathlib import Path
 
@@ -307,20 +306,20 @@ def test_islice_gzip_does_not_fail(tmp_path):
 
 def test_unsupported_mode():
     with pytest.raises(ValueError) as error:
-        f = dnaio.open(os.devnull, mode="x")
+        _ = dnaio.open(os.devnull, mode="x")
     error.match("Mode must be")
 
 
 def test_no_file2_with_multiple_args():
     with pytest.raises(ValueError) as error:
-        f = dnaio.open(os.devnull, os.devnull, file2=os.devnull)
+        _ = dnaio.open(os.devnull, os.devnull, file2=os.devnull)
     error.match("multiple")
     error.match("file2")
 
 
 def test_no_multiple_files_interleaved():
     with pytest.raises(ValueError) as error:
-        f = dnaio.open(os.devnull, os.devnull, interleaved=True)
+        _ = dnaio.open(os.devnull, os.devnull, interleaved=True)
     error.match("interleaved")
     error.match("one file")
 

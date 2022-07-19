@@ -28,7 +28,7 @@ __all__ = [
 ]
 
 from os import PathLike
-from typing import Iterable, Optional, Union, BinaryIO
+from typing import Optional, Union, BinaryIO
 
 from xopen import xopen
 
