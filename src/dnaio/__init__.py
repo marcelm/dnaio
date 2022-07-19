@@ -69,9 +69,8 @@ Sequence = SequenceRecord
 
 def open(
     file1: Union[str, PathLike, BinaryIO],
-    *,
+    *files: Union[str, PathLike, BinaryIO],
     file2: Optional[Union[str, PathLike, BinaryIO]] = None,
-    files: Optional[Iterable[Union[str, PathLike, BinaryIO]]],
     fileformat: Optional[str] = None,
     interleaved: bool = False,
     mode: str = "r",
