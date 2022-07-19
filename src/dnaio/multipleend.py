@@ -88,6 +88,7 @@ class MultipleFileWriter:
             raise ValueError("At least one file is required")
         mode = "a" if append else "w"
         self.files = files
+        self.number_of_files = len(files)
         self.writers: List[Union[FastaWriter, FastqWriter]] = [
             _open_single(
                 file,
@@ -108,3 +109,14 @@ class MultipleFileWriter:
     def close(self):
         for writer in self.writers:
             writer.close()
+
+    def write(self, records: Tuple[SequenceRecord, ...]):
+        if len(records) != self.number_of_files:
+            raise ValueError(f"records must have length {self.number_of_files}")
+        for record, writer in zip(records, self.writers):
+            writer.write(record)
+
+    def write_iterable(self,
+                       records_iterable: Iterable[Tuple[SequenceRecord, ...]]):
+        for records in records_iterable:
+            self.write(records)
