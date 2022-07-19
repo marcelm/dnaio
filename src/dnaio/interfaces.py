@@ -5,6 +5,9 @@ from dnaio import SequenceRecord
 
 
 class SingleEndReader(ABC):
+    delivers_qualities: bool
+    number_of_records: int
+
     @abstractmethod
     def __iter__(self) -> Iterator[SequenceRecord]:
         """Yield the records in the input as `SequenceRecord` objects."""

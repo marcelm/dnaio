@@ -1,11 +1,11 @@
 from os import PathLike
-from typing import BinaryIO, Iterable, Iterator, Optional, Tuple, Union
+from typing import BinaryIO, Iterable, Iterator, List, Optional, Tuple, Union
 
 from xopen import xopen
 
 from ._core import SequenceRecord, records_are_mates
 from .exceptions import FileFormatError
-from .interfaces import SingleEndReader
+from .readers import FastaReader, FastqReader
 from .singleend import _open_single
 
 
@@ -20,8 +20,9 @@ class MultipleFileReader:
         self.number_of_files = len(self.files)
         if self.number_of_files < 1:
             raise ValueError("At least one file is required")
-        self.readers: SingleEndReader = [
-            _open_single(file, opener=opener, fileformat=fileformat, mode="r")
+        self.readers: List[Union[FastaReader, FastqReader]] = [
+            _open_single(file, opener=opener, fileformat=fileformat, mode="r"
+                         )  # type: ignore
             for file in self.files
         ]
         self.delivers_qualities: bool = self.readers[0].delivers_qualities
@@ -57,7 +58,7 @@ class MultipleFileReader:
         # of records..
         for reader in self.readers:
             try:
-                _ = next(reader)
+                _ = next(iter(reader))
             except StopIteration:
                 pass
         record_numbers = [r.number_of_records for r in self.readers]
