@@ -22,19 +22,6 @@ class PairedEndReader(ABC):
         """
 
 
-class MultipleFileReader(ABC):
-    @abstractmethod
-    def __iter__(self) -> Iterator[Tuple[SequenceRecord, ...]]:
-        """
-        Yields the records as N-tuples depending on the number of input files.
-
-        If there are two or more files, it will raise a `FileFormatError`
-        if reads are improperly paired. That is when there are more reads in
-        one file than the others or if the record IDs do not match (according
-        to `SequenceRecord.is_mate` or `records_are_mates`).
-        """
-
-
 class SingleEndWriter(ABC):
     @abstractmethod
     def write(self, record: SequenceRecord) -> None:
