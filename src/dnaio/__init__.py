@@ -28,7 +28,7 @@ __all__ = [
 ]
 
 from os import PathLike
-from typing import Optional, Union, BinaryIO
+from typing import Iterable, Optional, Union, BinaryIO
 
 from xopen import xopen
 
@@ -71,6 +71,7 @@ def open(
     file1: Union[str, PathLike, BinaryIO],
     *,
     file2: Optional[Union[str, PathLike, BinaryIO]] = None,
+    files: Optional[Iterable[Union[str, PathLike, BinaryIO]]],
     fileformat: Optional[str] = None,
     interleaved: bool = False,
     mode: str = "r",
@@ -89,6 +90,12 @@ def open(
       file2:
         Path or an open file-like object. When reading paired-end reads from
         two files, set this to the second file.
+
+      files:
+        An iterable of Paths or open file-like objects. For reading N files.
+        Returns an iterator over N-tuples of SequenceRecord (for reading) or
+        writes N-tuples to files (for writing). N can be any positive number
+        including 1.
 
       mode:
         Either ``'r'``, ``'w'`` for writing or ``'a'`` for appending.
