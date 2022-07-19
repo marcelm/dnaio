@@ -146,7 +146,7 @@ def open(
             qualities=qualities,
         )
     if len(files) > 1:  # 3 or more files
-        open_multiple(
+        return open_multiple(
             file1,
             *files,
             fileformat=fileformat,
