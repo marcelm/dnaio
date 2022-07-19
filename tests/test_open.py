@@ -325,11 +325,11 @@ def test_no_multiple_files_interleaved():
     error.match("one file")
 
 
-@pytest.mark.parametrize(["mode", "expected_class"],
-                         [("r", dnaio.PairedEndReader),
-                          ("w", dnaio.PairedEndWriter)])
-def test_paired_open_with_multiple_args(tmp_path, fileformat, mode,
-                                        expected_class):
+@pytest.mark.parametrize(
+    ["mode", "expected_class"],
+    [("r", dnaio.PairedEndReader), ("w", dnaio.PairedEndWriter)],
+)
+def test_paired_open_with_multiple_args(tmp_path, fileformat, mode, expected_class):
     path = tmp_path / "file"
     path2 = tmp_path / "file2"
     path.touch()
@@ -338,12 +338,15 @@ def test_paired_open_with_multiple_args(tmp_path, fileformat, mode,
     assert isinstance(f, expected_class)
 
 
-@pytest.mark.parametrize(["kwargs", "expected_class"],[
-                         ({}, dnaio.multipleend.MultipleFileReader),
-                         ({"mode": "w"}, dnaio.multipleend.MultipleFastqWriter),
-                         ({"mode": "w", "fileformat": "fastq"}, dnaio.multipleend.MultipleFastqWriter),
-                         ({"mode": "w", "fileformat": "fasta"}, dnaio.multipleend.MultipleFastaWriter),
-                         ])
+@pytest.mark.parametrize(
+    ["kwargs", "expected_class"],
+    [
+        ({}, dnaio.multipleend.MultipleFileReader),
+        ({"mode": "w"}, dnaio.multipleend.MultipleFastqWriter),
+        ({"mode": "w", "fileformat": "fastq"}, dnaio.multipleend.MultipleFastqWriter),
+        ({"mode": "w", "fileformat": "fasta"}, dnaio.multipleend.MultipleFastaWriter),
+    ],
+)
 def test_multiple_open_fastq(kwargs, expected_class):
     f = dnaio.open(os.devnull, os.devnull, os.devnull, **kwargs)
     assert isinstance(f, expected_class)
