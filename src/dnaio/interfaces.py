@@ -45,7 +45,7 @@ class PairedEndWriter(ABC):
         """
 
 
-class MultipleEndWriter(ABC):
+class MultipleFileWriter(ABC):
     number_of_files: int
 
     @abstractmethod

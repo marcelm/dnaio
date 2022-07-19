@@ -342,7 +342,7 @@ def test_paired_open_with_multiple_args(tmp_path, fileformat, mode,
                          ({}, dnaio.multipleend.MultipleFileReader),
                          ({"mode": "w"}, dnaio.multipleend.MultipleFastqWriter),
                          ({"mode": "w", "fileformat": "fastq"}, dnaio.multipleend.MultipleFastqWriter),
-                         ({"mode": "w", "fileformat": "fasta"}, dnaio.multipleend.MultipleFileWriter),
+                         ({"mode": "w", "fileformat": "fasta"}, dnaio.multipleend.MultipleFastaWriter),
                          ])
 def test_multiple_open_fastq(kwargs, expected_class):
     f = dnaio.open(os.devnull, os.devnull, os.devnull, **kwargs)

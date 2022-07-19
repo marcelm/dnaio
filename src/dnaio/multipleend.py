@@ -5,7 +5,7 @@ from xopen import xopen
 
 from ._core import SequenceRecord, records_are_mates
 from .exceptions import FileFormatError
-from .interfaces import MultipleEndWriter
+from .interfaces import MultipleFileWriter
 from .readers import FastaReader, FastqReader
 from .singleend import _open_single
 from .writers import FastaWriter, FastqWriter
@@ -25,9 +25,7 @@ def open_multiple(
     append = True if mode == "a" else False
     if fileformat == "fastq" or qualities or (fileformat is None and qualities is None):
         return MultipleFastqWriter(*files, opener=opener, append=append)
-    return MultipleFileWriter(
-        *files, fileformat=fileformat, qualities=qualities, opener=opener, append=append
-    )
+    return MultipleFastaWriter(*files, opener=opener, append=append)
 
 
 class MultipleFileReader:
@@ -94,13 +92,17 @@ class MultipleFileReader:
         for reader in self.readers:
             reader.close()
 
+    def __enter__(self):
+        return self
 
-class MultipleFileWriter(MultipleEndWriter):
+    def __exit__(self, *exc):
+        self.close()
+
+
+class MultipleFastaWriter(MultipleFileWriter):
     def __init__(
         self,
         *files: Union[str, PathLike, BinaryIO],
-        fileformat: Optional[str] = "fastq",
-        qualities: Optional[bool] = None,
         opener=xopen,
         append: bool = False,
     ):
@@ -113,9 +115,9 @@ class MultipleFileWriter(MultipleEndWriter):
             _open_single(
                 file,
                 opener=opener,
-                fileformat=fileformat,
+                fileformat="fasta",
                 mode=mode,
-                qualities=qualities,
+                qualities=False,
             )  # type: ignore
             for file in self.files
         ]
@@ -140,11 +142,14 @@ class MultipleFileWriter(MultipleEndWriter):
         for records in records_iterable:
             self.write(*records)
 
+    def __enter__(self):
+        return self
 
-class MultipleFastqWriter(MultipleEndWriter):
-    """An optimized fast version of MultipleFileWriter specialized for FASTQ
-    files"""
+    def __exit__(self, *exc):
+        self.close()
 
+
+class MultipleFastqWriter(MultipleFileWriter):
     def __init__(
         self,
         *files: Union[str, PathLike, BinaryIO],
@@ -198,3 +203,9 @@ class MultipleFastqWriter(MultipleEndWriter):
             for records in records_iterable:
                 for record, output in zip(records, writers):
                     output.write(record.fastq_bytes())
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
