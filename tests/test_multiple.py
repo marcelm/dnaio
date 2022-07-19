@@ -1,4 +1,5 @@
 import itertools
+import os
 from pathlib import Path
 from dnaio.multipleend import open_multiple
 
@@ -17,3 +18,23 @@ def test_read_files(fileformat, number_of_files):
             pass
         assert len(records) == number_of_files
         assert isinstance(records, tuple)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        dict(mode="w", fileformat="fasta"),
+        dict(mode="r"),
+        dict(mode="w", fileformat="fastq"),
+    ],
+)
+def test_open_no_file_error(kwargs):
+    with pytest.raises(ValueError):
+        open_multiple(**kwargs)
+
+
+def test_open_multiple_unsupported_mode():
+    with pytest.raises(ValueError) as error:
+        open_multiple(os.devnull, mode="X")
+    error.match("mode")
+

@@ -19,7 +19,7 @@ def open_multiple(
     opener=xopen,
 ):
     if mode not in ("r", "w", "a"):
-        raise ValueError("Mode must be one of 'r', 'w', 'a'")
+        raise ValueError("mode must be one of 'r', 'w', 'a'")
     if mode == "r":
         return MultipleFileReader(*files, fileformat=fileformat, opener=opener)
     append = True if mode == "a" else False
