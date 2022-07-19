@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import BinaryIO, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import BinaryIO, IO, Iterable, Iterator, List, Optional, Tuple, Union
 
 from xopen import xopen
 
@@ -116,7 +116,65 @@ class MultipleFileWriter:
         for record, writer in zip(records, self.writers):
             writer.write(record)
 
-    def write_iterable(self,
-                       records_iterable: Iterable[Tuple[SequenceRecord, ...]]):
+    def write_iterable(self, records_iterable: Iterable[Tuple[SequenceRecord, ...]]):
         for records in records_iterable:
             self.write(records)
+
+
+class MultipleFastqWriter:
+    """An optimized fast version of MultipleFileWriter specialized for FASTQ
+    files"""
+
+    def __init__(
+        self,
+        *files: Union[str, PathLike, BinaryIO],
+        opener=xopen,
+        append: bool = False,
+    ):
+        if len(files) < 1:
+            raise ValueError("At least one file is required")
+        mode = "a" if append else "w"
+        self.files = files
+        self.number_of_files = len(files)
+        self.writers: List[IO] = [opener(file, mode + "b") for file in self.files]
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}" f"({', '.join(str(f) for f in self.files)})"
+
+    def close(self):
+        for writer in self.writers:
+            writer.close()
+
+    def write(self, records: Tuple[SequenceRecord, ...]):
+        if len(records) != self.number_of_files:
+            raise ValueError(f"records must have length {self.number_of_files}")
+        for record, writer in zip(records, self.writers):
+            writer.write(record.fastq_bytes())
+
+    def write_iterable(self, records_iterable: Iterable[Tuple[SequenceRecord, ...]]):
+        # Use faster methods for more common cases before falling back to
+        # generic multiple files mode (which is much slower due to calling the
+        # zip function).
+        if self.number_of_files == 1:
+            output = self.writers[0]
+            for (record,) in records_iterable:
+                output.write(record.fastq_bytes())
+        elif self.number_of_files == 2:
+            output1 = self.writers[0]
+            output2 = self.writers[1]
+            for record1, record2 in records_iterable:
+                output1.write(record1.fastq_bytes())
+                output2.write(record2.fastq_bytes())
+        elif self.number_of_files == 3:
+            output1 = self.writers[0]
+            output2 = self.writers[1]
+            output3 = self.writers[2]
+            for record1, record2, record3 in records_iterable:
+                output1.write(record1.fastq_bytes())
+                output2.write(record2.fastq_bytes())
+                output3.write(record3.fastq_bytes())
+        else:  # More than 3 files is quite uncommon.
+            writers = self.writers
+            for records in records_iterable:
+                for record, output in zip(records, writers):
+                    output.write(record.fastq_bytes())
