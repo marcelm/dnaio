@@ -76,3 +76,15 @@ def test_multiple_write_too_much(number_of_files, fileformat):
         with pytest.raises(ValueError) as error:
             writer.write(*records)
     error.match(str(number_of_files))
+
+
+@pytest.mark.parametrize(
+    ["number_of_files", "fileformat"],
+    itertools.product((1, 2, 3, 4), ("fastq", "fasta")),
+)
+def test_multiple_write_iterable(number_of_files, fileformat):
+    files = [io.BytesIO() for _ in range(number_of_files)]
+    records = [SequenceRecord("A", "A", "A") for _ in range(number_of_files)]
+    records_list = [records, records, records]
+    with open_multiple(*files, mode="w", fileformat=fileformat) as writer:
+        writer.write_iterable(records_list)
