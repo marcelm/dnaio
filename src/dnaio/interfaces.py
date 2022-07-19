@@ -49,9 +49,9 @@ class MultipleEndWriter(ABC):
     number_of_files: int
 
     @abstractmethod
-    def write(self, records: Tuple[SequenceRecord, ...]) -> None:
+    def write(self, *records: SequenceRecord) -> None:
         """
-        Write a N-tuple of SequenceRecords to the output. N should be equal
+        Writes N SequenceRecords to the output. N should be equal
         to the number of files the MultipleFileWriter was initiated with.
 
         This method does not check whether the records are properly paired.

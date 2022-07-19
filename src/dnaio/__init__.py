@@ -47,6 +47,7 @@ from .pairedend import (
     InterleavedPairedEndReader,
     InterleavedPairedEndWriter,
 )
+from .multipleend import open_multiple
 from .exceptions import (
     UnknownFileFormat,
     FileFormatError,
@@ -90,12 +91,6 @@ def open(
         Path or an open file-like object. When reading paired-end reads from
         two files, set this to the second file.
 
-      files:
-        An iterable of Paths or open file-like objects. For reading N files.
-        Returns an iterator over N-tuples of SequenceRecord (for reading) or
-        writes N-tuples to files (for writing). N can be any positive number
-        including 1.
-
       mode:
         Either ``'r'``, ``'w'`` for writing or ``'a'`` for appending.
 
@@ -129,9 +124,18 @@ def open(
     """
     if mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")
-    elif interleaved and file2 is not None:
-        raise ValueError("When interleaved is True, file2 must be None")
-    elif interleaved or file2 is not None:
+    if files and file2 is not None:
+        raise ValueError(
+            "the file2 argument can not be used when multiple "
+            "input files are specified."
+        )
+    if len(files) == 1:
+        file2 = files[0]
+    if interleaved and (file2 is not None or files):
+        raise ValueError(
+            "When interleaved is True only one file must be " "specified as input."
+        )
+    if interleaved or file2 is not None:
         return _open_paired(
             file1,
             file2=file2,
@@ -141,7 +145,18 @@ def open(
             mode=mode,
             qualities=qualities,
         )
+    if len(files) > 1:  # 3 or more files
+        open_multiple(
+            file1,
+            *files,
+            fileformat=fileformat,
+            mode=mode,
+            qualities=qualities,
+            opener=opener
+        )
+
     else:
         return _open_single(
             file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities
         )
+    assert False

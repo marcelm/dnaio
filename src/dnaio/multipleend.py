@@ -11,6 +11,25 @@ from .singleend import _open_single
 from .writers import FastaWriter, FastqWriter
 
 
+def open_multiple(
+    *files: Union[str, PathLike, BinaryIO],
+    fileformat: Optional[str] = None,
+    mode: str = "r",
+    qualities: Optional[bool] = None,
+    opener=xopen,
+):
+    if mode not in ("r", "w", "a"):
+        raise ValueError("Mode must be one of 'r', 'w', 'a'")
+    if mode == "r":
+        return MultipleFileReader(*files, fileformat=fileformat, opener=opener)
+    append = True if mode == "a" else False
+    if fileformat == "fastq" or qualities or (fileformat is None and qualities is None):
+        return MultipleFastqWriter(*files, opener=opener, append=append)
+    return MultipleFileWriter(
+        *files, fileformat=fileformat, qualities=qualities, opener=opener, append=append
+    )
+
+
 class MultipleFileReader:
     def __init__(
         self,
@@ -111,7 +130,7 @@ class MultipleFileWriter(MultipleEndWriter):
         for writer in self.writers:
             writer.close()
 
-    def write(self, records: Tuple[SequenceRecord, ...]):
+    def write(self, *records: SequenceRecord):
         if len(records) != self.number_of_files:
             raise ValueError(f"records must have length {self.number_of_files}")
         for record, writer in zip(records, self.writers):
@@ -119,7 +138,7 @@ class MultipleFileWriter(MultipleEndWriter):
 
     def write_iterable(self, records_iterable: Iterable[Tuple[SequenceRecord, ...]]):
         for records in records_iterable:
-            self.write(records)
+            self.write(*records)
 
 
 class MultipleFastqWriter(MultipleEndWriter):
@@ -146,7 +165,7 @@ class MultipleFastqWriter(MultipleEndWriter):
         for writer in self.writers:
             writer.close()
 
-    def write(self, records: Tuple[SequenceRecord, ...]):
+    def write(self, *records: SequenceRecord):
         if len(records) != self.number_of_files:
             raise ValueError(f"records must have length {self.number_of_files}")
         for record, writer in zip(records, self.writers):
