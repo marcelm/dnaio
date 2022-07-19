@@ -91,8 +91,7 @@ def open(
         two files, set this to the second file.
 
       mode:
-        Either ``'r'`` or ``'rb'`` for reading, ``'w'`` for writing
-        or ``'a'`` for appending.
+        Either ``'r'``, ``'w'`` for writing or ``'a'`` for appending.
 
       interleaved:
         If True, then file1 contains interleaved paired-end data.
@@ -122,8 +121,8 @@ def open(
        A subclass of `SingleEndReader`, `PairedEndReader`, `SingleEndWriter` or
        `PairedEndWriter`.
     """
-    if mode not in ("r", "rb", "w", "a"):
-        raise ValueError("Mode must be 'r', 'rb', 'w' or 'a'")
+    if mode not in ("r", "w", "a"):
+        raise ValueError("Mode must be 'r', 'w' or 'a'")
     elif interleaved and file2 is not None:
         raise ValueError("When interleaved is True, file2 must be None")
     elif interleaved or file2 is not None:
