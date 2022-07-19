@@ -60,7 +60,8 @@ class MultipleFileReader:
                 if not record1.is_mate(record2):
                     raise FileFormatError(
                         f"Records are out of sync, names "
-                        f"{record1}, f{record2} do not match.",
+                        f"{repr(record1.name)}, {repr(record2.name)} "
+                        f"do not match.",
                         line=None,
                     )
                 yield record1, record2
@@ -69,7 +70,7 @@ class MultipleFileReader:
                 if not records_are_mates(*records):
                     raise FileFormatError(
                         f"Records are out of sync, names "
-                        f"{', '.join(r.name for r in records)} do not match.",
+                        f"{', '.join(repr(r.name) for r in records)} do not match.",
                         line=None,
                     )
                 yield records

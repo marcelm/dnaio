@@ -3,6 +3,7 @@ import itertools
 import os
 from pathlib import Path
 
+import dnaio
 from dnaio import SequenceRecord, open_multiple
 
 import pytest
@@ -88,3 +89,33 @@ def test_multiple_write_iterable(number_of_files, fileformat):
     records_list = [records, records, records]
     with open_multiple(*files, mode="w", fileformat=fileformat) as writer:
         writer.write_iterable(records_list)
+
+
+@pytest.mark.parametrize("number_of_files", (2, 3, 4))
+def test_multiple_read_unmatched_names(number_of_files):
+    record1_content = b"@my_fastq\nAGC\n+\nHHH\n"
+    record2_content = b"@my_fasterq\nAGC\n+\nHHH\n"
+    files = (
+        io.BytesIO(record1_content),
+        *(io.BytesIO(record2_content) for _ in range(number_of_files - 1)),
+    )
+    with open_multiple(*files) as reader:
+        with pytest.raises(dnaio.FileFormatError) as error:
+            for records in reader:
+                pass
+    error.match("do not match")
+
+
+@pytest.mark.parametrize("number_of_files", (2, 3, 4))
+def test_multiple_read_out_of_sync(number_of_files):
+    record1_content = b"@my_fastq\nAGC\n+\nHHH\n"
+    record2_content = b"@my_fastq\nAGC\n+\nHHH\n@my_secondfastq\nAGC\n+\nHHH\n"
+    files = (
+        io.BytesIO(record1_content),
+        *(io.BytesIO(record2_content) for _ in range(number_of_files - 1)),
+    )
+    with open_multiple(*files) as reader:
+        with pytest.raises(dnaio.FileFormatError) as error:
+            for records in reader:
+                pass
+    error.match("unequal amount")
