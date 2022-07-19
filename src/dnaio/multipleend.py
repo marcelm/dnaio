@@ -161,7 +161,10 @@ class MultipleFastqWriter(MultipleFileWriter):
         mode = "a" if append else "w"
         self.files = files
         self.number_of_files = len(files)
-        self.writers: List[IO] = [opener(file, mode + "b") for file in self.files]
+        self.writers: List[IO] = [
+            opener(file, mode + "b") if not hasattr(file, "write") else file
+            for file in self.files
+        ]
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}" f"({', '.join(str(f) for f in self.files)})"
