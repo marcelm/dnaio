@@ -16,3 +16,4 @@ def test_read_files(fileformat, number_of_files):
         for records in multiple_reader:
             pass
         assert len(records) == number_of_files
+        assert isinstance(records, tuple)

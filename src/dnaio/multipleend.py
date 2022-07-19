@@ -54,7 +54,7 @@ class MultipleFileReader:
 
     def __iter__(self) -> Iterator[Tuple[SequenceRecord, ...]]:
         if len(self.files) == 1:
-            return zip(self.readers[0])
+            yield from zip(self.readers[0])
         elif len(self.files) == 2:
             for record1, record2 in zip(*self.readers):
                 if not record1.is_mate(record2):
