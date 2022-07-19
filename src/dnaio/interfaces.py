@@ -45,7 +45,7 @@ class PairedEndWriter(ABC):
         """
 
 
-class MultipleFileWriter(ABC):
+class MultipleEndWriter(ABC):
     number_of_files: int
 
     @abstractmethod
@@ -54,14 +54,17 @@ class MultipleFileWriter(ABC):
         Write a N-tuple of SequenceRecords to the output. N should be equal
         to the number of files the MultipleFileWriter was initiated with.
 
-        This method does not check wheter the records are properly paired.
+        This method does not check whether the records are properly paired.
         """
 
-    def write_list(self, list_of_records: Iterable[Tuple[SequenceRecord, ...]]):
+    @abstractmethod
+    def write_iterable(self, list_of_records: Iterable[Tuple[SequenceRecord, ...]]):
         """
         Iterates over the list (or other iterable container) and writes all
         N-tuples of SequenceRecord to disk. N should be equal
         to the number of files the MultipleFileWriter was initiated with.
 
-        This method does not check wheter the records are properly paired.
+        This method does not check whether the records are properly paired.
+        This method may provide a speed boost over calling write for each
+        Tuple of SequenceRecords individually.
         """

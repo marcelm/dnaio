@@ -5,6 +5,7 @@ from xopen import xopen
 
 from ._core import SequenceRecord, records_are_mates
 from .exceptions import FileFormatError
+from .interfaces import MultipleEndWriter
 from .readers import FastaReader, FastqReader
 from .singleend import _open_single
 from .writers import FastaWriter, FastqWriter
@@ -75,7 +76,7 @@ class MultipleFileReader:
             reader.close()
 
 
-class MultipleFileWriter:
+class MultipleFileWriter(MultipleEndWriter):
     def __init__(
         self,
         *files: Union[str, PathLike, BinaryIO],
@@ -121,7 +122,7 @@ class MultipleFileWriter:
             self.write(records)
 
 
-class MultipleFastqWriter:
+class MultipleFastqWriter(MultipleEndWriter):
     """An optimized fast version of MultipleFileWriter specialized for FASTQ
     files"""
 
