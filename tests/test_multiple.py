@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 import dnaio
-from dnaio import SequenceRecord, open_multiple
+from dnaio import SequenceRecord, _open_multiple
 
 import pytest
 
@@ -16,7 +16,7 @@ import pytest
 def test_read_files(fileformat, number_of_files):
     file = Path(__file__).parent / "data" / ("simple." + fileformat)
     files = [file for _ in range(number_of_files)]
-    with open_multiple(*files) as multiple_reader:
+    with _open_multiple(*files) as multiple_reader:
         for records in multiple_reader:
             pass
         assert len(records) == number_of_files
@@ -33,12 +33,12 @@ def test_read_files(fileformat, number_of_files):
 )
 def test_open_no_file_error(kwargs):
     with pytest.raises(ValueError):
-        open_multiple(**kwargs)
+        _open_multiple(**kwargs)
 
 
 def test_open_multiple_unsupported_mode():
     with pytest.raises(ValueError) as error:
-        open_multiple(os.devnull, mode="X")
+        _open_multiple(os.devnull, mode="X")
     error.match("mode")
 
 
@@ -50,7 +50,7 @@ def test_open_multiple_unsupported_mode():
 )
 def test_multiple_binary_read(number_of_files, content):
     files = [io.BytesIO(content.encode("ascii")) for _ in range(number_of_files)]
-    with open_multiple(*files) as reader:
+    with _open_multiple(*files) as reader:
         for records_tup in reader:
             pass
 
@@ -62,7 +62,7 @@ def test_multiple_binary_read(number_of_files, content):
 def test_multiple_binary_write(number_of_files, fileformat):
     files = [io.BytesIO() for _ in range(number_of_files)]
     records = [SequenceRecord("A", "A", "A") for _ in range(number_of_files)]
-    with open_multiple(*files, mode="w", fileformat=fileformat) as writer:
+    with _open_multiple(*files, mode="w", fileformat=fileformat) as writer:
         writer.write(*records)
 
 
@@ -73,7 +73,7 @@ def test_multiple_binary_write(number_of_files, fileformat):
 def test_multiple_write_too_much(number_of_files, fileformat):
     files = [io.BytesIO() for _ in range(number_of_files)]
     records = [SequenceRecord("A", "A", "A") for _ in range(number_of_files + 1)]
-    with open_multiple(*files, mode="w", fileformat=fileformat) as writer:
+    with _open_multiple(*files, mode="w", fileformat=fileformat) as writer:
         with pytest.raises(ValueError) as error:
             writer.write(*records)
     error.match(str(number_of_files))
@@ -87,7 +87,7 @@ def test_multiple_write_iterable(number_of_files, fileformat):
     files = [io.BytesIO() for _ in range(number_of_files)]
     records = [SequenceRecord("A", "A", "A") for _ in range(number_of_files)]
     records_list = [records, records, records]
-    with open_multiple(*files, mode="w", fileformat=fileformat) as writer:
+    with _open_multiple(*files, mode="w", fileformat=fileformat) as writer:
         writer.write_iterable(records_list)
 
 
@@ -99,7 +99,7 @@ def test_multiple_read_unmatched_names(number_of_files):
         io.BytesIO(record1_content),
         *(io.BytesIO(record2_content) for _ in range(number_of_files - 1)),
     )
-    with open_multiple(*files) as reader:
+    with _open_multiple(*files) as reader:
         with pytest.raises(dnaio.FileFormatError) as error:
             for records in reader:
                 pass
@@ -114,7 +114,7 @@ def test_multiple_read_out_of_sync(number_of_files):
         io.BytesIO(record1_content),
         *(io.BytesIO(record2_content) for _ in range(number_of_files - 1)),
     )
-    with open_multiple(*files) as reader:
+    with _open_multiple(*files) as reader:
         with pytest.raises(dnaio.FileFormatError) as error:
             for records in reader:
                 pass

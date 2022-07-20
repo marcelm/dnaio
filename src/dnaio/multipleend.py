@@ -11,7 +11,7 @@ from .singleend import _open_single
 from .writers import FastaWriter, FastqWriter
 
 
-def open_multiple(
+def _open_multiple(
     *files: Union[str, PathLike, BinaryIO],
     fileformat: Optional[str] = None,
     mode: str = "r",
@@ -55,16 +55,6 @@ class MultipleFileReader:
     def __iter__(self) -> Iterator[Tuple[SequenceRecord, ...]]:
         if len(self.files) == 1:
             yield from zip(self.readers[0])
-        elif len(self.files) == 2:
-            for record1, record2 in zip(*self.readers):
-                if not record1.is_mate(record2):
-                    raise FileFormatError(
-                        f"Records are out of sync, names "
-                        f"{repr(record1.name)}, {repr(record2.name)} "
-                        f"do not match.",
-                        line=None,
-                    )
-                yield record1, record2
         else:
             for records in zip(*self.readers):
                 if not records_are_mates(*records):

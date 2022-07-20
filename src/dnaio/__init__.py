@@ -47,7 +47,7 @@ from .pairedend import (
     InterleavedPairedEndReader,
     InterleavedPairedEndWriter,
 )
-from .multipleend import open_multiple
+from .multipleend import _open_multiple
 from .exceptions import (
     UnknownFileFormat,
     FileFormatError,
@@ -146,7 +146,7 @@ def open(
             qualities=qualities,
         )
     if len(files) > 1:  # 3 or more files
-        return open_multiple(
+        return _open_multiple(
             file1,
             *files,
             fileformat=fileformat,
