@@ -39,9 +39,9 @@ class MultipleFileReader:
             raise ValueError("At least one file is required")
         self.files = files
         self.readers: List[Union[FastaReader, FastqReader]] = [
-            _open_single(
+            _open_single(  # type: ignore
                 file, opener=opener, fileformat=fileformat, mode="r"
-            )  # type: ignore
+            )
             for file in self.files
         ]
         self.delivers_qualities: bool = self.readers[0].delivers_qualities
@@ -103,13 +103,13 @@ class MultipleFastaWriter(MultipleFileWriter):
         self.files = files
         self.number_of_files = len(files)
         self.writers: List[Union[FastaWriter, FastqWriter]] = [
-            _open_single(
+            _open_single(  # type: ignore
                 file,
                 opener=opener,
                 fileformat="fasta",
                 mode=mode,
                 qualities=False,
-            )  # type: ignore
+            )
             for file in self.files
         ]
 
