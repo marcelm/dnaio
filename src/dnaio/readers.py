@@ -11,7 +11,7 @@ from xopen import xopen
 
 from ._core import FastqIter, SequenceRecord
 from ._util import shorten as _shorten
-from .exceptions import FastaFormatError
+from .exceptions import FastaFormatError, IsNotAscii
 from .interfaces import SingleEndReader
 
 
@@ -104,7 +104,14 @@ class FastaReader(BinaryFileReader, SingleEndReader):
             if line and line[0] == ">":
                 if name is not None:
                     self.number_of_records += 1
-                    yield self.sequence_class(name, self._delimiter.join(seq), None)
+                    try:
+                        yield self.sequence_class(name, self._delimiter.join(seq), None)
+                    except IsNotAscii as e:
+                        raise FastaFormatError(
+                            str(e)
+                            + " (line number refers to record after the problematic one)",
+                            line=i,
+                        )
                 name = line[1:]
                 seq = []
             elif line and line[0] == "#":
@@ -119,7 +126,10 @@ class FastaReader(BinaryFileReader, SingleEndReader):
 
         if name is not None:
             self.number_of_records += 1
-            yield self.sequence_class(name, self._delimiter.join(seq), None)
+            try:
+                yield self.sequence_class(name, self._delimiter.join(seq), None)
+            except IsNotAscii as e:
+                raise FastaFormatError(str(e), line=None)
 
 
 class FastqReader(BinaryFileReader, SingleEndReader):

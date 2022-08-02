@@ -28,7 +28,7 @@ cdef extern from *:
 cdef extern from "_conversions.h":
     const char NUCLEOTIDE_COMPLEMENTS[256]
 
-from .exceptions import FastqFormatError
+from .exceptions import FastqFormatError, IsNotAscii
 from ._util import shorten
 
 
@@ -39,7 +39,6 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
         length = min(length, PyBytes_GET_SIZE(string))
     cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
     return ascii
-
 
 
 cdef class SequenceRecord:
@@ -57,6 +56,11 @@ cdef class SequenceRecord:
             If quality values are available, this is a string
             that contains the Phred-scaled qualities encoded as
             ASCII(qual+33) (as in FASTQ).
+
+    Raises:
+        TypeError: One of the provided attributes is not of type str
+        IsNotAscii: One of the provided attributes is not ASCII
+        ValueError: Lengths of sequence and qualities differ
     """
     cdef:
         object _name
@@ -74,16 +78,16 @@ cdef class SequenceRecord:
         if not PyUnicode_CheckExact(name):
             raise TypeError(f"name should be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
-            raise ValueError("name must be a valid ASCII-string.")
+            raise IsNotAscii("name", name)
         if not PyUnicode_CheckExact(sequence):
             raise TypeError(f"sequence should be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
-            raise ValueError("sequence must be a valid ASCII-string.")
+            raise IsNotAscii("sequence", sequence)
         if qualities is not None:
             if not PyUnicode_CheckExact(qualities):
                 raise TypeError(f"qualities should be of type str, got {type(qualities)}")
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
-                raise ValueError("qualities must be a valid ASCII-string.")
+                raise IsNotAscii("qualities", qualities)
             if len(qualities) != len(sequence):
                 rname = shorten(name)
                 raise ValueError("In read named {!r}: length of quality sequence "
@@ -99,7 +103,7 @@ cdef class SequenceRecord:
         if not PyUnicode_CheckExact(name):
             raise TypeError(f"name must be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
-            raise ValueError("name must be a valid ASCII-string.")
+            raise IsNotAscii("name", name)
         self._name = name
 
     @property
@@ -111,7 +115,7 @@ cdef class SequenceRecord:
         if not PyUnicode_CheckExact(sequence):
             raise TypeError(f"sequence must be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
-            raise ValueError("sequence must be a valid ASCII-string.")
+            raise IsNotAscii("sequence", sequence)
         self._sequence = sequence
 
     @property
@@ -122,7 +126,7 @@ cdef class SequenceRecord:
     def qualities(self, qualities):
         if PyUnicode_CheckExact(qualities):
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
-                raise ValueError("qualities must be a valid ASCII-string.")
+                raise IsNotAscii("qualities", qualities)
         elif qualities is None:
             pass
         else:

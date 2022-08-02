@@ -43,3 +43,28 @@ class FastaFormatError(FileFormatError):
     """
 
     format = "FASTA"
+
+
+class IsNotAscii(ValueError):
+    """
+    Some part of a FASTA or FASTQ file is not ASCII encoded
+
+    Attributes:
+        field: Description of the field ("name", "sequence", "qualities" or similar)
+            in which non-ASCII characters were found
+        value: Unicode string that was intended to be assigned to the field
+    """
+
+    def __init__(self, field: str, value: str):
+        self.value = value
+        self.field = field
+
+    def __str__(self):
+        detail = ""
+        try:
+            self.value.encode("ascii")
+        except UnicodeEncodeError as e:
+            detail = (
+                f", but found '{self.value[e.start:e.end]}' at position {e.start + 1}"
+            )
+        return f"'{self.field}' in sequence file must be ASCII encoded{detail}"
