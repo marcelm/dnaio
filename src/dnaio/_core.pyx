@@ -28,7 +28,7 @@ cdef extern from *:
 cdef extern from "_conversions.h":
     const char NUCLEOTIDE_COMPLEMENTS[256]
 
-from .exceptions import FastqFormatError, IsNotAscii
+from .exceptions import FastqFormatError
 from ._util import shorten
 
 
@@ -39,6 +39,25 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
         length = min(length, PyBytes_GET_SIZE(string))
     cdef bint ascii = string_is_ascii(PyBytes_AS_STRING(string), length)
     return ascii
+
+
+def is_not_ascii_message(field, value):
+    """
+    Return an error message for a non-ASCII field encountered when initializing a SequenceRecord
+
+    Arguments:
+        field: Description of the field ("name", "sequence", "qualities" or similar)
+            in which non-ASCII characters were found
+        value: Unicode string that was intended to be assigned to the field
+    """
+    detail = ""
+    try:
+        value.encode("ascii")
+    except UnicodeEncodeError as e:
+        detail = (
+            f", but found '{value[e.start:e.end]}' at index {e.start}"
+        )
+    return f"'{field}' in sequence file must be ASCII encoded{detail}"
 
 
 cdef class SequenceRecord:
@@ -58,9 +77,8 @@ cdef class SequenceRecord:
             ASCII(qual+33) (as in FASTQ).
 
     Raises:
-        TypeError: One of the provided attributes is not of type str
-        IsNotAscii: One of the provided attributes is not ASCII
-        ValueError: Lengths of sequence and qualities differ
+        ValueError: One of the provide attributes is not ASCII or
+            the lengths of sequence and qualities differ
     """
     cdef:
         object _name
@@ -78,16 +96,16 @@ cdef class SequenceRecord:
         if not PyUnicode_CheckExact(name):
             raise TypeError(f"name should be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
-            raise IsNotAscii("name", name)
+            raise ValueError(is_not_ascii_message("name", name))
         if not PyUnicode_CheckExact(sequence):
             raise TypeError(f"sequence should be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
-            raise IsNotAscii("sequence", sequence)
+            raise ValueError(is_not_ascii_message("sequence", sequence))
         if qualities is not None:
             if not PyUnicode_CheckExact(qualities):
                 raise TypeError(f"qualities should be of type str, got {type(qualities)}")
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
-                raise IsNotAscii("qualities", qualities)
+                raise ValueError(is_not_ascii_message("qualities", qualities))
             if len(qualities) != len(sequence):
                 rname = shorten(name)
                 raise ValueError("In read named {!r}: length of quality sequence "
@@ -103,7 +121,7 @@ cdef class SequenceRecord:
         if not PyUnicode_CheckExact(name):
             raise TypeError(f"name must be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
-            raise IsNotAscii("name", name)
+            raise ValueError(is_not_ascii_message("name", name))
         self._name = name
 
     @property
@@ -115,7 +133,7 @@ cdef class SequenceRecord:
         if not PyUnicode_CheckExact(sequence):
             raise TypeError(f"sequence must be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
-            raise IsNotAscii("sequence", sequence)
+            raise ValueError(is_not_ascii_message("sequence", sequence))
         self._sequence = sequence
 
     @property
@@ -126,7 +144,7 @@ cdef class SequenceRecord:
     def qualities(self, qualities):
         if PyUnicode_CheckExact(qualities):
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
-                raise IsNotAscii("qualities", qualities)
+                raise ValueError(is_not_ascii_message("qualities", qualities))
         elif qualities is None:
             pass
         else:
