@@ -61,7 +61,10 @@ def _open_paired(
 
 class TwoFilePairedEndReader(PairedEndReader):
     """
-    Read paired-end reads from two files.
+    Read paired-end reads from two files (not interleaved)
+
+    While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments.
     """
 
     paired = True
@@ -92,7 +95,7 @@ class TwoFilePairedEndReader(PairedEndReader):
     def __iter__(self) -> Iterator[Tuple[SequenceRecord, SequenceRecord]]:
         """
         Iterate over the paired reads.
-        Each yielded item is a pair of SequenceRecord objects.
+        Each yielded item is a pair of `SequenceRecord` objects.
 
         Raises a `FileFormatError` if reads are improperly paired.
         """
@@ -139,7 +142,10 @@ class TwoFilePairedEndReader(PairedEndReader):
 
 class InterleavedPairedEndReader(PairedEndReader):
     """
-    Read paired-end reads from an interleaved FASTQ file.
+    Read paired-end reads from an interleaved FASTQ file
+
+    While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments.
     """
 
     paired = True
@@ -191,6 +197,13 @@ class InterleavedPairedEndReader(PairedEndReader):
 
 
 class TwoFilePairedEndWriter(PairedEndWriter):
+    """
+    Write paired-end reads to two files (not interleaved)
+
+    While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments.
+    """
+
     def __init__(
         self,
         file1: Union[str, PathLike, BinaryIO],
@@ -246,6 +259,9 @@ class TwoFilePairedEndWriter(PairedEndWriter):
 class InterleavedPairedEndWriter(PairedEndWriter):
     """
     Write paired-end reads to an interleaved FASTA or FASTQ file
+
+    While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments.
     """
 
     def __init__(
