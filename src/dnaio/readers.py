@@ -64,6 +64,9 @@ class BinaryFileReader:
 class FastaReader(BinaryFileReader, SingleEndReader):
     """
     Reader for FASTA files
+
+    While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments.
     """
 
     def __init__(
@@ -135,6 +138,9 @@ class FastaReader(BinaryFileReader, SingleEndReader):
 class FastqReader(BinaryFileReader, SingleEndReader):
     """
     Reader for FASTQ files. Does not support multi-line FASTQ files.
+
+    While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments.
     """
 
     def __init__(

@@ -63,7 +63,7 @@ from .chunks import read_chunks, read_paired_chunks
 from ._version import version as __version__
 
 
-# Backwards compatibility aliases
+# Backwards compatibility alias
 Sequence = SequenceRecord
 
 

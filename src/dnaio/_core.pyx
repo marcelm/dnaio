@@ -323,9 +323,10 @@ def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
     """
     Skip forward in the two buffers by multiples of four lines.
 
-    Return a tuple (length1, length2) such that buf1[:length1] and
-    buf2[:length2] contain the same number of lines (where the
-    line number is divisible by four).
+    Returns:
+        A tuple (length1, length2) such that buf1[:length1] and
+        buf2[:length2] contain the same number of lines (where the
+        line number is divisible by four).
     """
     # Acquire buffers. Cython automatically checks for errors here.
     cdef Py_buffer data1_buffer
@@ -371,15 +372,21 @@ cdef class FastqIter:
     """
     Parse a FASTQ file and yield SequenceRecord objects
 
-    The *first value* that the generator yields is a boolean indicating whether
-    the first record in the FASTQ has a repeated header (in the third row
-    after the ``+``).
+    Arguments:
+        file: a file-like object, opened in binary mode (it must have a readinto
+            method)
 
-    file -- a file-like object, opened in binary mode (it must have a readinto
-    method)
+        sequence_class: A custom class to use for the returned instances
+            (instead of SequenceRecord)
 
-    buffer_size -- size of the initial buffer. This is automatically grown
-        if a FASTQ record is encountered that does not fit.
+        buffer_size: size of the initial buffer. This is automatically grown
+            if a FASTQ record is encountered that does not fit.
+
+    Yields:
+        The *first value* that the generator yields is a boolean indicating whether
+        the first record in the FASTQ has a repeated header (in the third row
+        after the ``+``). Subsequent values are SequenceRecord objects (or whichever
+        objects sequence_class returned if specified)
     """
     cdef:
         Py_ssize_t buffer_size
