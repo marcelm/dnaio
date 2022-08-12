@@ -22,7 +22,7 @@ def _open_multiple(
         raise ValueError("mode must be one of 'r', 'w', 'a'")
     if mode == "r":
         return MultipleFileReader(*files, fileformat=fileformat, opener=opener)
-    append = True if mode == "a" else False
+    append = mode == "a"
     if fileformat == "fastq" or qualities or (fileformat is None and qualities is None):
         return MultipleFastqWriter(*files, opener=opener, append=append)
     return MultipleFastaWriter(*files, opener=opener, append=append)
