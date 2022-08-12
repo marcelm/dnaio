@@ -76,7 +76,7 @@ class MultipleFileReader:
                     )
                 yield records
         # Consume one iteration to check if all the files have an equal number
-        # of records..
+        # of records.
         for reader in self._readers:
             try:
                 _ = next(iter(reader))
