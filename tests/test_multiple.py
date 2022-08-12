@@ -70,7 +70,7 @@ def test_multiple_binary_write(number_of_files, fileformat):
     ["number_of_files", "fileformat"],
     itertools.product((1, 2, 3, 4), ("fastq", "fasta")),
 )
-def test_multiple_write_too_much(number_of_files, fileformat):
+def test_multiple_write_too_many(number_of_files, fileformat):
     files = [io.BytesIO() for _ in range(number_of_files)]
     records = [SequenceRecord("A", "A", "A") for _ in range(number_of_files + 1)]
     with _open_multiple(*files, mode="w", fileformat=fileformat) as writer:
