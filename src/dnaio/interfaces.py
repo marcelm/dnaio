@@ -46,7 +46,7 @@ class PairedEndWriter(ABC):
 
 
 class MultipleFileWriter(ABC):
-    number_of_files: int
+    _number_of_files: int
 
     @abstractmethod
     def write(self, *records: SequenceRecord) -> None:

@@ -1,3 +1,4 @@
+import contextlib
 from os import PathLike
 from typing import BinaryIO, IO, Iterable, Iterator, List, Optional, Tuple, Union
 
@@ -40,26 +41,29 @@ class MultipleFileReader:
     ):
         if len(files) < 1:
             raise ValueError("At least one file is required")
-        self.files = files
-        self.readers: List[Union[FastaReader, FastqReader]] = [
-            _open_single(  # type: ignore
-                file, opener=opener, fileformat=fileformat, mode="r"
+        self._files = files
+        self._stack = contextlib.ExitStack()
+        self._readers: List[Union[FastaReader, FastqReader]] = [
+            self._stack.enter_context(
+                _open_single(  # type: ignore
+                    file, opener=opener, fileformat=fileformat, mode="r"
+                )
             )
-            for file in self.files
+            for file in self._files
         ]
-        self.delivers_qualities: bool = self.readers[0].delivers_qualities
+        self.delivers_qualities: bool = self._readers[0].delivers_qualities
 
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}"
-            f"({', '.join(repr(reader) for reader in self.readers)})"
+            f"({', '.join(repr(reader) for reader in self._readers)})"
         )
 
     def __iter__(self) -> Iterator[Tuple[SequenceRecord, ...]]:
-        if len(self.files) == 1:
-            yield from zip(self.readers[0])
+        if len(self._files) == 1:
+            yield from zip(self._readers[0])
         else:
-            for records in zip(*self.readers):
+            for records in zip(*self._readers):
                 if not records_are_mates(*records):
                     raise FileFormatError(
                         f"Records are out of sync, names "
@@ -69,22 +73,21 @@ class MultipleFileReader:
                 yield records
         # Consume one iteration to check if all the files have an equal number
         # of records..
-        for reader in self.readers:
+        for reader in self._readers:
             try:
                 _ = next(iter(reader))
             except StopIteration:
                 pass
-        record_numbers = [r.number_of_records for r in self.readers]
+        record_numbers = [r.number_of_records for r in self._readers]
         if len(set(record_numbers)) != 1:
             raise FileFormatError(
-                f"Files: {', '.join(str(file) for file in self.files)} have "
+                f"Files: {', '.join(str(file) for file in self._files)} have "
                 f"an unequal amount of reads.",
                 line=None,
             )
 
     def close(self):
-        for reader in self.readers:
-            reader.close()
+        self._stack.close()
 
     def __enter__(self):
         return self
@@ -103,33 +106,35 @@ class MultipleFastaWriter(MultipleFileWriter):
         if len(files) < 1:
             raise ValueError("At least one file is required")
         mode = "a" if append else "w"
-        self.files = files
-        self.number_of_files = len(files)
-        self.writers: List[Union[FastaWriter, FastqWriter]] = [
-            _open_single(  # type: ignore
-                file,
-                opener=opener,
-                fileformat="fasta",
-                mode=mode,
-                qualities=False,
+        self._files = files
+        self._number_of_files = len(files)
+        self._stack = contextlib.ExitStack()
+        self._writers: List[Union[FastaWriter, FastqWriter]] = [
+            self._stack.enter_context(
+                _open_single(  # type: ignore
+                    file,
+                    opener=opener,
+                    fileformat="fasta",
+                    mode=mode,
+                    qualities=False,
+                )
             )
-            for file in self.files
+            for file in self._files
         ]
 
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}"
-            f"({', '.join(repr(writer) for writer in self.writers)})"
+            f"({', '.join(repr(writer) for writer in self._writers)})"
         )
 
     def close(self):
-        for writer in self.writers:
-            writer.close()
+        self._stack.close()
 
     def write(self, *records: SequenceRecord):
-        if len(records) != self.number_of_files:
-            raise ValueError(f"records must have length {self.number_of_files}")
-        for record, writer in zip(records, self.writers):
+        if len(records) != self._number_of_files:
+            raise ValueError(f"records must have length {self._number_of_files}")
+        for record, writer in zip(records, self._writers):
             writer.write(record)
 
     def write_iterable(self, records_iterable: Iterable[Tuple[SequenceRecord, ...]]):
@@ -153,50 +158,54 @@ class MultipleFastqWriter(MultipleFileWriter):
         if len(files) < 1:
             raise ValueError("At least one file is required")
         mode = "a" if append else "w"
-        self.files = files
-        self.number_of_files = len(files)
-        self.writers: List[IO] = [
-            opener(file, mode + "b") if not hasattr(file, "write") else file
-            for file in self.files
+        self._files = files
+        self._number_of_files = len(files)
+        self._stack = contextlib.ExitStack()
+        self._writers: List[IO] = [
+            self._stack.enter_context(
+                opener(file, mode + "b") if not hasattr(file, "write") else file
+            )
+            for file in self._files
         ]
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}" f"({', '.join(str(f) for f in self.files)})"
+        return (
+            f"{self.__class__.__name__}" f"({', '.join(str(f) for f in self._files)})"
+        )
 
     def close(self):
-        for writer in self.writers:
-            writer.close()
+        self._stack.close()
 
     def write(self, *records: SequenceRecord):
-        if len(records) != self.number_of_files:
-            raise ValueError(f"records must have length {self.number_of_files}")
-        for record, writer in zip(records, self.writers):
+        if len(records) != self._number_of_files:
+            raise ValueError(f"records must have length {self._number_of_files}")
+        for record, writer in zip(records, self._writers):
             writer.write(record.fastq_bytes())
 
     def write_iterable(self, records_iterable: Iterable[Tuple[SequenceRecord, ...]]):
         # Use faster methods for more common cases before falling back to
         # generic multiple files mode (which is much slower due to calling the
         # zip function).
-        if self.number_of_files == 1:
-            output = self.writers[0]
+        if self._number_of_files == 1:
+            output = self._writers[0]
             for (record,) in records_iterable:
                 output.write(record.fastq_bytes())
-        elif self.number_of_files == 2:
-            output1 = self.writers[0]
-            output2 = self.writers[1]
+        elif self._number_of_files == 2:
+            output1 = self._writers[0]
+            output2 = self._writers[1]
             for record1, record2 in records_iterable:
                 output1.write(record1.fastq_bytes())
                 output2.write(record2.fastq_bytes())
-        elif self.number_of_files == 3:
-            output1 = self.writers[0]
-            output2 = self.writers[1]
-            output3 = self.writers[2]
+        elif self._number_of_files == 3:
+            output1 = self._writers[0]
+            output2 = self._writers[1]
+            output3 = self._writers[2]
             for record1, record2, record3 in records_iterable:
                 output1.write(record1.fastq_bytes())
                 output2.write(record2.fastq_bytes())
                 output3.write(record3.fastq_bytes())
         else:  # More than 3 files is quite uncommon.
-            writers = self.writers
+            writers = self._writers
             for records in records_iterable:
                 for record, output in zip(records, writers):
                     output.write(record.fastq_bytes())
