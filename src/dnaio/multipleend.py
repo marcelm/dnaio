@@ -7,7 +7,7 @@ from ._core import SequenceRecord, records_are_mates
 from .exceptions import FileFormatError
 from .interfaces import MultipleFileWriter
 from .readers import FastaReader, FastqReader
-from .singleend import _open_single
+from .singleend import _open_single, _detect_format_from_name
 from .writers import FastaWriter, FastqWriter
 
 
@@ -20,8 +20,11 @@ def _open_multiple(
 ):
     if mode not in ("r", "w", "a"):
         raise ValueError("mode must be one of 'r', 'w', 'a'")
-    if mode == "r":
+    elif mode == "r":
         return MultipleFileReader(*files, fileformat=fileformat, opener=opener)
+    elif mode == "w":
+        # Assume mixed files will not be offered.
+        fileformat = _detect_format_from_name(files[0])
     append = mode == "a"
     if fileformat == "fastq" or qualities or (fileformat is None and qualities is None):
         return MultipleFastqWriter(*files, opener=opener, append=append)
