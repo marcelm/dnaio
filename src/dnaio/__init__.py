@@ -166,4 +166,3 @@ def open(
         return _open_single(
             file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities
         )
-    assert False
