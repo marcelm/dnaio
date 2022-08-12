@@ -69,8 +69,8 @@ Sequence = SequenceRecord
 
 
 def open(
-    file1: Union[str, PathLike, BinaryIO],
     *files: Union[str, PathLike, BinaryIO],
+    file1: Union[str, PathLike, BinaryIO] = None,
     file2: Optional[Union[str, PathLike, BinaryIO]] = None,
     fileformat: Optional[str] = None,
     interleaved: bool = False,
@@ -89,14 +89,16 @@ def open(
     Open one or two files in FASTA or FASTQ format for reading or writing.
 
     Parameters:
+      files:
+        one or multiple Path or an open file-like objects. One for single-end
+        reads, two for multiple-end reads etc. More than two files are also
+        supported. At least one file is required.
 
       file1:
-        Path or an open file-like object. For reading single-end reads, this is
-        the only required argument.
+        Deprecated keyword argument for the first file.
 
       file2:
-        Path or an open file-like object. When reading paired-end reads from
-        two files, set this to the second file.
+        Deprecated keyword argument for the second file.
 
       mode:
         Either ``'r'``, ``'w'`` for writing or ``'a'`` for appending.
@@ -129,40 +131,53 @@ def open(
        A subclass of `SingleEndReader`, `PairedEndReader`, `SingleEndWriter` or
        `PairedEndWriter`.
     """
-    if mode not in ("r", "w", "a"):
-        raise ValueError("Mode must be 'r', 'w' or 'a'")
-    elif files and file2 is not None:
+    # legal cases: file1 and file2 given, one unnamed and file2 given, only unnamed files given.
+    # illegal cases: file1 and unnamed files, multiple unnamed and file2, file1 and file2 and unnamed.
+    if files and (file1 is not None):
         raise ValueError(
-            "the file2 argument can not be used when multiple "
-            "input files are specified."
+            "the file1 argument cannot be used together with unnamed files"
         )
-    elif interleaved and (file2 is not None or files):
+    elif len(files) > 1 and file2 is not None:
+        raise ValueError(
+            "the file2 argument cannot be used together with more than one "
+            "unnamed file"
+        )
+    elif file1 is not None and file2 is not None and files:
+        raise ValueError(
+            "file1 and file2 arguments cannot be used together with unnamed files"
+        )
+    elif file1 is not None and file2 is not None:
+        files = (file1, file2)
+    elif file2 is not None and len(files) == 1:
+        files = (files[0], file2)
+
+    if len(files) > 1 and interleaved:
         raise ValueError(
             "When interleaved is True only one file must be specified as input."
         )
-    if len(files) == 1:
-        file2 = files[0]
-    if interleaved or file2 is not None:
+    elif mode not in ("r", "w", "a"):
+        raise ValueError("Mode must be 'r', 'w' or 'a'")
+
+    if interleaved or len(files) == 2:
         return _open_paired(
-            file1,
-            file2=file2,
+            files[0],
+            file2=None if interleaved else files[1],
             opener=opener,
             fileformat=fileformat,
             interleaved=interleaved,
             mode=mode,
             qualities=qualities,
         )
-    elif len(files) > 1:  # 3 or more files
+    elif len(files) > 2:  # 3 or more files
         return _open_multiple(
-            file1,
-            *files,
-            fileformat=fileformat,
-            mode=mode,
-            qualities=qualities,
-            opener=opener
+            *files, fileformat=fileformat, mode=mode, qualities=qualities, opener=opener
         )
 
     else:
         return _open_single(
-            file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities
+            files[0],
+            opener=opener,
+            fileformat=fileformat,
+            mode=mode,
+            qualities=qualities,
         )

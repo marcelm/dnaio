@@ -313,7 +313,7 @@ def test_unsupported_mode():
 def test_no_file2_with_multiple_args():
     with pytest.raises(ValueError) as error:
         _ = dnaio.open(os.devnull, os.devnull, file2=os.devnull)
-    error.match("multiple")
+    error.match("more than one unnamed file")
     error.match("file2")
 
 
