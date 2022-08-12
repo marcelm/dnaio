@@ -28,7 +28,7 @@ def _open_multiple(
     elif mode == "w" and fileformat is None:
         # Assume mixed files will not be offered.
         for file in files:
-            if isinstance(file, str) or hasattr(file, "__fspath__"):
+            if isinstance(file, str):
                 fileformat = _detect_format_from_name(file)
     append = mode == "a"
     if fileformat == "fastq" or qualities or (fileformat is None and qualities is None):
