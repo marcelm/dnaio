@@ -51,8 +51,8 @@ class MultipleFileWriter(ABC):
     @abstractmethod
     def write(self, *records: SequenceRecord) -> None:
         """
-        Writes N SequenceRecords to the output. N should be equal
-        to the number of files the MultipleFileWriter was initiated with.
+        Write N SequenceRecords to the output. N must be equal
+        to the number of files the MultipleFileWriter was initialized with.
 
         This method does not check whether the records are properly paired.
         """
@@ -61,10 +61,10 @@ class MultipleFileWriter(ABC):
     def write_iterable(self, list_of_records: Iterable[Tuple[SequenceRecord, ...]]):
         """
         Iterates over the list (or other iterable container) and writes all
-        N-tuples of SequenceRecord to disk. N should be equal
-        to the number of files the MultipleFileWriter was initiated with.
+        N-tuples of SequenceRecord to disk. N must be equal
+        to the number of files the MultipleFileWriter was initialized with.
 
         This method does not check whether the records are properly paired.
         This method may provide a speed boost over calling write for each
-        Tuple of SequenceRecords individually.
+        tuple of SequenceRecords individually.
         """
