@@ -138,7 +138,7 @@ def open(
         )
     elif interleaved and (file2 is not None or files):
         raise ValueError(
-            "When interleaved is True only one file must be " "specified as input."
+            "When interleaved is True only one file must be specified as input."
         )
     if len(files) == 1:
         file2 = files[0]
