@@ -131,8 +131,6 @@ def open(
        A subclass of `SingleEndReader`, `PairedEndReader`, `SingleEndWriter` or
        `PairedEndWriter`.
     """
-    # legal cases: file1 and file2 given, one unnamed and file2 given, only unnamed files given.
-    # illegal cases: file1 and unnamed files, multiple unnamed and file2, file1 and file2 and unnamed.
     if files and (file1 is not None):
         raise ValueError(
             "the file1 argument cannot be used together with unnamed files"
