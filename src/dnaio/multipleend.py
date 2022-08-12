@@ -25,12 +25,11 @@ def _open_multiple(
         raise ValueError("mode must be one of 'r', 'w', 'a'")
     elif mode == "r":
         return MultipleFileReader(*files, fileformat=fileformat, opener=opener)
-    elif mode == "w":
+    elif mode == "w" and fileformat is None:
         # Assume mixed files will not be offered.
         for file in files:
             if isinstance(file, str) or hasattr(file, "__fspath__"):
-                fileformat = _detect_format_from_name(files[0])
-                break
+                fileformat = _detect_format_from_name(file)
     append = mode == "a"
     if fileformat == "fastq" or qualities or (fileformat is None and qualities is None):
         return MultipleFastqWriter(*files, opener=opener, append=append)
