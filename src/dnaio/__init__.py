@@ -47,7 +47,7 @@ from .pairedend import (
     InterleavedPairedEndReader,
     InterleavedPairedEndWriter,
 )
-from .multipleend import _open_multiple
+from .multipleend import MultipleFileReader, MultipleFileWriter, _open_multiple
 from .exceptions import (
     UnknownFileFormat,
     FileFormatError,
@@ -77,7 +77,14 @@ def open(
     mode: str = "r",
     qualities: Optional[bool] = None,
     opener=xopen
-) -> Union[SingleEndReader, PairedEndReader, SingleEndWriter, PairedEndWriter]:
+) -> Union[
+    SingleEndReader,
+    PairedEndReader,
+    SingleEndWriter,
+    PairedEndWriter,
+    MultipleFileReader,
+    MultipleFileWriter,
+]:
     """
     Open one or two files in FASTA or FASTQ format for reading or writing.
 
@@ -124,17 +131,17 @@ def open(
     """
     if mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")
-    if files and file2 is not None:
+    elif files and file2 is not None:
         raise ValueError(
             "the file2 argument can not be used when multiple "
             "input files are specified."
         )
-    if len(files) == 1:
-        file2 = files[0]
-    if interleaved and (file2 is not None or files):
+    elif interleaved and (file2 is not None or files):
         raise ValueError(
             "When interleaved is True only one file must be " "specified as input."
         )
+    if len(files) == 1:
+        file2 = files[0]
     if interleaved or file2 is not None:
         return _open_paired(
             file1,
@@ -145,7 +152,7 @@ def open(
             mode=mode,
             qualities=qualities,
         )
-    if len(files) > 1:  # 3 or more files
+    elif len(files) > 1:  # 3 or more files
         return _open_multiple(
             file1,
             *files,
