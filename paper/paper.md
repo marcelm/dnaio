@@ -1,5 +1,5 @@
 ---
-title: 'dnaio: Superfast FASTQ parsing'
+title: 'dnaio: Really fast FASTQ parsing'
 tags:
   - Python
   - bioinformatics
@@ -14,7 +14,7 @@ authors:
     equal-contrib: true
     affiliation: 2
 affiliations:
- - name:
+ - name:  Department of Biochemistry and Biophysics, National Bioinformatics Infrastructure Sweden, Science for Life Laboratory, Stockholm University, Solna, Sweden
    index: 1
  - name:  Sequencing Analysis Support Core, Department of Biomedical Data Sciences, Leiden University Medical Center, 2333 ZA, Leiden, The Netherlands
    index: 2
@@ -67,15 +67,16 @@ purpose of the software and places it in the context of related work.
 
 * Biopython [@Cock2009Biopython]
 * fastp [@Chen2018Fastp]
-* fastq-and-furious TODO add citation
-* pyfastx TODO add citation
-* pysam https://github.com/pysam-developers/pysam, wraps htslib [@Bonfield2021HTSlib]
-* scikit-bio TODO add citation
+* fastq-and-furious [@fastq-and-furious]
+* pyfastx [@Du2020Pyfastx]
+* pysam [@pysam], wraps htslib [@Bonfield2021HTSlib]
+* scikit-bio [@scikit-bio]
 
 
 
 # Benchmarks
 
+* Include version numbers for all libraries
 
 
 # Mathematics
@@ -117,6 +118,7 @@ and referenced from text using \autoref{fig:example}.
 
 Figure sizes can be customized by adding an optional second parameter:
 ![Caption for example figure.](figure.png){ width=20% }
+
 
 # Acknowledgements
 
