@@ -10,7 +10,7 @@ authors:
     equal-contrib: true
     affiliation: 1
   - name: Ruben H P Vorderman
-    orcid: TODO
+    orcid: https://orcid.org/0000-0002-8813-1528
     equal-contrib: true
     affiliation: 2
 affiliations:
