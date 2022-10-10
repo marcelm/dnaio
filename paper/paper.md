@@ -62,6 +62,28 @@ purpose of the software and places it in the context of related work.
 * features compared to other tools (feature matrix)
 * tricks used to make FASTQ parsing fast
 
+FASTQ parsing consists of a few simple steps.
+- Decompressing the FASTQ file.
+- Finding newlines to delimit the strings in the record.
+- Check if header lines start with the correct symbol.
+- Validating whether the strings contain characters in the acceptable range.
+- Create Python objects in memory to represent name, sequence and qualities.
+
+The parsing code is written in the C-code generator Cython `[CITATION NEEED]` 
+to make full use of Python's C-API. Dnaio accelerates gzip compression and 
+decompression by utilizing ISA-L `[CITATION NEEDED]`. Newlines are found using 
+the C standard library function `memchr`. Because it is a standard, it has been
+well optimized. The x864-64 glibc implementation utilizes SIMD instructions for 
+example. All characters in FASTQ records should be in the ASCII range. This can be 
+checked by reducing all characters using bitwise
+OR and checking if the most significant bit of the result is set. This 
+is sped up by using SIMD instructions. This is a trick utilized by simd-utf8
+`[CITATION NEEDED]`. This algorithm is run on the entire input buffer rather 
+than on individual strings to further enhance performance. More extensive checking 
+such as checking for IUPAC only characters in the sequence string is not 
+performed as these errors will usually be caught downstream. Rather than 
+utilizing convenience functions in the Python C-API, raw strings are created
+and data is copied in using memcpy. This is signficantly faster.
 
 # Alternatives
 
