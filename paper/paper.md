@@ -27,7 +27,8 @@ Your paper should include:
 
 ...
 
-- Mention (if applicable) a representative set of past or ongoing research projects using the software and recent scholarly publications enabled by it.
+- Mention (if applicable) a representative set of past or ongoing
+research projects using the software and recent scholarly publications enabled by it.
 
 
 # Summary
@@ -36,31 +37,73 @@ Your paper should include:
 A summary describing the high-level functionality and purpose of the
 software for a diverse, non-specialist audience.
 -->
-
 Low-cost, high-throughput DNA sequencing has become the workhorse of life
 science research. Compressed FASTQ files [@Cock2010Sanger] are the nearly
 universally used file format for representing the nucleotide sequences
-obtained from a sequencing machine.
+obtained from a DNA sequencing machine. Parsing FASTQ files is thus an
+essential task performed in many bioinformatics pipelines. We describe
+here our software `dnaio`, a highly optimized Python library
+for reading and writing FASTQ files that is faster than the fastest C/C++
+implementation known to us.
+
+Given the size
+of typical FASTQ files (~200 GiB after decompression for a human genome
+sequenced at
+
+dnaio is a Python library for reading and writing of FASTQ
+files. FASTQ files are used to , a file format used in bioinformatics to represent the
+sequences obtained from a sequencing machine ("reads").
+
+dnaio is highly optimized
+with support for
+FASTQ and FASTA files are simple text-based file formats used for
+storing DNA sequences. DNA sequencers typically output the
+obtained sequences ("reads") in gzip-compressed FASTQ format, which
+contain also nucleotide-level sequencing quality information in
+addition to the nucleotide sequences themselves [@Cock2010Sanger].
+Bioinformatics tools that work with FASTQ is used for
 
 ...
 
 # Statement of need
+
+Although alternatives have been proposed (uncompressed BAM, etc. TODO),
+gzip-compressed FASTQ is still the dominant format for representing sequencing
+reads with base-level quality values. It is used as the base-called output
+format from sequencing machines, as a long-term storage format (TODO SRA),
+but also as an intermediate format between stages in a bioinformatics pipeline.
+In the latter case, disk I/O and compression/decompression overhead may be
+avoided by working in a streaming manner, that is, by connecting the
+FASTQ-manipulating processes via Unix pipes, but the parsing/serializing
+overhead remains.
+
+dnaio was conceived because tools such as Cutadapt `[@Martin2011Cutadapt]`
+or fastq-filter (TODO) can be so fast in individual sequence manipulations
+that FASTQ parsing and writing overhead dominates the runtime.
+dnaio is now used in Cutadapt for FASTQ and FASTA input and output.
+Because Cutadapt is downloaded more than 1000 times each day (counting
+downloads from PyPI and Anaconda.org), we can assume that also dnaio, as one of
+its dependencies, works well in practice on many different types of datasets.
+
+
+
+# The library
+
+dnaio is a Python library,
+
 
 <!--
 A Statement of need section that clearly illustrates the research
 purpose of the software and places it in the context of related work.
 -->
 
-
 # To Do
 
-* already used by Cutadapt and therefore has >1000 daily downloads
-* mention license
-* homepage with tutorial and API reference at https://dnaio.readthedocs.io/
 * test coverage
+* serves as an example that Python libraries do not need to be slow
 * benchmarks and comparison to other tools
 * features compared to other tools (feature matrix)
-* tricks used to make FASTQ parsing fast
+
 
 FASTQ parsing consists of a few simple steps.
 - Decompressing the FASTQ file.
@@ -96,28 +139,10 @@ and data is copied in using memcpy. This is signficantly faster.
 * scikit-bio [@scikit-bio]
 
 
-
 # Benchmarks
 
 * Include version numbers for all libraries
 
-
-# Mathematics
-
-Single dollars ($) are required for inline mathematics e.g. $f(x) = e^{\pi/x}$
-
-Double dollars make self-standing equations:
-
-$$\Theta(x) = \left\{\begin{array}{l}
-0\textrm{ if } x < 0\cr
-1\textrm{ else}
-\end{array}\right.$$
-
-You can also use plain \LaTeX for equations
-\begin{equation}\label{eq:fourier}
-\hat f(\omega) = \int_{-\infty}^{\infty} f(x) e^{i\omega x} dx
-\end{equation}
-and refer to \autoref{eq:fourier} from text.
 
 # Citations
 
@@ -141,6 +166,13 @@ and referenced from text using \autoref{fig:example}.
 
 Figure sizes can be customized by adding an optional second parameter:
 ![Caption for example figure.](figure.png){ width=20% }
+
+# Availability
+
+The homepage for dnaio is at https://dnaio.readthedocs.io/.
+It contains installation instructions, a tutorial and the API reference.
+The software is  covered by the MIT license.
+dnaio is also distributed on Bioconda `[@Gruening2018Bioconda@]`.
 
 
 # Acknowledgements
