@@ -77,7 +77,7 @@ avoided by working in a streaming manner, that is, by connecting the
 FASTQ-manipulating processes via Unix pipes, but the parsing/serializing
 overhead remains.
 
-dnaio was conceived because tools such as Cutadapt `[@Martin2011Cutadapt]`
+dnaio was conceived because tools such as Cutadapt [@Martin2011Cutadapt]
 or fastq-filter (TODO) can be so fast in individual sequence manipulations
 that FASTQ parsing and writing overhead dominates the runtime.
 dnaio is now used in Cutadapt for FASTQ and FASTA input and output.
@@ -99,7 +99,7 @@ purpose of the software and places it in the context of related work.
 
 # To Do
 
-* test coverage
+* >200 unit tests; test coverage
 * serves as an example that Python libraries do not need to be slow
 * benchmarks and comparison to other tools
 * features compared to other tools (feature matrix)
@@ -112,9 +112,9 @@ FASTQ parsing consists of a few simple steps.
 - Validating whether the strings contain characters in the acceptable range.
 - Create Python objects in memory to represent name, sequence and qualities.
 
-The parsing code is written in the C-code generator Cython `[@Behnel2011Cython]`
+The parsing code is written in the C-code generator Cython [@Behnel2011Cython]
 to make full use of Python's C-API. Dnaio accelerates gzip compression and
-decompression by utilizing ISA-L `[@isa-l]`. Newlines are found using
+decompression by utilizing ISA-L [@isa-l]. Newlines are found using
 the C standard library function `memchr`. Because it is a standard, it has been
 well optimized. The x864-64 glibc implementation utilizes SIMD instructions for
 example. All characters in FASTQ records should be in the ASCII range. This can be
@@ -172,7 +172,7 @@ Figure sizes can be customized by adding an optional second parameter:
 The homepage for dnaio is at https://dnaio.readthedocs.io/.
 It contains installation instructions, a tutorial and the API reference.
 The software is  covered by the MIT license.
-dnaio is also distributed on Bioconda `[@Gruening2018Bioconda@]`.
+dnaio is also distributed on Bioconda [@Gruening2018Bioconda@].
 
 
 # Acknowledgements
