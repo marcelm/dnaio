@@ -5,6 +5,8 @@ from xopen import xopen
 
 import pytest
 
+from dnaio import FileFormatError
+
 
 @pytest.fixture(params=["", ".gz", ".bz2", ".xz"])
 def extension(request):
@@ -66,6 +68,15 @@ def test_open_empty_file_with_unrecognized_extension(tmp_path):
     with dnaio.open(path) as f:
         records = list(f)
     assert records == []
+
+
+def test_fileformat_error(tmp_path):
+    with open(tmp_path / "file.fastq", mode="w") as f:
+        print("this is not a FASTQ file", file=f)
+    with pytest.raises(FileFormatError) as e:
+        with dnaio.open(tmp_path / "file.fastq") as f:
+            _ = list(f)
+    assert "at line 2" in str(e.value)  # Premature end of file
 
 
 def test_read(fileformat, extension):
