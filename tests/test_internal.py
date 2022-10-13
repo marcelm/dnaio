@@ -22,8 +22,10 @@ from dnaio import (
     FastqWriter,
     InterleavedPairedEndWriter,
     TwoFilePairedEndReader,
+    records_are_mates,
+    record_names_match,
+    SequenceRecord,
 )
-from dnaio import records_are_mates, record_names_match, SequenceRecord
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
