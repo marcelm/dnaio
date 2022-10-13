@@ -59,7 +59,7 @@ def test_version():
 def test_open_nonexistent(tmp_path):
     with pytest.raises(FileNotFoundError):
         with dnaio.open(tmp_path / "nonexistent"):
-            pass
+            pass  # pragma: no cover
 
 
 def test_open_empty_file_with_unrecognized_extension(tmp_path):
@@ -199,7 +199,7 @@ def test_write_paired_same_path(tmp_path):
     path2 = tmp_path / "same.fastq"
     with pytest.raises(ValueError):
         with dnaio.open(file1=path1, file2=path2, mode="w"):
-            pass
+            pass  # pragma: no cover
 
 
 def test_write_paired(tmp_path, fileformat, extension):
