@@ -69,8 +69,36 @@ def test_fileformat_error(tmp_path):
         print("this is not a FASTQ file", file=f)
     with pytest.raises(FileFormatError) as e:
         with dnaio.open(tmp_path / "file.fastq") as f:
-            _ = list(f)
+            _ = list(f)  # pragma: no cover
     assert "at line 2" in str(e.value)  # Premature end of file
+
+
+def test_write_unknown_file_format(tmp_path):
+    with pytest.raises(UnknownFileFormat):
+        with dnaio.open(tmp_path / "out.txt", mode="w") as f:
+            f.write(dnaio.SequenceRecord("name", "ACG", "###"))  # pragma: no cover
+
+
+def test_read_unknown_file_format(tmp_path):
+    with open(tmp_path / "file.txt", mode="w") as f:
+        print("text file", file=f)
+    with pytest.raises(UnknownFileFormat):
+        with dnaio.open(tmp_path / "file.txt") as f:
+            _ = list(f)  # pragma: no cover
+
+
+def test_invalid_format(tmp_path):
+    with pytest.raises(UnknownFileFormat):
+        with dnaio.open(tmp_path / "out.txt", mode="w", fileformat="foo"):
+            pass  # pragma: no cover
+
+
+def test_write_qualities_to_file_without_fastq_extension(tmp_path):
+    with dnaio.open(tmp_path / "out.txt", mode="w", qualities=True) as f:
+        f.write(dnaio.SequenceRecord("name", "ACG", "###"))
+
+    with dnaio.open(tmp_path / "out.txt", mode="w", qualities=False) as f:
+        f.write(dnaio.SequenceRecord("name", "ACG", None))
 
 
 def test_read(fileformat, extension):
