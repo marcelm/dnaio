@@ -75,6 +75,8 @@ def _open_single(
             return FastqReader(file, _close_file=close_file)
         return FastqWriter(file, _close_file=close_file)
 
+    if close_file:
+        file.close()
     raise UnknownFileFormat(
         f"File format '{fileformat}' is unknown (expected 'fasta' or 'fastq')."
     )
