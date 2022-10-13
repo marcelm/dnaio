@@ -32,17 +32,12 @@ SIMPLE_RECORDS = {
 def formatted_sequence(record, fileformat):
     if fileformat == "fastq":
         return "@{}\n{}\n+\n{}\n".format(record.name, record.sequence, record.qualities)
-    elif fileformat == "fastq_bytes":
-        return b"@%b\n%b\n+\n%b\n" % (record.name, record.sequence, record.qualities)
     else:
         return ">{}\n{}\n".format(record.name, record.sequence)
 
 
 def formatted_sequences(records, fileformat):
-    record_iter = (formatted_sequence(record, fileformat) for record in records)
-    if fileformat == "fastq_bytes":
-        return b"".join(record_iter)
-    return "".join(record_iter)
+    return "".join(formatted_sequence(record, fileformat) for record in records)
 
 
 def test_formatted_sequence():
