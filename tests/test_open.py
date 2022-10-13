@@ -1,11 +1,10 @@
 from pathlib import Path
 
-import dnaio
+import pytest
 from xopen import xopen
 
-import pytest
-
-from dnaio import FileFormatError
+import dnaio
+from dnaio import FileFormatError, UnknownFileFormat
 
 
 @pytest.fixture(params=["", ".gz", ".bz2", ".xz"])
