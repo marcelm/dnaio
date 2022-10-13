@@ -1,6 +1,7 @@
 from pytest import raises
 from io import BytesIO
 
+from dnaio import UnknownFileFormat
 from dnaio._core import paired_fastq_heads
 from dnaio.chunks import _fastq_head, _fasta_head, read_chunks, read_paired_chunks
 
@@ -84,3 +85,8 @@ def test_read_chunks():
 
 def test_read_chunks_empty():
     assert list(read_chunks(BytesIO(b""))) == []
+
+
+def test_invalid_file_format():
+    with raises(UnknownFileFormat):
+        list(read_chunks(BytesIO(b"invalid format")))
