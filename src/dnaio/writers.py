@@ -1,10 +1,10 @@
+import os
 from os import PathLike
 from typing import Union, BinaryIO, Optional
 
 from xopen import xopen
 
 from . import SequenceRecord
-from ._util import _is_path
 from .interfaces import SingleEndWriter
 
 
@@ -13,6 +13,8 @@ class FileWriter:
     A mix-in that manages opening and closing and provides a context manager
     """
 
+    _file: BinaryIO
+
     def __init__(
         self,
         file: Union[PathLike, str, BinaryIO],
@@ -20,12 +22,15 @@ class FileWriter:
         opener=xopen,
         _close_file: Optional[bool] = None,
     ):
-        if _is_path(file):
+        try:
+            os.fspath(file)  # type: ignore
+        except TypeError:
+            # Assume it’s an open file-like object
+            self._file = file  # type: ignore
+            self._close_on_exit = bool(_close_file)
+        else:
             self._file = opener(file, "wb")
             self._close_on_exit = True
-        else:
-            self._file = file
-            self._close_on_exit = bool(_close_file)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}('{getattr(self._file, 'name', self._file)}')"

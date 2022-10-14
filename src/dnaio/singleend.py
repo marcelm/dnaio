@@ -4,7 +4,6 @@ from typing import Optional, Union, BinaryIO, Tuple
 from .exceptions import UnknownFileFormat
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
-from ._util import _is_path
 
 
 def _open_single(
@@ -70,14 +69,12 @@ def _open_single(
 
 def _open_file_or_path(
     file_or_path: Union[str, os.PathLike, BinaryIO], mode: str, opener
-) -> Tuple[bool, BinaryIO, str]:
+) -> Tuple[bool, BinaryIO, Optional[str]]:
     path: Optional[str]
     file: BinaryIO
-    if _is_path(file_or_path):
+    try:
         path = os.fspath(file_or_path)  # type: ignore
-        file = opener(path, mode[0] + "b")
-        close_file = True
-    else:
+    except TypeError:
         if "r" in mode and not hasattr(file_or_path, "readinto"):
             raise ValueError(
                 "When passing in an open file-like object, it must have been opened in binary mode"
@@ -88,7 +85,11 @@ def _open_file_or_path(
         else:
             path = None
         close_file = False
-    return close_file, file, path  # type: ignore
+    else:
+        file = opener(path, mode[0] + "b")
+        close_file = True
+
+    return close_file, file, path
 
 
 def _detect_format_from_name(name: str) -> Optional[str]:
