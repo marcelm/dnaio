@@ -22,8 +22,10 @@ from dnaio import (
     FastqWriter,
     InterleavedPairedEndWriter,
     TwoFilePairedEndReader,
+    records_are_mates,
+    record_names_match,
+    SequenceRecord,
 )
-from dnaio import records_are_mates, record_names_match, SequenceRecord
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
@@ -339,7 +341,7 @@ class TestOpen:
         path = os.path.join(self._tmpdir, "tmp.fastq")
         with raises(ValueError):
             with dnaio.open(path, mode="w", qualities=False):
-                pass
+                pass  # pragma: no cover
 
 
 class TestInterleavedReader:
@@ -608,7 +610,7 @@ def test_file_writer(tmp_path):
     assert path.exists()
     with raises(ValueError) as e:
         with fw:
-            pass
+            pass  # pragma: no coverage
     assert "operation on closed file" in e.value.args[0]
 
 
@@ -618,7 +620,7 @@ def test_binary_file_reader():
     bfr.close()
     with raises(ValueError) as e:
         with bfr:
-            pass
+            pass  # pragma: no coverage
     assert "operation on closed" in e.value.args[0]
 
 
