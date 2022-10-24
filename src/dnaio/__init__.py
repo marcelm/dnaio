@@ -101,7 +101,7 @@ def open(
         Deprecated keyword argument for the second file.
 
       mode:
-        Either ``'r'``, ``'w'`` for writing or ``'a'`` for appending.
+        Set to ``'r'`` for reading, ``'w'`` for writing or ``'a'`` for appending.
 
       interleaved:
         If True, then file1 contains interleaved paired-end data.
@@ -133,16 +133,18 @@ def open(
     """
     if files and (file1 is not None):
         raise ValueError(
-            "the file1 argument cannot be used together with unnamed files"
+            "The file1 keyword argument cannot be used together with files specified"
+            "as positional arguments"
         )
     elif len(files) > 1 and file2 is not None:
         raise ValueError(
-            "the file2 argument cannot be used together with more than one "
-            "unnamed file"
+            "The file2 argument cannot be used together with more than one "
+            "file specified as positional argument"
         )
     elif file1 is not None and file2 is not None and files:
         raise ValueError(
-            "file1 and file2 arguments cannot be used together with unnamed files"
+            "file1 and file2 arguments cannot be used together with files specified"
+            "as positional arguments"
         )
     elif file1 is not None and file2 is not None:
         files = (file1, file2)
@@ -151,7 +153,7 @@ def open(
 
     if len(files) > 1 and interleaved:
         raise ValueError(
-            "When interleaved is True only one file must be specified as input."
+            "When interleaved is True, only one file must be specified."
         )
     elif mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")
