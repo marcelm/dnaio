@@ -1,4 +1,13 @@
-from typing import Optional, Tuple, BinaryIO, Iterator, Type, TypeVar, ByteString
+from typing import (
+    Generic,
+    Optional,
+    Tuple,
+    BinaryIO,
+    Iterator,
+    Type,
+    TypeVar,
+    ByteString,
+)
 
 class SequenceRecord:
     name: str
@@ -31,7 +40,7 @@ def records_are_mates(
 
 T = TypeVar("T")
 
-class FastqIter:
+class FastqIter(Generic[T]):
     def __init__(
         self, file: BinaryIO, sequence_class: Type[T], buffer_size: int = ...
     ): ...
