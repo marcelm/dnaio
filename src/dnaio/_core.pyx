@@ -289,6 +289,13 @@ cdef class SequenceRecord:
                                 header2_length, id1_ends_with_number)
 
     def reverse_complement(self):
+        """
+        Return a reverse-complemented version of this record.
+
+        - The name remains unchanged.
+        - The sequence is reverse complemented.
+        - If quality values exist, their order is reversed.
+        """
         cdef:
             Py_ssize_t sequence_length = PyUnicode_GET_LENGTH(self._sequence)
             object reversed_sequence_obj = PyUnicode_New(sequence_length, 127)
