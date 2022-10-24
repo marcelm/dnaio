@@ -152,9 +152,7 @@ def open(
         files = (files[0], file2)
 
     if len(files) > 1 and interleaved:
-        raise ValueError(
-            "When interleaved is True, only one file must be specified."
-        )
+        raise ValueError("When interleaved is True, only one file must be specified.")
     elif mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")
 
