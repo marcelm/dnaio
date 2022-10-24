@@ -12,7 +12,7 @@ v0.9.1 (2022-08-01)
 v0.9.0 (2022-05-17)
 -------------------
 
-* :pr:`79`: Added a `records_are_mates` function to be used for checking whether
+* :pr:`79`: Added a `~dnaio.records_are_mates` function to be used for checking whether
   three or more records are mates of each other (by checking the ID).
 * :pr:`74`, :pr:`68`: Made FASTQ parsing faster by implementing the check for
   ASCII using SSE vector instructions.
@@ -23,12 +23,13 @@ v0.8.0 (2022-03-26)
 
 * Preliminary documentation is available at
   <https://dnaio.readthedocs.io/>.
-* :pr:`53`: Renamed ``Sequence`` to `SequenceRecord`.
+* :pr:`53`: Renamed ``Sequence`` to `~dnaio.SequenceRecord`.
   The previous name is still available as an alias
   so that existing code will continue to work.
 * When reading a FASTQ file, there is now a check that ensures that
   all characters are ASCII.
-* Function ``record_names_match`` is deprecated, use `SequenceRecord.is_mate` instead.
+* Function ``record_names_match`` is deprecated, use `~dnaio.SequenceRecord.is_mate` instead.
+* Added `~dnaio.SequenceRecord.reverse_complement`.
 * Dropped Python 3.6 support as it is end-of-life.
 
 v0.7.1 (2022-01-26)
