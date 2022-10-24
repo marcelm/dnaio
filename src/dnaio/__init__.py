@@ -160,11 +160,9 @@ def open(
 
     if interleaved or len(files) == 2:
         return _open_paired(
-            files[0],
-            file2=None if interleaved else files[1],
+            *files,
             opener=opener,
             fileformat=fileformat,
-            interleaved=interleaved,
             mode=mode,
             qualities=qualities,
         )
