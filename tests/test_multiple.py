@@ -39,7 +39,7 @@ def test_open_no_file_error(kwargs):
 def test_open_multiple_unsupported_mode():
     with pytest.raises(ValueError) as error:
         _open_multiple(os.devnull, mode="X")
-    error.match("mode")
+    error.match("one of 'r', 'w', 'a'")
 
 
 @pytest.mark.parametrize(
