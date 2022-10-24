@@ -1,4 +1,5 @@
 import contextlib
+import os
 from os import PathLike
 from typing import BinaryIO, IO, Iterable, Iterator, List, Optional, Tuple, Union
 
@@ -28,8 +29,8 @@ def _open_multiple(
     elif mode == "w" and fileformat is None:
         # Assume mixed files will not be offered.
         for file in files:
-            if isinstance(file, str):
-                fileformat = _detect_format_from_name(file)
+            if isinstance(file, (str, os.PathLike)):
+                fileformat = _detect_format_from_name(os.fspath(file))
     append = mode == "a"
     if fileformat == "fastq" or qualities or (fileformat is None and qualities is None):
         return MultipleFastqWriter(*files, opener=opener, append=append)
