@@ -20,9 +20,9 @@ def _open_multiple(
     opener=xopen,
 ):
     if not files:
-        raise ValueError("at least one file is required")
+        raise ValueError("At least one file is required")
     if mode not in ("r", "w", "a"):
-        raise ValueError("mode must be one of 'r', 'w', 'a'")
+        raise ValueError("Mode must be one of 'r', 'w', 'a'")
     elif mode == "r":
         return MultipleFileReader(*files, fileformat=fileformat, opener=opener)
     elif mode == "w" and fileformat is None:

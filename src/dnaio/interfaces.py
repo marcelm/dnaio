@@ -60,7 +60,7 @@ class MultipleFileWriter(ABC):
     @abstractmethod
     def write_iterable(self, list_of_records: Iterable[Tuple[SequenceRecord, ...]]):
         """
-        Iterates over the list (or other iterable container) and writes all
+        Iterate over the list (or other iterable container) and write all
         N-tuples of SequenceRecord to disk. N must be equal
         to the number of files the MultipleFileWriter was initialized with.
 
