@@ -168,7 +168,7 @@ def open(
             mode=mode,
             qualities=qualities,
         )
-    elif len(files) > 2:  # 3 or more files
+    elif len(files) > 2:
         return _open_multiple(
             *files, fileformat=fileformat, mode=mode, qualities=qualities, opener=opener
         )
