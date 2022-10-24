@@ -1,10 +1,9 @@
 import os
-from typing import Optional, Union, BinaryIO
+from typing import Optional, Union, BinaryIO, Tuple
 
 from .exceptions import UnknownFileFormat
 from .readers import FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
-from ._util import _is_path
 
 
 def _open_single(
@@ -21,22 +20,8 @@ def _open_single(
     if mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")
 
-    path: Optional[str]
-    if _is_path(file_or_path):
-        path = os.fspath(file_or_path)  # type: ignore
-        file = opener(path, mode[0] + "b")
-        close_file = True
-    else:
-        if "r" in mode and not hasattr(file_or_path, "readinto"):
-            raise ValueError(
-                "When passing in an open file-like object, it must have been opened in binary mode"
-            )
-        file = file_or_path
-        if hasattr(file, "name") and isinstance(file.name, str):
-            path = file.name
-        else:
-            path = None
-        close_file = False
+    close_file, file, path = _open_file_or_path(file_or_path, mode, opener)
+    del file_or_path
 
     if path is not None and fileformat is None:
         fileformat = _detect_format_from_name(path)
@@ -75,9 +60,36 @@ def _open_single(
             return FastqReader(file, _close_file=close_file)
         return FastqWriter(file, _close_file=close_file)
 
+    if close_file:
+        file.close()
     raise UnknownFileFormat(
         f"File format '{fileformat}' is unknown (expected 'fasta' or 'fastq')."
     )
+
+
+def _open_file_or_path(
+    file_or_path: Union[str, os.PathLike, BinaryIO], mode: str, opener
+) -> Tuple[bool, BinaryIO, Optional[str]]:
+    path: Optional[str]
+    file: BinaryIO
+    try:
+        path = os.fspath(file_or_path)  # type: ignore
+    except TypeError:
+        if "r" in mode and not hasattr(file_or_path, "readinto"):
+            raise ValueError(
+                "When passing in an open file-like object, it must have been opened in binary mode"
+            )
+        file = file_or_path  # type: ignore
+        if hasattr(file, "name") and isinstance(file.name, str):
+            path = file.name
+        else:
+            path = None
+        close_file = False
+    else:
+        file = opener(path, mode[0] + "b")
+        close_file = True
+
+    return close_file, file, path
 
 
 def _detect_format_from_name(name: str) -> Optional[str]:

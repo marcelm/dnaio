@@ -1,10 +1,11 @@
 import os
 from pathlib import Path
 
-import dnaio
+import pytest
 from xopen import xopen
 
-import pytest
+import dnaio
+from dnaio import FileFormatError, UnknownFileFormat
 
 
 @pytest.fixture(params=["", ".gz", ".bz2", ".xz"])
@@ -32,17 +33,12 @@ SIMPLE_RECORDS = {
 def formatted_sequence(record, fileformat):
     if fileformat == "fastq":
         return "@{}\n{}\n+\n{}\n".format(record.name, record.sequence, record.qualities)
-    elif fileformat == "fastq_bytes":
-        return b"@%b\n%b\n+\n%b\n" % (record.name, record.sequence, record.qualities)
     else:
         return ">{}\n{}\n".format(record.name, record.sequence)
 
 
 def formatted_sequences(records, fileformat):
-    record_iter = (formatted_sequence(record, fileformat) for record in records)
-    if fileformat == "fastq_bytes":
-        return b"".join(record_iter)
-    return "".join(record_iter)
+    return "".join(formatted_sequence(record, fileformat) for record in records)
 
 
 def test_formatted_sequence():
@@ -58,7 +54,7 @@ def test_version():
 def test_open_nonexistent(tmp_path):
     with pytest.raises(FileNotFoundError):
         with dnaio.open(tmp_path / "nonexistent"):
-            pass
+            pass  # pragma: no cover
 
 
 def test_open_empty_file_with_unrecognized_extension(tmp_path):
@@ -67,6 +63,43 @@ def test_open_empty_file_with_unrecognized_extension(tmp_path):
     with dnaio.open(path) as f:
         records = list(f)
     assert records == []
+
+
+def test_fileformat_error(tmp_path):
+    with open(tmp_path / "file.fastq", mode="w") as f:
+        print("this is not a FASTQ file", file=f)
+    with pytest.raises(FileFormatError) as e:
+        with dnaio.open(tmp_path / "file.fastq") as f:
+            _ = list(f)  # pragma: no cover
+    assert "at line 2" in str(e.value)  # Premature end of file
+
+
+def test_write_unknown_file_format(tmp_path):
+    with pytest.raises(UnknownFileFormat):
+        with dnaio.open(tmp_path / "out.txt", mode="w") as f:
+            f.write(dnaio.SequenceRecord("name", "ACG", "###"))  # pragma: no cover
+
+
+def test_read_unknown_file_format(tmp_path):
+    with open(tmp_path / "file.txt", mode="w") as f:
+        print("text file", file=f)
+    with pytest.raises(UnknownFileFormat):
+        with dnaio.open(tmp_path / "file.txt") as f:
+            _ = list(f)  # pragma: no cover
+
+
+def test_invalid_format(tmp_path):
+    with pytest.raises(UnknownFileFormat):
+        with dnaio.open(tmp_path / "out.txt", mode="w", fileformat="foo"):
+            pass  # pragma: no cover
+
+
+def test_write_qualities_to_file_without_fastq_extension(tmp_path):
+    with dnaio.open(tmp_path / "out.txt", mode="w", qualities=True) as f:
+        f.write(dnaio.SequenceRecord("name", "ACG", "###"))
+
+    with dnaio.open(tmp_path / "out.txt", mode="w", qualities=False) as f:
+        f.write(dnaio.SequenceRecord("name", "ACG", None))
 
 
 def test_read(fileformat, extension):
@@ -189,7 +222,7 @@ def test_write_paired_same_path(tmp_path):
     path2 = tmp_path / "same.fastq"
     with pytest.raises(ValueError):
         with dnaio.open(file1=path1, file2=path2, mode="w"):
-            pass
+            pass  # pragma: no cover
 
 
 def test_write_paired(tmp_path, fileformat, extension):

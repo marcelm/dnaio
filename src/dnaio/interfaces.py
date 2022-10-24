@@ -10,18 +10,30 @@ class SingleEndReader(ABC):
 
     @abstractmethod
     def __iter__(self) -> Iterator[SequenceRecord]:
-        """Yield the records in the input as `SequenceRecord` objects."""
+        """
+        Iterate over an input containing sequence records
+
+        Yields:
+            `SequenceRecord` objects
+
+        Raises:
+            `FileFormatError` if there was a parse error
+        """
 
 
 class PairedEndReader(ABC):
     @abstractmethod
     def __iter__(self) -> Iterator[Tuple[SequenceRecord, SequenceRecord]]:
         """
-        Yield the records in the paired-end input as pairs of `SequenceRecord` objects.
+        Iterate over an input containing paired-end records
 
-        Raises a `FileFormatError` if reads are improperly paired, that is,
-        if there are more reads in one file than the other or if the record IDs
-        do not match (according to `SequenceRecord.is_mate`).
+        Yields:
+            Pairs of `SequenceRecord` objects
+
+        Raises:
+            `FileFormatError` if there was a parse error or if reads are improperly paired,
+            that is, if there are more reads in one file than the other or if the record IDs
+            do not match (according to `SequenceRecord.is_mate`).
         """
 
 
@@ -41,7 +53,7 @@ class PairedEndWriter(ABC):
         because this was already done at parsing time. If it is possible
         that the record IDs no longer match, check that
         ``record1.is_mate(record2)`` returns True before calling
-        this function.
+        this method.
         """
 
 

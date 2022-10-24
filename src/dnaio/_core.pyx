@@ -41,6 +41,24 @@ def bytes_ascii_check(bytes string, Py_ssize_t length = -1):
     return ascii
 
 
+def is_not_ascii_message(field, value):
+    """
+    Return an error message for a non-ASCII field encountered when initializing a SequenceRecord
+
+    Arguments:
+        field: Description of the field ("name", "sequence", "qualities" or similar)
+            in which non-ASCII characters were found
+        value: Unicode string that was intended to be assigned to the field
+    """
+    detail = ""
+    try:
+        value.encode("ascii")
+    except UnicodeEncodeError as e:
+        detail = (
+            f", but found '{value[e.start:e.end]}' at index {e.start}"
+        )
+    return f"'{field}' in sequence file must be ASCII encoded{detail}"
+
 
 cdef class SequenceRecord:
     """
@@ -57,6 +75,10 @@ cdef class SequenceRecord:
             If quality values are available, this is a string
             that contains the Phred-scaled qualities encoded as
             ASCII(qual+33) (as in FASTQ).
+
+    Raises:
+        ValueError: One of the provide attributes is not ASCII or
+            the lengths of sequence and qualities differ
     """
     cdef:
         object _name
@@ -74,16 +96,16 @@ cdef class SequenceRecord:
         if not PyUnicode_CheckExact(name):
             raise TypeError(f"name should be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
-            raise ValueError("name must be a valid ASCII-string.")
+            raise ValueError(is_not_ascii_message("name", name))
         if not PyUnicode_CheckExact(sequence):
             raise TypeError(f"sequence should be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
-            raise ValueError("sequence must be a valid ASCII-string.")
+            raise ValueError(is_not_ascii_message("sequence", sequence))
         if qualities is not None:
             if not PyUnicode_CheckExact(qualities):
                 raise TypeError(f"qualities should be of type str, got {type(qualities)}")
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
-                raise ValueError("qualities must be a valid ASCII-string.")
+                raise ValueError(is_not_ascii_message("qualities", qualities))
             if len(qualities) != len(sequence):
                 rname = shorten(name)
                 raise ValueError("In read named {!r}: length of quality sequence "
@@ -99,7 +121,7 @@ cdef class SequenceRecord:
         if not PyUnicode_CheckExact(name):
             raise TypeError(f"name must be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
-            raise ValueError("name must be a valid ASCII-string.")
+            raise ValueError(is_not_ascii_message("name", name))
         self._name = name
 
     @property
@@ -111,7 +133,7 @@ cdef class SequenceRecord:
         if not PyUnicode_CheckExact(sequence):
             raise TypeError(f"sequence must be of type str, got {type(sequence)}")
         if not PyUnicode_IS_COMPACT_ASCII(sequence):
-            raise ValueError("sequence must be a valid ASCII-string.")
+            raise ValueError(is_not_ascii_message("sequence", sequence))
         self._sequence = sequence
 
     @property
@@ -122,7 +144,7 @@ cdef class SequenceRecord:
     def qualities(self, qualities):
         if PyUnicode_CheckExact(qualities):
             if not PyUnicode_IS_COMPACT_ASCII(qualities):
-                raise ValueError("qualities must be a valid ASCII-string.")
+                raise ValueError(is_not_ascii_message("qualities", qualities))
         elif qualities is None:
             pass
         else:
@@ -301,9 +323,10 @@ def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
     """
     Skip forward in the two buffers by multiples of four lines.
 
-    Return a tuple (length1, length2) such that buf1[:length1] and
-    buf2[:length2] contain the same number of lines (where the
-    line number is divisible by four).
+    Returns:
+        A tuple (length1, length2) such that buf1[:length1] and
+        buf2[:length2] contain the same number of lines (where the
+        line number is divisible by four).
     """
     # Acquire buffers. Cython automatically checks for errors here.
     cdef Py_buffer data1_buffer
@@ -349,15 +372,21 @@ cdef class FastqIter:
     """
     Parse a FASTQ file and yield SequenceRecord objects
 
-    The *first value* that the generator yields is a boolean indicating whether
-    the first record in the FASTQ has a repeated header (in the third row
-    after the ``+``).
+    Arguments:
+        file: a file-like object, opened in binary mode (it must have a readinto
+            method)
 
-    file -- a file-like object, opened in binary mode (it must have a readinto
-    method)
+        sequence_class: A custom class to use for the returned instances
+            (instead of SequenceRecord)
 
-    buffer_size -- size of the initial buffer. This is automatically grown
-        if a FASTQ record is encountered that does not fit.
+        buffer_size: size of the initial buffer. This is automatically grown
+            if a FASTQ record is encountered that does not fit.
+
+    Yields:
+        The *first value* that the generator yields is a boolean indicating whether
+        the first record in the FASTQ has a repeated header (in the third row
+        after the ``+``). Subsequent values are SequenceRecord objects (or whichever
+        objects sequence_class returned if specified)
     """
     cdef:
         Py_ssize_t buffer_size

@@ -1,10 +1,10 @@
+import os
 from os import PathLike
 from typing import Union, BinaryIO, Optional
 
 from xopen import xopen
 
 from . import SequenceRecord
-from ._util import _is_path
 from .interfaces import SingleEndWriter
 
 
@@ -13,6 +13,8 @@ class FileWriter:
     A mix-in that manages opening and closing and provides a context manager
     """
 
+    _file: BinaryIO
+
     def __init__(
         self,
         file: Union[PathLike, str, BinaryIO],
@@ -20,12 +22,15 @@ class FileWriter:
         opener=xopen,
         _close_file: Optional[bool] = None,
     ):
-        if _is_path(file):
+        try:
+            os.fspath(file)  # type: ignore
+        except TypeError:
+            # Assume it’s an open file-like object
+            self._file = file  # type: ignore
+            self._close_on_exit = bool(_close_file)
+        else:
             self._file = opener(file, "wb")
             self._close_on_exit = True
-        else:
-            self._file = file
-            self._close_on_exit = bool(_close_file)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}('{getattr(self._file, 'name', self._file)}')"
@@ -45,7 +50,14 @@ class FileWriter:
 
 class FastaWriter(FileWriter, SingleEndWriter):
     """
-    Write FASTA-formatted sequences to a file.
+    Write FASTA-formatted sequences to a file
+
+    While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments unless you need to set the
+    line_length argument.
+
+    Arguments:
+        line_length: Wrap sequence lines after this many characters (None disables wrapping)
     """
 
     def __init__(
@@ -56,13 +68,6 @@ class FastaWriter(FileWriter, SingleEndWriter):
         opener=xopen,
         _close_file: Optional[bool] = None,
     ):
-        """
-
-        Arguments:
-            file: A path or an open file-like object
-            line_length: Wrap sequence lines after this many characters (None disables wrapping)
-            opener: If *file* is a path, this function is called to open it.
-        """
         super().__init__(file, opener=opener, _close_file=_close_file)
         self.line_length = line_length if line_length != 0 else None
 
@@ -101,14 +106,15 @@ class FastaWriter(FileWriter, SingleEndWriter):
 
 class FastqWriter(FileWriter, SingleEndWriter):
     """
-    Write records in FASTQ format.
+    Write records in FASTQ format
 
-    FASTQ files are formatted like this::
+    While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments unless you need to set
+    two_headers to True.
 
-        @read name
-        AACCGGTT
-        +
-        FF,:F,,F
+    Arguments:
+        two_headers: If True, the header is repeated on the third line
+            of each record after the "+".
     """
 
     file_mode = "wb"
@@ -121,13 +127,6 @@ class FastqWriter(FileWriter, SingleEndWriter):
         opener=xopen,
         _close_file: Optional[bool] = None,
     ):
-        """
-        Arguments:
-            file: A path or an open file-like object
-            two_headers: If True, the header is repeated on the third line
-                of each record after the "+".
-            opener: If *file* is a path, this function is called to open it.
-        """
         super().__init__(file, opener=opener, _close_file=_close_file)
         self._two_headers = two_headers
         # setattr avoids a complaint from Mypy

@@ -2,6 +2,13 @@
 Changelog
 =========
 
+v0.9.1 (2022-08-01)
+-------------------
+
+* :pr:`85`: macOS wheels are now also built as part of the release procedure.
+* :pr:`81`: API documentation improvements and minor code refactors for
+  readability.
+
 v0.9.0 (2022-05-17)
 -------------------
 
