@@ -90,8 +90,8 @@ def open(
 
     Parameters:
       files:
-        one or multiple Path or an open file-like objects. One for single-end
-        reads, two for multiple-end reads etc. More than two files are also
+        one or more Path or open file-like objects. One for single-end
+        reads, two for paired-end reads etc. More than two files are also
         supported. At least one file is required.
 
       file1:
