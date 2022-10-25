@@ -17,7 +17,8 @@ class SingleEndReader(ABC):
             `SequenceRecord` objects
 
         Raises:
-            `FileFormatError` if there was a parse error
+            `FileFormatError`
+                if there was a parse error
         """
 
 
@@ -31,9 +32,11 @@ class PairedEndReader(ABC):
             Pairs of `SequenceRecord` objects
 
         Raises:
-            `FileFormatError` if there was a parse error or if reads are improperly paired,
-            that is, if there are more reads in one file than the other or if the record IDs
-            do not match (according to `SequenceRecord.is_mate`).
+            `FileFormatError`
+                if there was a parse error or if reads are improperly paired,
+                that is, if there are more reads in one file than the other or
+                if the record IDs do not match (according to
+                `SequenceRecord.is_mate`).
         """
 
 

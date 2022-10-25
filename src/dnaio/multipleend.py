@@ -81,10 +81,11 @@ class MultipleFileReader:
             of files.
 
         Raises:
-            `FileFormatError` if there was a parse error or if reads are
-            improperly paired, that is, if there are more reads in one file
-            than the others or if the record IDs do not match (according to
-            `records_are_mates`).
+            `FileFormatError`
+                if there was a parse error or if reads are improperly paired,
+                that is, if there are more reads in one file than the others or
+                if the record IDs do not match (according to
+                `records_are_mates`).
         """
         if len(self._files) == 1:
             yield from zip(self._readers[0])
