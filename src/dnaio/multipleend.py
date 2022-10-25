@@ -45,6 +45,7 @@ class MultipleFileReader:
     While this class can be instantiated directly, the recommended way is to
     use `dnaio.open` with appropriate arguments.
     """
+
     def __init__(
         self,
         *files: Union[str, PathLike, BinaryIO],
@@ -72,6 +73,19 @@ class MultipleFileReader:
         )
 
     def __iter__(self) -> Iterator[Tuple[SequenceRecord, ...]]:
+        """
+        Iterate over multiple inputs containing records
+
+        Yields:
+            N-tuples of `SequenceRecord` objects where N is equal to the number
+            of files.
+
+        Raises:
+            `FileFormatError` if there was a parse error or if reads are
+            improperly paired, that is, if there are more reads in one file
+            than the others or if the record IDs do not match (according to
+            `records_are_mates`).
+        """
         if len(self._files) == 1:
             yield from zip(self._readers[0])
         else:
@@ -112,9 +126,10 @@ class MultipleFastaWriter(MultipleFileWriter):
     """
     Write multiple FASTA files simultaneously.
 
-     While this class can be instantiated directly, the recommended way is to
+    While this class can be instantiated directly, the recommended way is to
     use `dnaio.open` with appropriate arguments.
     """
+
     def __init__(
         self,
         *files: Union[str, PathLike, BinaryIO],
@@ -170,9 +185,10 @@ class MultipleFastqWriter(MultipleFileWriter):
     """
     Write multiple FASTA files simultaneously.
 
-     While this class can be instantiated directly, the recommended way is to
+    While this class can be instantiated directly, the recommended way is to
     use `dnaio.open` with appropriate arguments.
     """
+
     def __init__(
         self,
         *files: Union[str, PathLike, BinaryIO],

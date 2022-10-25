@@ -21,6 +21,9 @@ __all__ = [
     "InterleavedPairedEndWriter",
     "TwoFilePairedEndReader",
     "TwoFilePairedEndWriter",
+    "MultipleFileReader",
+    "MultipleFastaWriter",
+    "MultipleFastqWriter",
     "read_chunks",
     "read_paired_chunks",
     "records_are_mates",
@@ -47,7 +50,13 @@ from .pairedend import (
     InterleavedPairedEndReader,
     InterleavedPairedEndWriter,
 )
-from .multipleend import MultipleFileReader, MultipleFileWriter, _open_multiple
+from .multipleend import (
+    MultipleFastaWriter,
+    MultipleFastqWriter,
+    MultipleFileReader,
+    MultipleFileWriter,
+    _open_multiple,
+)
 from .exceptions import (
     UnknownFileFormat,
     FileFormatError,

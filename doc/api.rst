@@ -36,6 +36,9 @@ Reader and writer interfaces
 .. autoclass:: PairedEndWriter
    :members: write
 
+.. autoclass:: MultipleFileWriter
+   :members: write, write_iterable
+
 
 Reader and writer classes
 -------------------------
@@ -66,6 +69,15 @@ They can also be used directly if needed.
    :show-inheritance:
 
 .. autoclass:: InterleavedPairedEndWriter
+   :show-inheritance:
+
+.. autoclass:: MultipleFileReader
+   :members: __iter__
+
+.. autoclass:: MultipleFastaWriter
+   :show-inheritance:
+
+.. autoclass:: MultipleFastqWriter
    :show-inheritance:
 
 
