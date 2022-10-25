@@ -38,6 +38,13 @@ def _open_multiple(
 
 
 class MultipleFileReader:
+    """
+    Read multiple FASTA/FASTQ files simultaneously. Useful when additional
+    FASTQ files with extra information are supplied (UMIs, indices etc.).
+
+    While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments.
+    """
     def __init__(
         self,
         *files: Union[str, PathLike, BinaryIO],
@@ -102,6 +109,12 @@ class MultipleFileReader:
 
 
 class MultipleFastaWriter(MultipleFileWriter):
+    """
+    Write multiple FASTA files simultaneously.
+
+     While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments.
+    """
     def __init__(
         self,
         *files: Union[str, PathLike, BinaryIO],
@@ -154,6 +167,12 @@ class MultipleFastaWriter(MultipleFileWriter):
 
 
 class MultipleFastqWriter(MultipleFileWriter):
+    """
+    Write multiple FASTA files simultaneously.
+
+     While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments.
+    """
     def __init__(
         self,
         *files: Union[str, PathLike, BinaryIO],
