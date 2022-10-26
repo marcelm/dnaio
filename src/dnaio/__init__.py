@@ -30,6 +30,7 @@ __all__ = [
     "__version__",
 ]
 
+import functools
 from os import PathLike
 from typing import Optional, Union, BinaryIO
 
@@ -85,7 +86,9 @@ def open(
     interleaved: bool = False,
     mode: str = "r",
     qualities: Optional[bool] = None,
-    opener=xopen
+    opener=xopen,
+    compression_level: int = 1,
+    open_threads: int = 0,
 ) -> Union[
     SingleEndReader,
     PairedEndReader,
@@ -136,6 +139,17 @@ def open(
         already open file-like objects. By default, ``xopen`` is used, which can
         also open compressed file formats.
 
+      open_threads: By default dnaio opens files in the main thread,
+        when threads is greater than 0 external processes are opened for
+        compressing and decompressing files. This decreases wall clock time
+        at the cost of a little extra overhead. This parameter does not work
+        when a custom opener is set.
+
+      compression_level: By default dnaio uses compression level 1 for writing
+        gzipped files as this is the fastest. A higher level can be set using
+        this parameter. This parameter does not work when a custom opener is
+        set.
+
     Return:
        A subclass of `SingleEndReader`, `PairedEndReader`, `SingleEndWriter` or
        `PairedEndWriter`.
@@ -165,6 +179,10 @@ def open(
     elif mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")
 
+    if opener == xopen:
+        opener = functools.partial(
+            xopen, threads=open_threads, compresslevel=compression_level
+        )
     if interleaved or len(files) == 2:
         return _open_paired(
             *files,
