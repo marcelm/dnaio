@@ -1,4 +1,5 @@
 from typing import (
+    Generic,
     Optional,
     Tuple,
     BinaryIO,
@@ -6,7 +7,6 @@ from typing import (
     Type,
     TypeVar,
     ByteString,
-    Generic,
 )
 
 class SequenceRecord:

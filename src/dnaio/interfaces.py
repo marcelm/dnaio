@@ -1,10 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, Tuple
+from typing import Iterable, Iterator, Tuple
 
 from dnaio import SequenceRecord
 
 
 class SingleEndReader(ABC):
+    delivers_qualities: bool
+    number_of_records: int
+
     @abstractmethod
     def __iter__(self) -> Iterator[SequenceRecord]:
         """
@@ -14,7 +17,8 @@ class SingleEndReader(ABC):
             `SequenceRecord` objects
 
         Raises:
-            `FileFormatError` if there was a parse error
+            `FileFormatError`
+                if there was a parse error
         """
 
 
@@ -28,9 +32,11 @@ class PairedEndReader(ABC):
             Pairs of `SequenceRecord` objects
 
         Raises:
-            `FileFormatError` if there was a parse error or if reads are improperly paired,
-            that is, if there are more reads in one file than the other or if the record IDs
-            do not match (according to `SequenceRecord.is_mate`).
+            `FileFormatError`
+                if there was a parse error or if reads are improperly paired,
+                that is, if there are more reads in one file than the other or
+                if the record IDs do not match (according to
+                `SequenceRecord.is_mate`).
         """
 
 
@@ -51,4 +57,29 @@ class PairedEndWriter(ABC):
         that the record IDs no longer match, check that
         ``record1.is_mate(record2)`` returns True before calling
         this method.
+        """
+
+
+class MultipleFileWriter(ABC):
+    _number_of_files: int
+
+    @abstractmethod
+    def write(self, *records: SequenceRecord) -> None:
+        """
+        Write N SequenceRecords to the output. N must be equal
+        to the number of files the MultipleFileWriter was initialized with.
+
+        This method does not check whether the records are properly paired.
+        """
+
+    @abstractmethod
+    def write_iterable(self, list_of_records: Iterable[Tuple[SequenceRecord, ...]]):
+        """
+        Iterate over the list (or other iterable container) and write all
+        N-tuples of SequenceRecord to disk. N must be equal
+        to the number of files the MultipleFileWriter was initialized with.
+
+        This method does not check whether the records are properly paired.
+        This method may provide a speed boost over calling write for each
+        tuple of SequenceRecords individually.
         """

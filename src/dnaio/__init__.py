@@ -21,6 +21,9 @@ __all__ = [
     "InterleavedPairedEndWriter",
     "TwoFilePairedEndReader",
     "TwoFilePairedEndWriter",
+    "MultipleFileReader",
+    "MultipleFastaWriter",
+    "MultipleFastqWriter",
     "read_chunks",
     "read_paired_chunks",
     "records_are_mates",
@@ -47,6 +50,13 @@ from .pairedend import (
     InterleavedPairedEndReader,
     InterleavedPairedEndWriter,
 )
+from .multipleend import (
+    MultipleFastaWriter,
+    MultipleFastqWriter,
+    MultipleFileReader,
+    MultipleFileWriter,
+    _open_multiple,
+)
 from .exceptions import (
     UnknownFileFormat,
     FileFormatError,
@@ -68,31 +78,39 @@ Sequence = SequenceRecord
 
 
 def open(
-    file1: Union[str, PathLike, BinaryIO],
-    *,
+    *files: Union[str, PathLike, BinaryIO],
+    file1: Union[str, PathLike, BinaryIO] = None,
     file2: Optional[Union[str, PathLike, BinaryIO]] = None,
     fileformat: Optional[str] = None,
     interleaved: bool = False,
     mode: str = "r",
     qualities: Optional[bool] = None,
     opener=xopen
-) -> Union[SingleEndReader, PairedEndReader, SingleEndWriter, PairedEndWriter]:
+) -> Union[
+    SingleEndReader,
+    PairedEndReader,
+    SingleEndWriter,
+    PairedEndWriter,
+    MultipleFileReader,
+    MultipleFileWriter,
+]:
     """
     Open one or two files in FASTA or FASTQ format for reading or writing.
 
     Parameters:
+      files:
+        one or more Path or open file-like objects. One for single-end
+        reads, two for paired-end reads etc. More than two files are also
+        supported. At least one file is required.
 
       file1:
-        Path or an open file-like object. For reading single-end reads, this is
-        the only required argument.
+        Deprecated keyword argument for the first file.
 
       file2:
-        Path or an open file-like object. When reading paired-end reads from
-        two files, set this to the second file.
+        Deprecated keyword argument for the second file.
 
       mode:
-        Either ``'r'`` or ``'rb'`` for reading, ``'w'`` for writing
-        or ``'a'`` for appending.
+        Set to ``'r'`` for reading, ``'w'`` for writing or ``'a'`` for appending.
 
       interleaved:
         If True, then file1 contains interleaved paired-end data.
@@ -122,21 +140,49 @@ def open(
        A subclass of `SingleEndReader`, `PairedEndReader`, `SingleEndWriter` or
        `PairedEndWriter`.
     """
-    if mode not in ("r", "rb", "w", "a"):
-        raise ValueError("Mode must be 'r', 'rb', 'w' or 'a'")
-    elif interleaved and file2 is not None:
-        raise ValueError("When interleaved is True, file2 must be None")
-    elif interleaved or file2 is not None:
+    if files and (file1 is not None):
+        raise ValueError(
+            "The file1 keyword argument cannot be used together with files specified"
+            "as positional arguments"
+        )
+    elif len(files) > 1 and file2 is not None:
+        raise ValueError(
+            "The file2 argument cannot be used together with more than one "
+            "file specified as positional argument"
+        )
+    elif file1 is not None and file2 is not None and files:
+        raise ValueError(
+            "file1 and file2 arguments cannot be used together with files specified"
+            "as positional arguments"
+        )
+    elif file1 is not None and file2 is not None:
+        files = (file1, file2)
+    elif file2 is not None and len(files) == 1:
+        files = (files[0], file2)
+
+    if len(files) > 1 and interleaved:
+        raise ValueError("When interleaved is True, only one file must be specified.")
+    elif mode not in ("r", "w", "a"):
+        raise ValueError("Mode must be 'r', 'w' or 'a'")
+
+    if interleaved or len(files) == 2:
         return _open_paired(
-            file1,
-            file2=file2,
+            *files,
             opener=opener,
             fileformat=fileformat,
-            interleaved=interleaved,
             mode=mode,
             qualities=qualities,
         )
+    elif len(files) > 2:
+        return _open_multiple(
+            *files, fileformat=fileformat, mode=mode, qualities=qualities, opener=opener
+        )
+
     else:
         return _open_single(
-            file1, opener=opener, fileformat=fileformat, mode=mode, qualities=qualities
+            files[0],
+            opener=opener,
+            fileformat=fileformat,
+            mode=mode,
+            qualities=qualities,
         )

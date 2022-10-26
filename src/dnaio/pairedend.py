@@ -13,11 +13,8 @@ from .singleend import _open_single
 
 
 def _open_paired(
-    file1: Union[str, PathLike, BinaryIO],
-    *,
-    file2: Optional[Union[str, PathLike, BinaryIO]] = None,
+    *files: Union[str, PathLike, BinaryIO],
     fileformat: Optional[str] = None,
-    interleaved: bool = False,
     mode: str = "r",
     qualities: Optional[bool] = None,
     opener=xopen,
@@ -25,38 +22,35 @@ def _open_paired(
     """
     Open paired-end reads
     """
-    if interleaved and file2 is not None:
-        raise ValueError("When interleaved is True, file2 must be None")
-    if file2 is not None:
-        if mode in "wa" and file1 == file2:
+    if len(files) == 2:
+        if mode in "wa" and files[0] == files[1]:
             raise ValueError("The paired-end output files are identical")
         if "r" in mode:
             return TwoFilePairedEndReader(
-                file1, file2, fileformat=fileformat, opener=opener, mode=mode
+                *files, fileformat=fileformat, opener=opener, mode=mode
             )
         append = mode == "a"
         return TwoFilePairedEndWriter(
-            file1,
-            file2,
+            *files,
             fileformat=fileformat,
             qualities=qualities,
             opener=opener,
             append=append,
         )
-    if interleaved:
+    elif len(files) == 1:
         if "r" in mode:
             return InterleavedPairedEndReader(
-                file1, fileformat=fileformat, opener=opener, mode=mode
+                files[0], fileformat=fileformat, opener=opener, mode=mode
             )
         append = mode == "a"
         return InterleavedPairedEndWriter(
-            file1,
+            files[0],
             fileformat=fileformat,
             qualities=qualities,
             opener=opener,
             append=append,
         )
-    assert False
+    raise ValueError("_open_paired must be called with one or two files.")
 
 
 class TwoFilePairedEndReader(PairedEndReader):

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -334,3 +335,50 @@ def test_islice_gzip_does_not_fail(tmp_path):
     f = dnaio.open(path)
     next(iter(f))
     f.close()
+
+
+def test_unsupported_mode():
+    with pytest.raises(ValueError) as error:
+        _ = dnaio.open(os.devnull, mode="x")
+    error.match("Mode must be")
+
+
+def test_no_file2_with_multiple_args():
+    with pytest.raises(ValueError) as error:
+        _ = dnaio.open(os.devnull, os.devnull, file2=os.devnull)
+    error.match("as positional argument")
+    error.match("file2")
+
+
+def test_no_multiple_files_interleaved():
+    with pytest.raises(ValueError) as error:
+        _ = dnaio.open(os.devnull, os.devnull, interleaved=True)
+    error.match("interleaved")
+    error.match("one file")
+
+
+@pytest.mark.parametrize(
+    ["mode", "expected_class"],
+    [("r", dnaio.PairedEndReader), ("w", dnaio.PairedEndWriter)],
+)
+def test_paired_open_with_multiple_args(tmp_path, fileformat, mode, expected_class):
+    path = tmp_path / "file"
+    path2 = tmp_path / "file2"
+    path.touch()
+    path2.touch()
+    f = dnaio.open(path, path2, fileformat=fileformat, mode=mode)
+    assert isinstance(f, expected_class)
+
+
+@pytest.mark.parametrize(
+    ["kwargs", "expected_class"],
+    [
+        ({}, dnaio.multipleend.MultipleFileReader),
+        ({"mode": "w"}, dnaio.multipleend.MultipleFastqWriter),
+        ({"mode": "w", "fileformat": "fastq"}, dnaio.multipleend.MultipleFastqWriter),
+        ({"mode": "w", "fileformat": "fasta"}, dnaio.multipleend.MultipleFastaWriter),
+    ],
+)
+def test_multiple_open_fastq(kwargs, expected_class):
+    f = dnaio.open(os.devnull, os.devnull, os.devnull, **kwargs)
+    assert isinstance(f, expected_class)
