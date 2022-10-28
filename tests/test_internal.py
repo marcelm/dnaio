@@ -266,10 +266,10 @@ class TestFastqReader:
 
 
 class TestOpen:
-    def setup(self):
+    def setup_method(self):
         self._tmpdir = mkdtemp()
 
-    def teardown(self):
+    def teardown_method(self):
         shutil.rmtree(self._tmpdir)
 
     def test_sequence_reader(self):
@@ -388,11 +388,11 @@ class TestInterleavedReader:
 
 
 class TestFastaWriter:
-    def setup(self):
+    def setup_method(self):
         self._tmpdir = mkdtemp()
         self.path = os.path.join(self._tmpdir, "tmp.fasta")
 
-    def teardown(self):
+    def teardown_method(self):
         shutil.rmtree(self._tmpdir)
 
     def test(self):
@@ -438,11 +438,11 @@ class TestFastaWriter:
 
 
 class TestFastqWriter:
-    def setup(self):
+    def setup_method(self):
         self._tmpdir = mkdtemp()
         self.path = os.path.join(self._tmpdir, "tmp.fastq")
 
-    def teardown(self):
+    def teardown_method(self):
         shutil.rmtree(self._tmpdir)
 
     def test(self):
