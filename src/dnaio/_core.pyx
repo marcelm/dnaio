@@ -85,14 +85,7 @@ cdef class SequenceRecord:
         object _sequence
         object _qualities
 
-    def __cinit__(self, object name, object sequence, object qualities=None):
-        """Set qualities to None if there are no quality values"""
-        self._name = name
-        self._sequence = sequence
-        self._qualities = qualities
-
     def __init__(self, object name, object sequence, object qualities = None):
-        # __cinit__ is called first and sets all the variables.
         if not PyUnicode_CheckExact(name):
             raise TypeError(f"name should be of type str, got {type(name)}")
         if not PyUnicode_IS_COMPACT_ASCII(name):
@@ -111,6 +104,9 @@ cdef class SequenceRecord:
                 raise ValueError("In read named {!r}: length of quality sequence "
                                  "({}) and length of read ({}) do not match".format(
                     rname, len(qualities), len(sequence)))
+        self._name = name
+        self._sequence = sequence
+        self._qualities = qualities
 
     @property
     def name(self):
@@ -299,6 +295,7 @@ cdef class SequenceRecord:
             char *qualities
             Py_ssize_t cursor, reverse_cursor
             unsigned char nucleotide
+            SequenceRecord seq_record
         reverse_cursor = sequence_length
         for cursor in range(sequence_length):
             reverse_cursor -= 1
@@ -315,8 +312,11 @@ cdef class SequenceRecord:
                 reversed_qualities[reverse_cursor] = qualities[cursor]
         else:
             reversed_qualities_obj = None
-        return SequenceRecord.__new__(
-            SequenceRecord, self._name, reversed_sequence_obj, reversed_qualities_obj)
+        seq_record = SequenceRecord.__new__(SequenceRecord)
+        seq_record._name = self._name
+        seq_record._sequence = reversed_sequence_obj
+        seq_record._qualities = reversed_qualities_obj
+        return seq_record
 
 
 def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
@@ -490,6 +490,7 @@ cdef class FastqIter:
     def __next__(self):
         cdef:
             object ret_val
+            SequenceRecord seq_record
             char *name_start
             char *name_end
             char *sequence_start
@@ -593,8 +594,11 @@ cdef class FastqIter:
             if self.use_custom_class:
                 ret_val = self.sequence_class(name, sequence, qualities)
             else:
-                ret_val = SequenceRecord.__new__(SequenceRecord, name, sequence, qualities)
-
+                seq_record = SequenceRecord.__new__(SequenceRecord)
+                seq_record._name = name
+                seq_record._sequence = sequence
+                seq_record._qualities = qualities
+                ret_val = seq_record
             # Advance record to next position
             self.number_of_records += 1
             self.record_start = qualities_end + 1

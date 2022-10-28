@@ -2,6 +2,12 @@
 Changelog
 =========
 
+vnext
+-------------------
+* :pr:`99`: SequenceRecord initialization is now faster which also provides
+  a speed boost to FASTQ iteration. ``SequenceRecord.__new__`` cannot be used
+  anymore to initialize `SequenceRecord` objects.
+
 v0.9.1 (2022-08-01)
 -------------------
 
