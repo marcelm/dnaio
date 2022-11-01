@@ -75,11 +75,6 @@ jobs:
       uses: pypa/cibuildwheel@v2.11.2
       env:
         CIBW_BUILD: "cp*-manylinux_x86_64 cp3*-win_amd64 cp3*-macosx_x86_64"
-        CIBW_ENVIRONMENT: "CFLAGS=-g0"
-        CIBW_TEST_REQUIRES: "pytest"
-        CIBW_TEST_COMMAND_LINUX: "cd {project} && pytest tests"
-        CIBW_TEST_COMMAND_MACOS: "cd {project} && pytest tests"
-        CIBW_TEST_COMMAND_WINDOWS: "cd /d {project} && pytest tests"
     - uses: actions/upload-artifact@v2
       with:
         name: wheels
