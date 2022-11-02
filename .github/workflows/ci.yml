@@ -72,14 +72,9 @@ jobs:
       with:
         fetch-depth: 0  # required for setuptools_scm
     - name: Build wheels
-      uses: pypa/cibuildwheel@v2.3.1
+      uses: pypa/cibuildwheel@v2.11.2
       env:
         CIBW_BUILD: "cp*-manylinux_x86_64 cp3*-win_amd64 cp3*-macosx_x86_64"
-        CIBW_ENVIRONMENT: "CFLAGS=-g0"
-        CIBW_TEST_REQUIRES: "pytest"
-        CIBW_TEST_COMMAND_LINUX: "cd {project} && pytest tests"
-        CIBW_TEST_COMMAND_MACOS: "cd {project} && pytest tests"
-        CIBW_TEST_COMMAND_WINDOWS: "cd /d {project} && pytest tests"
     - uses: actions/upload-artifact@v2
       with:
         name: wheels
@@ -99,9 +94,8 @@ jobs:
         name: wheels
         path: dist/
     - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.4.2
+      uses: pypa/gh-action-pypi-publish@v1.5.1
       with:
-        user: __token__
         password: ${{ secrets.pypi_password }}
         #password: ${{ secrets.test_pypi_password }}
         #repository_url: https://test.pypi.org/legacy/

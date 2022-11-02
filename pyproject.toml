@@ -7,3 +7,12 @@ write_to = "src/dnaio/_version.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.cibuildwheel]
+environment = "CFLAGS=-g0"
+test-requires = "pytest"
+test-command = ["cd {project}", "pytest tests"]
+
+[[tool.cibuildwheel.overrides]]
+select = "*-win*"
+test-command = ["cd /d {project}", "pytest tests"]
