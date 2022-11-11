@@ -116,8 +116,8 @@ def open(
         Set to ``'r'`` for reading, ``'w'`` for writing or ``'a'`` for appending.
 
       interleaved:
-        If True, then file1 contains interleaved paired-end data.
-        file2 must be None in this case.
+        If True, then there must be only one file argument that contains
+        interleaved paired-end data.
 
       fileformat:
         If *None*, the file format is autodetected from the file name
@@ -135,7 +135,7 @@ def open(
         - When False (no qualities available), an exception is raised when the
           auto-detected output format is FASTQ.
 
-      opener: A function that is used to open file1 and file2 if they are not
+      opener: A function that is used to open the files if they are not
         already open file-like objects. By default, ``xopen`` is used, which can
         also open compressed file formats.
 
