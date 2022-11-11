@@ -80,7 +80,7 @@ Sequence = SequenceRecord
 
 def open(
     *files: Union[str, PathLike, BinaryIO],
-    file1: Union[str, PathLike, BinaryIO] = None,
+    file1: Optional[Union[str, PathLike, BinaryIO]] = None,
     file2: Optional[Union[str, PathLike, BinaryIO]] = None,
     fileformat: Optional[str] = None,
     interleaved: bool = False,
