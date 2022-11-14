@@ -1,3 +1,4 @@
+import io
 import os
 import shutil
 import subprocess
@@ -26,6 +27,7 @@ from dnaio import (
     record_names_match,
     SequenceRecord,
 )
+from dnaio.singleend import _detect_format_from_content
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 
@@ -703,3 +705,22 @@ class TestRecordsAreMates:
         with pytest.raises(TypeError) as error:
             records_are_mates(SequenceRecord("A", "A", "A"))
         error.match("records_are_mates requires at least two arguments")
+
+
+@pytest.mark.parametrize(
+    "content,file_format",
+    [
+        (b"@r", "fastq"),
+        (b"", "fastq"),
+        (b">r", "fasta"),
+        (b"#r", "fasta"),
+        (b"hello", None),
+    ],
+)
+def test_detect_format_from_content(content, file_format, tmp_path):
+    assert _detect_format_from_content(io.BytesIO(content)) == file_format
+
+    path = tmp_path / "file"
+    path.write_bytes(content)
+    with open(path, "rb") as f:
+        assert _detect_format_from_content(f) == file_format
