@@ -99,7 +99,7 @@ def _detect_format_from_name(name: str) -> Optional[str]:
     Return 'fasta', 'fastq' or None if the format could not be detected.
     """
     name = name.lower()
-    for ext in (".gz", ".xz", ".bz2"):
+    for ext in (".gz", ".xz", ".bz2", ".zst"):
         if name.endswith(ext):
             name = name[: -len(ext)]
             break
