@@ -30,6 +30,7 @@ __all__ = [
     "__version__",
 ]
 
+import functools
 from os import PathLike
 from typing import Optional, Union, BinaryIO
 
@@ -79,13 +80,15 @@ Sequence = SequenceRecord
 
 def open(
     *files: Union[str, PathLike, BinaryIO],
-    file1: Union[str, PathLike, BinaryIO] = None,
+    file1: Optional[Union[str, PathLike, BinaryIO]] = None,
     file2: Optional[Union[str, PathLike, BinaryIO]] = None,
     fileformat: Optional[str] = None,
     interleaved: bool = False,
     mode: str = "r",
     qualities: Optional[bool] = None,
-    opener=xopen
+    opener=xopen,
+    compression_level: int = 1,
+    open_threads: int = 0,
 ) -> Union[
     SingleEndReader,
     PairedEndReader,
@@ -113,8 +116,8 @@ def open(
         Set to ``'r'`` for reading, ``'w'`` for writing or ``'a'`` for appending.
 
       interleaved:
-        If True, then file1 contains interleaved paired-end data.
-        file2 must be None in this case.
+        If True, then there must be only one file argument that contains
+        interleaved paired-end data.
 
       fileformat:
         If *None*, the file format is autodetected from the file name
@@ -132,9 +135,20 @@ def open(
         - When False (no qualities available), an exception is raised when the
           auto-detected output format is FASTQ.
 
-      opener: A function that is used to open file1 and file2 if they are not
+      opener: A function that is used to open the files if they are not
         already open file-like objects. By default, ``xopen`` is used, which can
         also open compressed file formats.
+
+      open_threads: By default dnaio opens files in the main thread,
+        when threads is greater than 0 external processes are opened for
+        compressing and decompressing files. This decreases wall clock time
+        at the cost of a little extra overhead. This parameter does not work
+        when a custom opener is set.
+
+      compression_level: By default dnaio uses compression level 1 for writing
+        gzipped files as this is the fastest. A higher level can be set using
+        this parameter. This parameter does not work when a custom opener is
+        set.
 
     Return:
        A subclass of `SingleEndReader`, `PairedEndReader`, `SingleEndWriter` or
@@ -165,6 +179,10 @@ def open(
     elif mode not in ("r", "w", "a"):
         raise ValueError("Mode must be 'r', 'w' or 'a'")
 
+    if opener == xopen:
+        opener = functools.partial(
+            xopen, threads=open_threads, compresslevel=compression_level
+        )
     if interleaved or len(files) == 2:
         return _open_paired(
             *files,
