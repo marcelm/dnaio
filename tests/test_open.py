@@ -366,8 +366,8 @@ def test_paired_open_with_multiple_args(tmp_path, fileformat, mode, expected_cla
     path2 = tmp_path / "file2"
     path.touch()
     path2.touch()
-    f = dnaio.open(path, path2, fileformat=fileformat, mode=mode)
-    assert isinstance(f, expected_class)
+    with dnaio.open(path, path2, fileformat=fileformat, mode=mode) as f:
+        assert isinstance(f, expected_class)
 
 
 @pytest.mark.parametrize(
@@ -380,5 +380,5 @@ def test_paired_open_with_multiple_args(tmp_path, fileformat, mode, expected_cla
     ],
 )
 def test_multiple_open_fastq(kwargs, expected_class):
-    f = dnaio.open(os.devnull, os.devnull, os.devnull, **kwargs)
-    assert isinstance(f, expected_class)
+    with dnaio.open(os.devnull, os.devnull, os.devnull, **kwargs) as f:
+        assert isinstance(f, expected_class)
