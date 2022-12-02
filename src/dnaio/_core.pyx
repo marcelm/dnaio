@@ -507,6 +507,7 @@ cdef class FastqIter:
             char *qualities_start
             char *qualities_end
             char *buffer_end
+            size_t remaining_bytes
             Py_ssize_t name_length, sequence_length, second_header_length, qualities_length
         # Repeatedly attempt to parse the buffer until we have found a full record.
         # If an attempt fails, we read more data before retrying.
@@ -532,10 +533,15 @@ cdef class FastqIter:
                 self._read_into_buffer()
                 continue
             second_header_start = sequence_end + 1
-            second_header_end = <char *>memchr(second_header_start, b'\n', <size_t>(buffer_end - second_header_start))
-            if second_header_end == NULL:
-                self._read_into_buffer()
-                continue
+            remaining_bytes = (buffer_end - second_header_start)
+            # Usually there is no second header, so we skip the memchr call.
+            if remaining_bytes > 2 and second_header_start[0] == b'+' and second_header_start[1] == b'\n':
+                second_header_end = second_header_start + 1
+            else:
+                second_header_end = <char *>memchr(second_header_start, b'\n', <size_t>(remaining_bytes))
+                if second_header_end == NULL:
+                    self._read_into_buffer()
+                    continue
             qualities_start = second_header_end + 1
             qualities_end = <char *>memchr(qualities_start, b'\n', <size_t>(buffer_end - qualities_start))
             if qualities_end == NULL:
