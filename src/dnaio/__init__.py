@@ -98,7 +98,7 @@ def open(
     MultipleFileWriter,
 ]:
     """
-    Open one or two files in FASTA or FASTQ format for reading or writing.
+    Open one or more FASTQ or FASTA files for reading or writing.
 
     Parameters:
       files:
@@ -139,8 +139,8 @@ def open(
         already open file-like objects. By default, ``xopen`` is used, which can
         also open compressed file formats.
 
-      open_threads: By default dnaio opens files in the main thread,
-        when threads is greater than 0 external processes are opened for
+      open_threads: By default, dnaio opens files in the main thread.
+        When threads is greater than 0, external processes are opened for
         compressing and decompressing files. This decreases wall clock time
         at the cost of a little extra overhead. This parameter does not work
         when a custom opener is set.
@@ -149,10 +149,6 @@ def open(
         gzipped files as this is the fastest. A higher level can be set using
         this parameter. This parameter does not work when a custom opener is
         set.
-
-    Return:
-       A subclass of `SingleEndReader`, `PairedEndReader`, `SingleEndWriter` or
-       `PairedEndWriter`.
     """
     if files and (file1 is not None):
         raise ValueError(
