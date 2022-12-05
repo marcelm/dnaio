@@ -2,15 +2,16 @@
 Changelog
 =========
 
-vnext
--------------------
-* :pr:`99`: SequenceRecord initialization is now faster which also provides
+v0.10.0 (2022-12-05)
+--------------------
+
+* :pr:`99`: SequenceRecord initialization is now faster, which also provides
   a speed boost to FASTQ iteration. ``SequenceRecord.__new__`` cannot be used
   anymore to initialize `SequenceRecord` objects.
 * :pr:`96`: ``open_threads`` and ``compression_level`` are now added
   to `~dnaio.open` as arguments. By default dnaio now uses compression level
   1 and does not utilize external programs to speed up gzip (de)compression.
-* :pr:`87`: `~dnaio.open` can now als open more than two files.
+* :pr:`87`: `~dnaio.open` can now open more than two files.
   The ``file1`` and ``file2`` arguments are now deprecated.
 
 v0.9.1 (2022-08-01)
