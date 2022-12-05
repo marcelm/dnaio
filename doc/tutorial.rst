@@ -61,9 +61,8 @@ pass the ``mode="w"`` argument to ``dnaio.open``::
 Here, a `~dnaio.FastqWriter` object is returned by ``dnaio.open``,
 which has a `~dnaio.FastqWriter.write()` method that accepts a ``SequenceRecord``.
 
-Instead of constructing a single record from scratch,
-in practice it is more realistic to take input reads,
-process them, and write them to a new output file.
+A possibly more common use case is to read an input file,
+modify the reads and write them to a new output file.
 The following example program shows how that can be done.
 It truncates all reads in the input file to a length of 30 nt
 and writes them to another file::
@@ -83,23 +82,22 @@ trimmed to the first 30 characters, leaving the name unchanged.
 Paired-end data
 ---------------
 
-Paired-end data is supported in two forms:
-Either as a single file that contains the read in an interleaved form (R1, R2, R1, R2, ...)
-or as two separate files. To read from separate files, provide the ``file2=`` argument
-with the name of the second file to ``dnaio.open``::
+Paired-end data is supported in two forms: Two separate files or interleaved.
+
+To read from separate files, provide two input file names to the ``dnaio.open``
+function::
 
     import dnaio
 
-    with dnaio.open("reads.1.fastq.gz", file2="reads.2.fastq.gz") as reader:
+    with dnaio.open("reads.1.fastq.gz", "reads.2.fastq.gz") as reader:
         bp = 0
         for r1, r2 in reader:
             bp += len(r1) + len(r2)
         print(f"The paired-end input contains {bp/1E6:.1f} Mbp")
 
-Note that ``file2`` is a keyword-only argument, so you need to write the ``file2=`` part.
-In this example, ``dnaio.open`` returns a `~dnaio.TwoFilePairedEndReader`.
-It also supports iteration, but instead of a single ``SequenceRecord``,
-it returns a pair of them.
+Here, ``dnaio.open`` returns a `~dnaio.TwoFilePairedEndReader`.
+It also supports iteration, but instead of a plain ``SequenceRecord``,
+it returns a tuple of two ``SequenceRecord`` instances.
 
 To read from interleaved paired-end data,
 pass ``interleaved=True`` to ``dnaio.open`` instead of a second file name::
@@ -122,7 +120,7 @@ to R2::
     import dnaio
 
     with dnaio.open("in.fastq.gz") as reader, \
-            dnaio.open("out.1.fastq.gz", file2="out.2.fastq.gz", mode="w") as writer:
+            dnaio.open("out.1.fastq.gz", "out.2.fastq.gz", mode="w") as writer:
         for record in reader:
             r1 = record[:30]
             r2 = record[-30:]
