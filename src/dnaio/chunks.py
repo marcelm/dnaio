@@ -151,7 +151,7 @@ def read_paired_chunks(
     Raises:
          ValueError: A FASTQ record was encountered that is larger than *buffer_size*.
     """
-    if buffer_size < 1:
+    if buffer_size < 6:
         raise ValueError("Buffer size too small")
 
     buf1 = bytearray(buffer_size)
@@ -167,8 +167,10 @@ def read_paired_chunks(
         )
 
     while True:
-        if start1 == len(buf1) or start2 == len(buf2):
-            raise ValueError("FASTQ record does not fit into buffer")
+        if start1 == len(buf1) and start2 == len(buf2):
+            raise ValueError(
+                f"FASTQ records do not fit into buffer of size {buffer_size}"
+            )
         bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1  # type: ignore
         bufend2 = f2.readinto(memoryview(buf2)[start2:]) + start2  # type: ignore
         if start1 == bufend1 and start2 == bufend2:
@@ -180,6 +182,15 @@ def read_paired_chunks(
 
         if end1 > 0 or end2 > 0:
             yield (memoryview(buf1)[0:end1], memoryview(buf2)[0:end2])
+        else:
+            assert end1 == 0 and end2 == 0
+            extra = ""
+            if bufend1 == 0 or bufend2 == 0:
+                i = 1 if bufend1 == 0 else 2
+                extra = f". File {i} ended, but more data found in the other file"
+            raise FileFormatError(
+                f"Premature end of paired FASTQ input{extra}.", line=None
+            )
         start1 = bufend1 - end1
         assert start1 >= 0
         buf1[0:start1] = buf1[end1:bufend1]

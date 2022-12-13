@@ -1,7 +1,7 @@
 from pytest import raises
 from io import BytesIO
 
-from dnaio import UnknownFileFormat
+from dnaio import UnknownFileFormat, FileFormatError
 from dnaio._core import paired_fastq_heads
 from dnaio.chunks import _fastq_head, _fasta_head, read_chunks, read_paired_chunks
 
@@ -72,6 +72,17 @@ def test_read_paired_chunks():
         with open("tests/data/paired.2.fastq", "rb") as f2:
             for c1, c2 in read_paired_chunks(f1, f2, buffer_size=128):
                 print(c1, c2)
+
+
+def test_paired_chunks_different_number_of_records():
+    record = b"@r\nAA\n+\n##\n"
+    buf1 = record
+    buf2 = record * 3
+    it = read_paired_chunks(BytesIO(buf1), BytesIO(buf2), 16)
+    assert next(it) == (record, record)
+    with raises(FileFormatError) as error:
+        next(it)
+    error.match("more data found in the other file")
 
 
 def test_read_chunks():
