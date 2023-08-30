@@ -176,6 +176,7 @@ cdef class SequenceRecord:
         cdef char *name
         cdef size_t name_length
         cdef size_t id_length
+        cdef char *comment_start
         cdef size_t comment_length
         # Not yet cached is None
         if self._comment is None:
@@ -186,8 +187,9 @@ cdef class SequenceRecord:
                 self._comment = ""
             else:
                 comment_length = name_length - (id_length + 1)
+                comment_start = name + id_length + 1
                 self._comment = PyUnicode_New(comment_length , 127)
-                memcpy(PyUnicode_DATA(self._comment), name, comment_length)
+                memcpy(PyUnicode_DATA(self._comment), comment_start, comment_length)
         # Cached but nothing is internally empty string, expose externally as None
         if PyUnicode_GET_LENGTH(self._comment) == 0:
             return None

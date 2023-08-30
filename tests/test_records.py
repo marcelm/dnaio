@@ -105,6 +105,42 @@ class TestSequenceRecord:
         seq.qualities = None
         assert seq.qualities is None
 
+    def test_set_id(self):
+        seq = SequenceRecord("name", "A", "=")
+        with pytest.raises(AttributeError):
+            seq.id = "Obi-Wan"
+
+    def test_set_comment(self):
+        seq = SequenceRecord("name", "A", "=")
+        with pytest.raises(AttributeError):
+            seq.comment = "Hello there!"
+
+    @pytest.mark.parametrize(
+        ["record", "expected"],
+        [
+            (SequenceRecord("name", "A", "="), None),
+            (SequenceRecord("name ", "A", "="), None),
+            (SequenceRecord("name  ", "A", "="), " "),
+            (SequenceRecord("name", "A", "="), None),
+            (SequenceRecord("AotC I hate sand!", "A", "="), "I hate sand!"),
+        ],
+    )
+    def test_get_comment(self, record, expected):
+        assert record.comment == expected
+
+    @pytest.mark.parametrize(
+        ["record", "expected"],
+        [
+            (SequenceRecord("name", "A", "="), "name"),
+            (SequenceRecord("name ", "A", "="), "name"),
+            (SequenceRecord("name  ", "A", "="), "name"),
+            (SequenceRecord("name", "A", "="), "name"),
+            (SequenceRecord("AotC I hate sand!", "A", "="), "AotC"),
+        ],
+    )
+    def test_get_id(self, record, expected):
+        assert record.id == expected
+
 
 def test_legacy_sequence():
     from dnaio import Sequence
