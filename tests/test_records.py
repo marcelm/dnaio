@@ -120,9 +120,13 @@ class TestSequenceRecord:
         [
             (SequenceRecord("name", "A", "="), None),
             (SequenceRecord("name ", "A", "="), None),
-            (SequenceRecord("name  ", "A", "="), " "),
+            (SequenceRecord("name  ", "A", "="), None),
             (SequenceRecord("name", "A", "="), None),
             (SequenceRecord("AotC I hate sand!", "A", "="), "I hate sand!"),
+            (
+                SequenceRecord("Givemesome                       space", "A", "="),
+                "space",
+            ),
         ],
     )
     def test_get_comment(self, record, expected):

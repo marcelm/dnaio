@@ -7,7 +7,7 @@ from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH, PyUnico
 from cpython.object cimport Py_TYPE, PyTypeObject
 from cpython.ref cimport PyObject
 from cpython.tuple cimport PyTuple_GET_ITEM
-from libc.string cimport memcmp, memcpy, memchr, strcspn, memmove
+from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove
 cimport cython
 
 cdef extern from "Python.h":
@@ -186,8 +186,10 @@ cdef class SequenceRecord:
             if id_length == name_length:
                 self._comment = ""
             else:
-                comment_length = name_length - (id_length + 1)
                 comment_start = name + id_length + 1
+                # Skip empty whitespace before comment
+                comment_start = comment_start + strspn(comment_start, '\t ')
+                comment_length = name_length - (comment_start - name)
                 self._comment = PyUnicode_New(comment_length , 127)
                 memcpy(PyUnicode_DATA(self._comment), comment_start, comment_length)
         # Cached but nothing is internally empty string, expose externally as None
