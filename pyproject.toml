@@ -35,6 +35,9 @@ dev = [
 "Homepage" = "https://dnaio.readthedocs.io/"
 "Changelog" = "https://dnaio.readthedocs.io/en/latest/changes.html"
 
+[tool.setuptools.exclude-package-data]
+dnaio = ["*.pyx"]
+
 [tool.setuptools_scm]
 write_to = "src/dnaio/_version.py"
 
