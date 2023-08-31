@@ -2,6 +2,10 @@
 Changelog
 =========
 
+v1.0.0-dev
+--------------------
++ Add ``id`` and ``comment`` properties to ``SequenceRecord``.
+
 v0.10.0 (2022-12-05)
 --------------------
 
