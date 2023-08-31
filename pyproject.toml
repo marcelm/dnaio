@@ -2,6 +2,38 @@
 requires = ["setuptools >= 52", "setuptools_scm >= 6.2", "Cython >= 0.29.20"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "dnaio"
+authors = [
+    {name = "Marcel Martin", email = "marcel.martin@scilifelab.se"}
+]
+description = "Read and write FASTA and FASTQ files efficiently"
+readme = "README.rst"
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Bio-Informatics"
+]
+requires-python = ">3.7"
+dependencies = [
+    "xopen >= 1.4.0"
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "Cython",
+    "pytest"
+]
+
+[project.urls]
+"Homepage" = "https://dnaio.readthedocs.io/"
+"Changelog" = "https://dnaio.readthedocs.io/en/latest/changes.html"
+
 [tool.setuptools_scm]
 write_to = "src/dnaio/_version.py"
 
