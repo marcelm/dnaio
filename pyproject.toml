@@ -5,7 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dnaio"
 authors = [
-    {name = "Marcel Martin", email = "marcel.martin@scilifelab.se"}
+    {name = "Marcel Martin", email = "marcel.martin@scilifelab.se"},
+    {name = "Ruben Vorderman", email = "r.h.p.vorderman@lumc.nl"}
 ]
 description = "Read and write FASTA and FASTQ files efficiently"
 readme = "README.rst"
