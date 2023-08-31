@@ -192,7 +192,9 @@ cdef class SequenceRecord:
                 comment_length = name_length - (comment_start - name)
                 self._comment = PyUnicode_New(comment_length , 127)
                 memcpy(PyUnicode_DATA(self._comment), comment_start, comment_length)
-        # Cached but nothing is internally empty string, expose externally as None
+        # Empty comment is returned as None. This is not stored internally as
+        # None, otherwise the above code would run every time the attribute
+        # was accessed.
         if PyUnicode_GET_LENGTH(self._comment) == 0:
             return None
         return self._comment
