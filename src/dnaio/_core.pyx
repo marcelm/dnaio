@@ -156,6 +156,10 @@ cdef class SequenceRecord:
 
     @property
     def id(self):
+        """
+        The header part before any whitespace. This is the unique identifier
+        for the sequence.
+        """
         cdef char *name
         cdef size_t name_length
         cdef size_t id_length
@@ -173,6 +177,10 @@ cdef class SequenceRecord:
 
     @property
     def comment(self):
+        """
+        The header part after the first whitespace. This is usually used
+        to store metadata. It may be empty in which case the attribute is None.
+        """
         cdef char *name
         cdef size_t name_length
         cdef size_t id_length
