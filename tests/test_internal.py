@@ -28,6 +28,8 @@ from dnaio import (
 )
 from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
+from dnaio._core import bytes_ascii_check
+
 
 TEST_DATA = Path(__file__).parent / "data"
 SIMPLE_FASTQ = str(TEST_DATA / "simple.fastq")
@@ -635,8 +637,6 @@ def test_fastq_writer_repr(tmp_path):
 
 
 class TestAsciiCheck:
-    from dnaio._core import bytes_ascii_check
-
     ASCII_STRING = (
         "In het Nederlands komen bijzondere leestekens niet vaak voor.".encode("ascii")
     )
@@ -646,14 +646,14 @@ class TestAsciiCheck:
     )
 
     def test_ascii(self):
-        assert self.bytes_ascii_check(self.ASCII_STRING)
+        assert bytes_ascii_check(self.ASCII_STRING)
 
     def test_ascii_all_chars(self):
-        assert self.bytes_ascii_check(bytes(range(128)))
-        assert not self.bytes_ascii_check(bytes(range(129)))
+        assert bytes_ascii_check(bytes(range(128)))
+        assert not bytes_ascii_check(bytes(range(129)))
 
     def test_non_ascii(self):
-        assert not self.bytes_ascii_check(self.NON_ASCII_STRING)
+        assert not bytes_ascii_check(self.NON_ASCII_STRING)
 
     def test_non_ascii_lengths(self):
         # Make sure that the function finds the non-ascii byte correctly for
@@ -661,7 +661,7 @@ class TestAsciiCheck:
         non_ascii_char = "é".encode("latin-1")
         for i in range(len(self.ASCII_STRING)):
             test_string = self.ASCII_STRING[:i] + non_ascii_char
-            assert not self.bytes_ascii_check(test_string)
+            assert not bytes_ascii_check(test_string)
 
     def test_ascii_lengths(self):
         # Make sure the ascii check is correct even though there are non-ASCII
@@ -671,7 +671,7 @@ class TestAsciiCheck:
         non_ascii_char = "é".encode("latin-1")
         for i in range(1, len(self.ASCII_STRING) + 1):
             test_string = self.ASCII_STRING[:i] + (non_ascii_char * 8)
-            assert self.bytes_ascii_check(test_string, i - 1)
+            assert bytes_ascii_check(test_string, i - 1)
 
 
 class TestRecordsAreMates:

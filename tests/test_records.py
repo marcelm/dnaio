@@ -105,6 +105,54 @@ class TestSequenceRecord:
         seq.qualities = None
         assert seq.qualities is None
 
+    def test_set_id(self):
+        seq = SequenceRecord("name", "A", "=")
+        with pytest.raises(AttributeError):
+            seq.id = "Obi-Wan"
+
+    def test_set_comment(self):
+        seq = SequenceRecord("name", "A", "=")
+        with pytest.raises(AttributeError):
+            seq.comment = "Hello there!"
+
+    @pytest.mark.parametrize(
+        ["record", "expected"],
+        [
+            (SequenceRecord("name", "A", "="), None),
+            (SequenceRecord("name ", "A", "="), None),
+            (SequenceRecord("name  ", "A", "="), None),
+            (SequenceRecord("name", "A", "="), None),
+            (SequenceRecord("AotC I hate sand!", "A", "="), "I hate sand!"),
+            (
+                SequenceRecord("Givemesome                       space", "A", "="),
+                "space",
+            ),
+        ],
+    )
+    def test_get_comment(self, record, expected):
+        assert record.comment == expected
+
+    @pytest.mark.parametrize(
+        ["record", "expected"],
+        [
+            (SequenceRecord("name", "A", "="), "name"),
+            (SequenceRecord("name ", "A", "="), "name"),
+            (SequenceRecord("name  ", "A", "="), "name"),
+            (SequenceRecord("name", "A", "="), "name"),
+            (SequenceRecord("AotC I hate sand!", "A", "="), "AotC"),
+        ],
+    )
+    def test_get_id(self, record, expected):
+        assert record.id == expected
+
+    def test_reset_id_and_comment_on_name_update(self):
+        record = SequenceRecord("Obi-Wan: don't try it!", "", "")
+        assert record.id == "Obi-Wan:"
+        assert record.comment == "don't try it!"
+        record.name = "Anakin: you underestimate my power!"
+        assert record.id == "Anakin:"
+        assert record.comment == "you underestimate my power!"
+
 
 def test_legacy_sequence():
     from dnaio import Sequence

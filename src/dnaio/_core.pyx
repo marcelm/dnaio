@@ -7,7 +7,7 @@ from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH, PyUnico
 from cpython.object cimport Py_TYPE, PyTypeObject
 from cpython.ref cimport PyObject
 from cpython.tuple cimport PyTuple_GET_ITEM
-from libc.string cimport memcmp, memcpy, memchr, strcspn, memmove
+from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove
 cimport cython
 
 cdef extern from "Python.h":
@@ -84,6 +84,8 @@ cdef class SequenceRecord:
         object _name
         object _sequence
         object _qualities
+        object _id
+        object _comment
 
     def __init__(self, object name, object sequence, object qualities = None):
         if not PyUnicode_CheckExact(name):
@@ -119,6 +121,8 @@ cdef class SequenceRecord:
         if not PyUnicode_IS_COMPACT_ASCII(name):
             raise ValueError(is_not_ascii_message("name", name))
         self._name = name
+        self._id = None
+        self._comment = None
 
     @property
     def sequence(self):
@@ -149,6 +153,59 @@ cdef class SequenceRecord:
                 f"got {type(qualities)}."
             )
         self._qualities = qualities
+
+    @property
+    def id(self):
+        """
+        The header part before any whitespace. This is the unique identifier
+        for the sequence.
+        """
+        cdef char *name
+        cdef size_t name_length
+        cdef size_t id_length
+        # Not yet cached is None
+        if self._id is None:
+            name = <char *>PyUnicode_DATA(self._name)
+            name_length = <size_t>PyUnicode_GET_LENGTH(self._name)
+            id_length = strcspn(name, "\t ")
+            if id_length == name_length:
+                self._id = self._name
+            else:
+                self._id = PyUnicode_New(id_length, 127)
+                memcpy(PyUnicode_DATA(self._id), name, id_length)
+        return self._id
+
+    @property
+    def comment(self):
+        """
+        The header part after the first whitespace. This is usually used
+        to store metadata. It may be empty in which case the attribute is None.
+        """
+        cdef char *name
+        cdef size_t name_length
+        cdef size_t id_length
+        cdef char *comment_start
+        cdef size_t comment_length
+        # Not yet cached is None
+        if self._comment is None:
+            name = <char *>PyUnicode_DATA(self._name)
+            name_length = <size_t>PyUnicode_GET_LENGTH(self._name)
+            id_length = strcspn(name, "\t ")
+            if id_length == name_length:
+                self._comment = ""
+            else:
+                comment_start = name + id_length + 1
+                # Skip empty whitespace before comment
+                comment_start = comment_start + strspn(comment_start, '\t ')
+                comment_length = name_length - (comment_start - name)
+                self._comment = PyUnicode_New(comment_length , 127)
+                memcpy(PyUnicode_DATA(self._comment), comment_start, comment_length)
+        # Empty comment is returned as None. This is not stored internally as
+        # None, otherwise the above code would run every time the attribute
+        # was accessed.
+        if PyUnicode_GET_LENGTH(self._comment) == 0:
+            return None
+        return self._comment
 
     def __getitem__(self, key):
         """
