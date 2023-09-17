@@ -1,11 +1,12 @@
 import platform
-import sys
 
 from setuptools import setup, Extension
 import setuptools_scm  # noqa  Ensure it’s installed
 
-if platform.machine() == "x86_64" or platform.machine() == "AMD64":
-    DEFINE_MACROS = [("USE_SSE2", None)]
+if platform.machine() == "AMD64":
+    # Macro is defined by default for clang and GCC on relevant targets, but
+    # not by MSVC.
+    DEFINE_MACROS = [("__SSE2__", 1)]
 else:
     DEFINE_MACROS = []
 
