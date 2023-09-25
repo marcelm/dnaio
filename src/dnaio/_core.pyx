@@ -9,6 +9,7 @@ from cpython.ref cimport PyObject
 from cpython.tuple cimport PyTuple_GET_ITEM
 from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t
+
 cimport cython
 
 cdef extern from "Python.h":
@@ -22,9 +23,9 @@ cdef extern from "ascii_check.h":
 cdef extern from "_conversions.h":
     const char NUCLEOTIDE_COMPLEMENTS[256]
 
-cdef extern fom "bam.h":
-    void decode_bam_sequence(uint8_t *dest, const uint8_t *encoded_sequence, size_t length)
-    void decode_bam_qualities(uint8_t *dest, const uint8_t *encoded_qualities, size_t length)
+cdef extern from "bam.h":
+    void decode_bam_sequence(void *dest, void *encoded_sequence, size_t length)
+    void decode_bam_qualities(uint8_t *dest, uint8_t *encoded_qualities, size_t length)
 
 from .exceptions import FastqFormatError
 from ._util import shorten
@@ -672,7 +673,7 @@ cdef class FastqIter:
             self.record_start = qualities_end + 1
             return ret_val
 
-cdef struct BamRecordHeader {
+cdef struct BamRecordHeader:
     uint32_t block_size;
     int32_t reference_id;
     int32_t pos;
@@ -685,11 +686,10 @@ cdef struct BamRecordHeader {
     int32_t next_ref_id;
     int32_t next_pos;
     int32_t tlen;
-};
 
 cdef class BamIter:
     cdef:
-        uint8_t *record_start)
+        uint8_t *record_start
         uint8_t *buffer_end
         size_t read_in_size
         uint8_t *read_in_buffer
@@ -710,7 +710,7 @@ cdef class BamIter:
         magic_and_header_size = fileobj.read(8)
         if not isinstance(magic_and_header_size, bytes):
             raise TypeError(f"fileobj {fileobj} is not a binary IO type, "
-                            f"got {type(file)}")
+                            f"got {type(fileobj)}")
         if magic_and_header_size[:4] != b"BAM\1":
             raise ValueError(
                 f"fileobj: {fileobj}, is not a BAM file. No BAM magic, instead "
@@ -745,13 +745,13 @@ cdef class BamIter:
         cdef size_t read_in_size 
         cdef size_t leftover_size = self.buffer_end - self.record_start
         cdef uint32_t block_size
-        memmove(self->read_in_buffer, self->record_start, leftover_size)
-        self->record_start = self->read_in_buffer 
-        self->buffer_end = self->record_start + leftover_size
+        memmove(self.read_in_buffer, self.record_start, leftover_size)
+        self.record_start = self.read_in_buffer
+        self.buffer_end = self.record_start + leftover_size
         if leftover_size >= 4:
             # Immediately check how much data is at least required
             block_size = (<uint32_t *>self.record_start)[0]
-            read_in_size = max(block_size, self->read_in_size)
+            read_in_size = max(block_size, self.read_in_size)
         else:
             read_in_size = self.read_in_size - leftover_size
         new_bytes = self.file.read(read_in_size)
@@ -765,13 +765,13 @@ cdef class BamIter:
             raise EOFError("Incomplete record at the end of file")
         cdef uint8_t *tmp 
         if new_buffer_size > self.read_in_buffer_size:
-            tmp = PyMem_Realloc(self->read_in_buffer, new_buffer_size);
+            tmp = <uint8_t *>PyMem_Realloc(self.read_in_buffer, new_buffer_size)
             if tmp == NULL:
                 raise MemoryError()
-            self->_read_into_buffer = tmp 
-            self->read_in_buffer_size = new_buffer_size
-        memcpy(self->read_in_buffer + leftover_size, new_bytes_buf, new_bytes_size)
-        self->buffer_end = self->record_start + new_buffer_size
+            self.read_into_buffer = tmp
+            self.read_in_buffer_size = new_buffer_size
+        memcpy(self.read_in_buffer + leftover_size, new_bytes_buf, new_bytes_size)
+        self.buffer_end = self.record_start + new_buffer_size
 
     def __next__(self):
         cdef:
@@ -780,7 +780,7 @@ cdef class BamIter:
             uint8_t *buffer_end
             uint32_t record_size
             uint8_t *record_end
-            cdef BamRecordHeader *header
+            cdef BamRecordHeader header
             cdef uint8_t *bam_name_start
             uint32_t name_length
             uint8_t *bam_seq_start
@@ -789,8 +789,8 @@ cdef class BamIter:
             uint32_t encoded_seq_length
 
         while True:
-            record_start = self->record_start
-            buffer_end = self->buffer_end
+            record_start = self.record_start
+            buffer_end = self.buffer_end
             if record_start + 4 >= buffer_end:
                 self._read_into_buffer()
                 continue
@@ -799,7 +799,7 @@ cdef class BamIter:
             if record_end > buffer_end:
                 self._read_into_buffer()
                 continue
-            header = <BamRecordHeader *>record_start
+            header = (<BamRecordHeader *>record_start)[0]
             bam_name_start = record_start + sizeof(BamRecordHeader)
             name_length = header.l_read_name
             bam_seq_start = bam_name_start + name_length + header.n_cigar_op * sizeof(uint32_t)
@@ -807,11 +807,11 @@ cdef class BamIter:
             encoded_seq_length = (seq_length + 1) // 2
             bam_qual_start = bam_seq_start + encoded_seq_length
             name = PyUnicode_New(name_length, 127)
-            sequence = PyUnicode_New(sequence_length, 127)
-            qualities = PyUnicode_New(qualities_length, 127)
-            memcpy(PyUnicode_DATA(name), bam_name_start, name_length)
-            decode_bam_sequence(PyUnicode_DATA(sequence), bam_seq_start, seq_length)
-            decode_bam_qualities(PyUnicode_DATA(qualities), bam_qual_start, seq_length)
+            sequence = PyUnicode_New(seq_length, 127)
+            qualities = PyUnicode_New(seq_length, 127)
+            memcpy(<uint8_t *>PyUnicode_DATA(name), bam_name_start, name_length)
+            decode_bam_sequence(<uint8_t *>PyUnicode_DATA(sequence), bam_seq_start, seq_length)
+            decode_bam_qualities(<uint8_t *>PyUnicode_DATA(qualities), bam_qual_start, seq_length)
             seq_record = SequenceRecord.__new__(SequenceRecord)
             seq_record._name = name
             seq_record._sequence = sequence
