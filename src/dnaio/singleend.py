@@ -59,7 +59,11 @@ def _open_single(
         if "r" in mode:
             return FastqReader(file, _close_file=close_file)
         return FastqWriter(file, _close_file=close_file)
-
+    elif fileformat == "bam":
+        if "r" in mode:
+            return BamReader(file, _close_file=close_file)
+        # This should not be reached
+        raise NotImplementedError("Only reading is supported for BAM files")
     if close_file:
         file.close()
     raise UnknownFileFormat(
@@ -117,15 +121,17 @@ def _detect_format_from_content(file: BinaryIO) -> Optional[str]:
     """
     if file.seekable():
         original_position = file.tell()
-        first_char = file.read(1)
+        magic = file.read(4)
         file.seek(original_position)
     else:
         # We cannot always use peek() because BytesIO objects do not suppert it
-        first_char = file.peek(1)[0:1]  # type: ignore
-    formats = {
-        b"@": "fastq",
-        b">": "fasta",
-        b"#": "fasta",  # Some FASTA variants allow comments
-        b"": "fastq",  # Pretend FASTQ for empty input
-    }
-    return formats.get(first_char, None)
+        magic = file.peek(4)[0:4]  # type: ignore
+    if magic.startswith(b"@") or magic == b"":
+        # Pretend FASTQ for empty input
+        return "fastq"
+    elif magic.startswith(b">") or magic.startswith(b"#"):
+        # Some FASTA variants allow comments
+        return "fasta"
+    elif magic == b"BAM\1":
+        return "bam"
+    return None
