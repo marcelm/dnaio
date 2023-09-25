@@ -723,6 +723,8 @@ cdef class BamIter:
         n_ref = int.from_bytes(n_ref_obj, "little", signed=False)
         for i in range(n_ref):
             l_name_obj = fileobj.read(4)
+            if len(l_name_obj) < 4:
+                raise EOFError("Truncated BAM file")
             l_name = int.from_bytes(l_name_obj, "little", signed=False)
             reference_chunk_size = l_name + 4  # Include name and uint32_t of size
             reference_chunk = fileobj.read(reference_chunk_size)

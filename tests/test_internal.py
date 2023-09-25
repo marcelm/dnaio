@@ -1,3 +1,5 @@
+import gzip
+import io
 import os
 import shutil
 import subprocess
@@ -713,6 +715,9 @@ class TestBamReader:
         / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878"
         ".bwa.markDuplicates.bam"
     )
+    raw_bam_bytes = gzip.decompress(bam_file.read_bytes())
+    complete_record_with_header = raw_bam_bytes[:4329]
+    complete_header = complete_record_with_header[:4320]
 
     def test_parse_bam(self):
         with dnaio.open(self.bam_file) as reader:
@@ -755,3 +760,11 @@ class TestBamReader:
         header_bytes = header.read_bytes()
         with dnaio.open(self.bam_file) as bam:
             assert bam.header == header_bytes
+
+    @pytest.mark.parametrize("end", range(len(complete_header), len(complete_record_with_header)))
+    def test_truncated_record(self, end: int):
+        file = io.BytesIO(self.complete_record_with_header[:end])
+        with pytest.raises(EOFError) as e:
+            list(BamReader(file))
+        e.match("Incomple record at the end of file")
+
