@@ -8,6 +8,7 @@ from cpython.object cimport Py_TYPE, PyTypeObject
 from cpython.ref cimport PyObject
 from cpython.tuple cimport PyTuple_GET_ITEM
 from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t
 cimport cython
 
 cdef extern from "Python.h":
@@ -20,6 +21,10 @@ cdef extern from "ascii_check.h":
 
 cdef extern from "_conversions.h":
     const char NUCLEOTIDE_COMPLEMENTS[256]
+
+cdef extern fom "bam.h":
+    void decode_bam_sequence(uint8_t *dest, const uint8_t *encoded_sequence, size_t length)
+    void decode_bam_qualities(uint8_t *dest, const uint8_t *encoded_qualities, size_t length)
 
 from .exceptions import FastqFormatError
 from ._util import shorten
@@ -667,6 +672,153 @@ cdef class FastqIter:
             self.record_start = qualities_end + 1
             return ret_val
 
+cdef struct BamRecordHeader {
+    uint32_t block_size;
+    int32_t reference_id;
+    int32_t pos;
+    uint8_t l_read_name;
+    uint8_t mapq;
+    uint16_t bin;
+    uint16_t n_cigar_op;
+    uint16_t flag;
+    uint32_t l_seq;
+    int32_t next_ref_id;
+    int32_t next_pos;
+    int32_t tlen;
+};
+
+cdef class BamIter:
+    cdef:
+        uint8_t *record_start)
+        uint8_t *buffer_end
+        size_t read_in_size
+        uint8_t *read_in_buffer
+        size_t read_in_buffer_size
+        object file
+        readonly object header
+        readonly Py_ssize_t number_of_records
+
+    def __dealloc__(self):
+        PyMem_Free(self.read_in_buffer)
+
+    def __cinit__(self, fileobj, read_in_size = 48 * 1024):
+        if read_in_size < 4:
+            raise ValueError(f"read_in_size must be at least 4 got "
+                              f"{read_in_size}")
+
+        # Skip ahead and save the BAM header for later inspection
+        magic_and_header_size = fileobj.read(8)
+        if not isinstance(magic_and_header_size, bytes):
+            raise TypeError(f"fileobj {fileobj} is not a binary IO type, "
+                            f"got {type(file)}")
+        if magic_and_header_size[:4] != b"BAM\1":
+            raise ValueError(
+                f"fileobj: {fileobj}, is not a BAM file. No BAM magic, instead "
+                f"found {magic_and_header_size[:4]}")
+        l_text = int.from_bytes(magic_and_header_size[4:], "little", signed=False)
+        header =  fileobj.read(l_text)
+        if len(header) < l_text:
+            raise EOFError("Truncated BAM file")
+        n_ref_obj = fileobj.read(4)
+        n_ref = int.from_bytes(n_ref_obj, "little", signed=False)
+        for i in range(n_ref):
+            l_name_obj = fileobj.read(4)
+            l_name = int.from_bytes(l_name_obj, "little", signed=False)
+            reference_chunk_size = l_name + 4  # Include name and uint32_t of size
+            reference_chunk = fileobj.read(reference_chunk_size)
+            if len(reference_chunk) < reference_chunk_size:
+                raise EOFError("Truncated BAM file")
+        # Fileobj is now skipped ahead and at the start of the BAM records
+
+        self.header = header
+        self.read_in_size = read_in_size
+        self.file = fileobj
+        self.read_in_buffer = NULL
+        self.read_in_buffer_size = 0
+        self.record_start = self.read_in_buffer
+        self.buffer_end = self.record_start
+
+    def __iter__(self):
+        return self
+    
+    cdef _read_into_buffer(self):
+        cdef size_t read_in_size 
+        cdef size_t leftover_size = self.buffer_end - self.record_start
+        cdef uint32_t block_size
+        memmove(self->read_in_buffer, self->record_start, leftover_size)
+        self->record_start = self->read_in_buffer 
+        self->buffer_end = self->record_start + leftover_size
+        if leftover_size >= 4:
+            # Immediately check how much data is at least required
+            block_size = (<uint32_t *>self.record_start)[0]
+            read_in_size = max(block_size, self->read_in_size)
+        else:
+            read_in_size = self.read_in_size - leftover_size
+        new_bytes = self.file.read(read_in_size)
+        cdef size_t new_bytes_size = PyBytes_GET_SIZE(new_bytes)
+        cdef uint8_t *new_bytes_buf = <uint8_t *>PyBytes_AS_STRING(new_bytes)
+        cdef size_t new_buffer_size = leftover_size + new_bytes_size
+        if new_buffer_size == 0:
+            # File completely read
+            raise StopIteration()
+        elif new_bytes_size == 0:
+            raise EOFError("Incomplete record at the end of file")
+        cdef uint8_t *tmp 
+        if new_buffer_size > self.read_in_buffer_size:
+            tmp = PyMem_Realloc(self->read_in_buffer, new_buffer_size);
+            if tmp == NULL:
+                raise MemoryError()
+            self->_read_into_buffer = tmp 
+            self->read_in_buffer_size = new_buffer_size
+        memcpy(self->read_in_buffer + leftover_size, new_bytes_buf, new_bytes_size)
+        self->buffer_end = self->record_start + new_buffer_size
+
+    def __next__(self):
+        cdef:
+            SequenceRecord seq_record
+            uint8_t *record_start
+            uint8_t *buffer_end
+            uint32_t record_size
+            uint8_t *record_end
+            cdef BamRecordHeader *header
+            cdef uint8_t *bam_name_start
+            uint32_t name_length
+            uint8_t *bam_seq_start
+            uint32_t seq_length
+            uint8_t *bam_qual_start
+            uint32_t encoded_seq_length
+
+        while True:
+            record_start = self->record_start
+            buffer_end = self->buffer_end
+            if record_start + 4 >= buffer_end:
+                self._read_into_buffer()
+                continue
+            record_size = (<uint32_t *>record_start)[0]
+            record_end = record_start + record_size
+            if record_end > buffer_end:
+                self._read_into_buffer()
+                continue
+            header = <BamRecordHeader *>record_start
+            bam_name_start = record_start + sizeof(BamRecordHeader)
+            name_length = header.l_read_name
+            bam_seq_start = bam_name_start + name_length + header.n_cigar_op * sizeof(uint32_t)
+            seq_length = header.seq_length
+            encoded_seq_length = (seq_length + 1) // 2
+            bam_qual_start = bam_seq_start + encoded_seq_length
+            name = PyUnicode_New(name_length, 127)
+            sequence = PyUnicode_New(sequence_length, 127)
+            qualities = PyUnicode_New(qualities_length, 127)
+            memcpy(PyUnicode_DATA(name), bam_name_start, name_length)
+            decode_bam_sequence(PyUnicode_DATA(sequence), bam_seq_start, seq_length)
+            decode_bam_qualities(PyUnicode_DATA(qualities), bam_qual_start, seq_length)
+            seq_record = SequenceRecord.__new__(SequenceRecord)
+            seq_record._name = name
+            seq_record._sequence = sequence
+            seq_record._qualities = qualities
+            self.number_of_records += 1
+            self.record_start = record_end
+            return seq_record
 
 def record_names_match(header1: str, header2: str):
     """
