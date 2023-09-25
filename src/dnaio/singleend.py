@@ -2,7 +2,7 @@ import os
 from typing import Optional, Union, BinaryIO, Tuple
 
 from .exceptions import UnknownFileFormat
-from .readers import FastaReader, FastqReader
+from .readers import BamReader, FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 
 

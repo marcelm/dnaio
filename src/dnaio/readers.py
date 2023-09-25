@@ -220,7 +220,7 @@ class BamReader(BinaryFileReader, SingleEndReader):
         self.buffer_size = buffer_size
         try:
             self._iter: Iterator[SequenceRecord] = BamIter(
-                self._file, self.sequence_class, self.buffer_size
+                self._file, self.buffer_size
             )
         except Exception:
             self.close()

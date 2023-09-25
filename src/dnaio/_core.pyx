@@ -768,7 +768,7 @@ cdef class BamIter:
             tmp = <uint8_t *>PyMem_Realloc(self.read_in_buffer, new_buffer_size)
             if tmp == NULL:
                 raise MemoryError()
-            self.read_into_buffer = tmp
+            self.read_in_buffer = tmp
             self.read_in_buffer_size = new_buffer_size
         memcpy(self.read_in_buffer + leftover_size, new_bytes_buf, new_bytes_size)
         self.buffer_end = self.record_start + new_buffer_size
