@@ -771,6 +771,7 @@ cdef class BamIter:
             self.read_in_buffer = tmp
             self.read_in_buffer_size = new_buffer_size
         memcpy(self.read_in_buffer + leftover_size, new_bytes_buf, new_bytes_size)
+        self.record_start = self.read_in_buffer
         self.buffer_end = self.record_start + new_buffer_size
 
     def __next__(self):
@@ -803,7 +804,7 @@ cdef class BamIter:
             bam_name_start = record_start + sizeof(BamRecordHeader)
             name_length = header.l_read_name
             bam_seq_start = bam_name_start + name_length + header.n_cigar_op * sizeof(uint32_t)
-            seq_length = header.seq_length
+            seq_length = header.l_seq
             encoded_seq_length = (seq_length + 1) // 2
             bam_qual_start = bam_seq_start + encoded_seq_length
             name = PyUnicode_New(name_length, 127)
