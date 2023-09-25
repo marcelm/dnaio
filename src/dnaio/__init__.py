@@ -4,6 +4,7 @@ Sequence I/O: Read and write FASTA and FASTQ files efficiently
 
 __all__ = [
     "open",
+    "BamReader",
     "SequenceRecord",
     "SingleEndReader",
     "PairedEndReader",
@@ -41,7 +42,7 @@ from ._core import (
 )
 from ._core import record_names_match  # noqa: F401  # deprecated
 from ._core import records_are_mates
-from .readers import FastaReader, FastqReader
+from .readers import BamReader, FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 from .singleend import _open_single
 from .pairedend import (

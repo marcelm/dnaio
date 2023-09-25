@@ -12,6 +12,7 @@ from pytest import raises, mark
 
 import dnaio
 from dnaio import (
+    BamReader,
     FileFormatError,
     FastaFormatError,
     FastqFormatError,
@@ -703,3 +704,19 @@ class TestRecordsAreMates:
         with pytest.raises(TypeError) as error:
             records_are_mates(SequenceRecord("A", "A", "A"))
         error.match("records_are_mates requires at least two arguments")
+
+
+class TestBamReader:
+    def test_parse_bam(self):
+        bam_file = Path(__file__).parent / "data" / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878.bwa.markDuplicates.bam"
+        with dnaio.open(bam_file) as reader:
+            records = list(reader)
+        assert records[0].name == "HWI-D00119:50:H7AP8ADXX:1:1104:8519:18990"
+        assert records[0].sequence == "GATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTATGCACGCGATAGCATTGCGAGACGCTGG"
+        assert records[0].qualities == "CCCFFFFFHFFHHJIJJIJGGJJJJJJJJJJJJJIGHIIEHIJJJJJJIJJJJIBGGIIIHIIIIHHHHDD;9CCDEDDDDDDDDDDEDDDDDDDDDDDDD"
+        assert records[1].name == "HWI-D00119:50:H7AP8ADXX:1:2104:18479:82511"
+        assert records[1].sequence == "GATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTATGCACGCGATAGCATTGCGAGACGCTGG"
+        assert records[1].qualities == "CCCFFFFFHFFHHJJJJIJJJJIIJJJJJGIJJJJGIJJJJJJJJGJIJJIJJJGHIJJJJJJJIHHHHDD@>CDDEDDDDDDDDDDEDDCDDDDD?BBD9"
+        assert records[2].name == "HWI-D00119:50:H7AP8ADXX:1:2105:7076:23015"
+        assert records[2].sequence == "GATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTATGCACGCGATAGCATTGCGAGACGCTGG"
+        assert records[2].qualities == "@@CFFFDFGFHHHJIIJIJIJJJJJJJIIJJJJIIJIJFIIJJJJIIIGIJJJJDHIJIIJIJJJHHGGCB>BDDDDDDDDDDDBDDEDDDDDDDDDDDDD"
