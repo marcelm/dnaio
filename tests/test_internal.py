@@ -707,14 +707,15 @@ class TestRecordsAreMates:
 
 
 class TestBamReader:
+    bam_file = (
+        Path(__file__).parent
+        / "data"
+        / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878"
+        ".bwa.markDuplicates.bam"
+    )
+
     def test_parse_bam(self):
-        bam_file = (
-            Path(__file__).parent
-            / "data"
-            / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878"
-            ".bwa.markDuplicates.bam"
-        )
-        with dnaio.open(bam_file) as reader:
+        with dnaio.open(self.bam_file) as reader:
             records = list(reader)
         assert records[0].name == "HWI-D00119:50:H7AP8ADXX:1:1104:8519:18990"
         assert records[0].sequence == (
@@ -743,3 +744,14 @@ class TestBamReader:
             "@@CFFFDFGFHHHJIIJIJIJJJJJJJIIJJJJIIJIJFIIJJJJIIIGIJJJJDHIJIIJIJJJ"
             "HHGGCB>BDDDDDDDDDDDBDDEDDDDDDDDDDDDD"
         )
+
+    def test_parse_header(self):
+        header = (
+            Path(__file__).parent
+            / "data"
+            / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878.bwa"
+            ".markDuplicates.header.sam"
+        )
+        header_bytes = header.read_bytes()
+        with dnaio.open(self.bam_file) as bam:
+            assert bam.header == header_bytes

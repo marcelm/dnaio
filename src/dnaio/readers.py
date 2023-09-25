@@ -236,3 +236,10 @@ class BamReader(BinaryFileReader, SingleEndReader):
             return self._iter.number_of_records
         except AttributeError:
             return 0
+
+    @property
+    def header(self):
+        try:
+            return self._iter.header
+        except AttributeError:
+            return b""
