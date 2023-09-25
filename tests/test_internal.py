@@ -716,8 +716,8 @@ class TestBamReader:
         ".bwa.markDuplicates.bam"
     )
     raw_bam_bytes = gzip.decompress(bam_file.read_bytes())
-    complete_record_with_header = raw_bam_bytes[:4329]
-    complete_header = complete_record_with_header[:4320]
+    complete_record_with_header = raw_bam_bytes[:6661]
+    complete_header = complete_record_with_header[:6359]
 
     def test_parse_bam(self):
         with dnaio.open(self.bam_file) as reader:
@@ -761,10 +761,9 @@ class TestBamReader:
         with dnaio.open(self.bam_file) as bam:
             assert bam.header == header_bytes
 
-    @pytest.mark.parametrize("end", range(len(complete_header), len(complete_record_with_header)))
+    @pytest.mark.parametrize("end", range(len(complete_header) + 1, len(complete_record_with_header)))
     def test_truncated_record(self, end: int):
         file = io.BytesIO(self.complete_record_with_header[:end])
         with pytest.raises(EOFError) as e:
             list(BamReader(file))
-        e.match("Incomple record at the end of file")
-
+        e.match("Incomplete record at the end of file")
