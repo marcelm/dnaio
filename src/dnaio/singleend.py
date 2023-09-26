@@ -13,7 +13,7 @@ def _open_single(
     fileformat: Optional[str] = None,
     mode: str = "r",
     qualities: Optional[bool] = None,
-) -> Union[FastaReader, FastaWriter, FastqReader, FastqWriter]:
+) -> Union[BamReader, FastaReader, FastaWriter, FastqReader, FastqWriter]:
     """
     Open a single sequence file.
     """
