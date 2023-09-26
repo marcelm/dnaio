@@ -1,2 +1,3 @@
 *.fastq -crlf
 *.fasta -crlf
+*.sam -crlf
