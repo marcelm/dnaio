@@ -761,9 +761,17 @@ class TestBamReader:
         with dnaio.open(self.bam_file) as bam:
             assert bam.header == header_bytes
 
-    @pytest.mark.parametrize("end", range(len(complete_header) + 1, len(complete_record_with_header)))
+    @pytest.mark.parametrize("end", range(len(complete_header) + 1,
+                                          len(complete_record_with_header)))
     def test_truncated_record(self, end: int):
         file = io.BytesIO(self.complete_record_with_header[:end])
         with pytest.raises(EOFError) as e:
             list(BamReader(file))
         e.match("Incomplete record at the end of file")
+
+    @pytest.mark.parametrize("end", [3, 5, 2000, 6000])
+    def test_truncated_header(self, end):
+        file = io.BytesIO(self.complete_record_with_header[:end])
+        with pytest.raises(EOFError) as e:
+            list(BamReader(file))
+        e.match("Truncated BAM file")

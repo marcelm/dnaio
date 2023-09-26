@@ -711,12 +711,12 @@ cdef class BamIter:
         if not isinstance(magic_and_header_size, bytes):
             raise TypeError(f"fileobj {fileobj} is not a binary IO type, "
                             f"got {type(fileobj)}")
+        if len(magic_and_header_size) < 8:
+            raise EOFError("Truncated BAM file")
         if magic_and_header_size[:4] != b"BAM\1":
             raise ValueError(
                 f"fileobj: {fileobj}, is not a BAM file. No BAM magic, instead "
                 f"found {magic_and_header_size[:4]}")
-        if len(magic_and_header_size) < 8:
-            raise EOFError("Truncated BAM file")
         l_text = int.from_bytes(magic_and_header_size[4:], "little", signed=False)
         header =  fileobj.read(l_text)
         if len(header) < l_text:
