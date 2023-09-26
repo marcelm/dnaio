@@ -761,8 +761,9 @@ class TestBamReader:
         with dnaio.open(self.bam_file) as bam:
             assert bam.header == header_bytes
 
-    @pytest.mark.parametrize("end", range(len(complete_header) + 1,
-                                          len(complete_record_with_header)))
+    @pytest.mark.parametrize(
+        "end", range(len(complete_header) + 1, len(complete_record_with_header))
+    )
     def test_truncated_record(self, end: int):
         file = io.BytesIO(self.complete_record_with_header[:end])
         with pytest.raises(EOFError) as e:
@@ -775,3 +776,16 @@ class TestBamReader:
         with pytest.raises(EOFError) as e:
             list(BamReader(file))
         e.match("Truncated BAM file")
+
+    def test_bam_parser_not_binary_error(self):
+        file = io.StringIO(
+            "Don't be too proud of this technological terror " "you have constructed."
+        )
+        with pytest.raises(TypeError) as error:
+            BamReader(file)  # type: ignore
+        error.match("binary IO")
+
+    @pytest.mark.parametrize("buffersize", [4, 8, 10, 20, 40])
+    def test_small_buffersize(self, buffersize):
+        reader = BamReader(str(self.bam_file), buffer_size=buffersize)
+        assert len(list(reader)) == 3
