@@ -24,11 +24,14 @@ def extra_compile_args():
     # run into trouble.
     return None
 
+
 setup(
     ext_modules=[
         Extension(
-            "dnaio._core", sources=["src/dnaio/_core.pyx"],
-            define_macros=DEFINE_MACROS, extra_compile_args=extra_compile_args()
+            "dnaio._core",
+            sources=["src/dnaio/_core.pyx"],
+            define_macros=DEFINE_MACROS,
+            extra_compile_args=extra_compile_args(),
         ),
     ],
 )
