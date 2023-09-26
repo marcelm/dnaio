@@ -182,6 +182,18 @@ def test_detect_compressed_fastq_from_content():
     assert record.name == "prefix:1_13_573/1"
 
 
+def test_detect_bam_from_content():
+    with dnaio.open("tests/data/simplebamnoextension") as f:
+        record = next(iter(f))
+        assert record.name == "Myheader"
+
+
+def test_detect_bam_from_filename():
+    with dnaio.open("tests/data/simple.unaligned.bam") as f:
+        record = next(iter(f))
+        assert record.name == "Myheader"
+
+
 def test_write(tmp_path, extension):
     out_fastq = tmp_path / ("out.fastq" + extension)
     with dnaio.open(str(out_fastq), mode="w") as f:

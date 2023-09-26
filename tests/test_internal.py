@@ -722,6 +722,8 @@ class TestBamReader:
     def test_parse_bam(self):
         with dnaio.open(self.bam_file) as reader:
             records = list(reader)
+        assert len(records) == 3
+        assert reader.number_of_records == 3
         assert records[0].name == "HWI-D00119:50:H7AP8ADXX:1:1104:8519:18990"
         assert records[0].sequence == (
             "GATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCT"

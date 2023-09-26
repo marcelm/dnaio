@@ -112,6 +112,8 @@ def _detect_format_from_name(name: str) -> Optional[str]:
         return "fasta"
     elif ext in [".fastq", ".fq"] or (ext == ".txt" and name.endswith("_sequence")):
         return "fastq"
+    elif ext == "bam":
+        return "bam"
     return None
 
 
