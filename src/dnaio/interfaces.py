@@ -1,10 +1,11 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+from contextlib import AbstractContextManager
 from typing import Iterable, Iterator, Tuple
 
 from dnaio import SequenceRecord
 
 
-class SingleEndReader(ABC):
+class SingleEndReader(AbstractContextManager):
     delivers_qualities: bool
     number_of_records: int
 
@@ -22,7 +23,7 @@ class SingleEndReader(ABC):
         """
 
 
-class PairedEndReader(ABC):
+class PairedEndReader(AbstractContextManager):
     @abstractmethod
     def __iter__(self) -> Iterator[Tuple[SequenceRecord, SequenceRecord]]:
         """
@@ -40,13 +41,13 @@ class PairedEndReader(ABC):
         """
 
 
-class SingleEndWriter(ABC):
+class SingleEndWriter(AbstractContextManager):
     @abstractmethod
     def write(self, record: SequenceRecord) -> None:
         """Write a `SequenceRecord` to the output."""
 
 
-class PairedEndWriter(ABC):
+class PairedEndWriter(AbstractContextManager):
     @abstractmethod
     def write(self, record1: SequenceRecord, record2: SequenceRecord) -> None:
         """
@@ -60,7 +61,7 @@ class PairedEndWriter(ABC):
         """
 
 
-class MultipleFileWriter(ABC):
+class MultipleFileWriter(AbstractContextManager):
     _number_of_files: int
 
     @abstractmethod
