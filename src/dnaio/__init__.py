@@ -77,11 +77,13 @@ from ._version import version as __version__
 # Backwards compatibility alias
 Sequence = SequenceRecord
 
+_FileOrPath = Union[str, PathLike, BinaryIO]
+
 
 def open(
-    *files: Union[str, PathLike, BinaryIO],
-    file1: Optional[Union[str, PathLike, BinaryIO]] = None,
-    file2: Optional[Union[str, PathLike, BinaryIO]] = None,
+    *files: _FileOrPath,
+    file1: Optional[_FileOrPath] = None,
+    file2: Optional[_FileOrPath] = None,
     fileformat: Optional[str] = None,
     interleaved: bool = False,
     mode: str = "r",
