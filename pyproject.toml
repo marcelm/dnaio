@@ -34,6 +34,7 @@ dev = [
 [project.urls]
 "Homepage" = "https://dnaio.readthedocs.io/"
 "Changelog" = "https://dnaio.readthedocs.io/en/latest/changes.html"
+"Repository" = "https://github.com/marcelm/dnaio/"
 
 [tool.setuptools.exclude-package-data]
 dnaio = ["*.pyx"]
