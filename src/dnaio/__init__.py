@@ -32,7 +32,7 @@ __all__ = [
 
 import functools
 from os import PathLike
-from typing import Optional, Union, BinaryIO
+from typing import Optional, Union, BinaryIO, Literal, overload
 
 from xopen import xopen
 
@@ -80,6 +80,146 @@ Sequence = SequenceRecord
 _FileOrPath = Union[str, PathLike, BinaryIO]
 
 
+@overload
+def open(
+    _file: _FileOrPath,
+    *,
+    file1: Optional[_FileOrPath] = ...,
+    file2: Optional[_FileOrPath] = ...,
+    fileformat: Optional[str] = ...,
+    interleaved: Literal[False] = ...,
+    mode: Literal["r"] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> SingleEndReader:
+    ...
+
+
+@overload
+def open(
+    _file1: _FileOrPath,
+    *,
+    file2: _FileOrPath,
+    file1: Optional[_FileOrPath] = ...,
+    fileformat: Optional[str] = ...,
+    interleaved: Literal[False] = ...,
+    mode: Literal["r"] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> PairedEndReader:
+    ...
+
+
+@overload
+def open(
+    _file: _FileOrPath,
+    *,
+    interleaved: Literal[True],
+    file1: Optional[_FileOrPath] = ...,
+    file2: Optional[_FileOrPath] = ...,
+    fileformat: Optional[str] = ...,
+    mode: Literal["r"] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> PairedEndReader:
+    ...
+
+
+@overload
+def open(
+    _file1: _FileOrPath,
+    _file2: _FileOrPath,
+    _file3: _FileOrPath,
+    *files: _FileOrPath,
+    file1: Optional[_FileOrPath] = ...,
+    file2: Optional[_FileOrPath] = ...,
+    fileformat: Optional[str] = ...,
+    mode: Literal["r"] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> MultipleFileReader:
+    ...
+
+
+@overload
+def open(
+    _file: _FileOrPath,
+    *,
+    mode: Literal["w", "a"],
+    file1: Optional[_FileOrPath] = ...,
+    file2: Optional[_FileOrPath] = ...,
+    fileformat: Optional[str] = ...,
+    interleaved: Literal[False] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> SingleEndWriter:
+    ...
+
+
+@overload
+def open(
+    _file1: _FileOrPath,
+    _file2: _FileOrPath,
+    *,
+    mode: Literal["w", "a"],
+    file1: Optional[_FileOrPath] = ...,
+    file2: Optional[_FileOrPath] = ...,
+    fileformat: Optional[str] = ...,
+    interleaved: Literal[False] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> PairedEndWriter:
+    ...
+
+
+@overload
+def open(
+    _file: _FileOrPath,
+    *,
+    mode: Literal["w", "a"],
+    interleaved: Literal[True],
+    file1: Optional[_FileOrPath] = ...,
+    file2: Optional[_FileOrPath] = ...,
+    fileformat: Optional[str] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> PairedEndWriter:
+    ...
+
+
+@overload
+def open(
+    _file1: _FileOrPath,
+    _file2: _FileOrPath,
+    _file3: _FileOrPath,
+    *files: _FileOrPath,
+    mode: Literal["w", "a"],
+    file1: Optional[_FileOrPath] = ...,
+    file2: Optional[_FileOrPath] = ...,
+    fileformat: Optional[str] = ...,
+    interleaved: Literal[False] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> MultipleFileWriter:
+    ...
+
+
 def open(
     *files: _FileOrPath,
     file1: Optional[_FileOrPath] = None,
@@ -91,6 +231,7 @@ def open(
     opener=xopen,
     compression_level: int = 1,
     open_threads: int = 0,
+    **_kwargs,  # TODO Can we get rid of this? Only here to satisfy type checker
 ) -> Union[
     SingleEndReader,
     PairedEndReader,
