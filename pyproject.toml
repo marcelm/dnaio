@@ -58,3 +58,24 @@ test-command = ["cd /d {project}", "pytest tests"]
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
+
+[tool.coverage.report]
+precision = 1
+exclude_also = [
+    "def __repr__",
+    "@overload",
+]
+
+[tool.coverage.run]
+branch = true
+parallel = true
+include = [
+    "*/site-packages/dnaio/*",
+    "tests/*",
+]
+
+[tool.coverage.paths]
+source = [
+    "src/",
+    "*/site-packages/",
+]
