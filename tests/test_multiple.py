@@ -15,7 +15,7 @@ import pytest
 )
 def test_read_files(fileformat, number_of_files):
     file = Path(__file__).parent / "data" / ("simple." + fileformat)
-    files = [file for _ in range(number_of_files)]
+    files = [file] * number_of_files
     with _open_multiple(*files) as multiple_reader:
         for records in multiple_reader:
             pass
@@ -102,7 +102,7 @@ def test_multiple_read_unmatched_names(number_of_files):
     with _open_multiple(*files) as reader:
         with pytest.raises(dnaio.FileFormatError) as error:
             for records in reader:
-                pass
+                pass  # pragma: no coverage
     error.match("do not match")
 
 

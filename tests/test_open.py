@@ -384,3 +384,33 @@ def test_paired_open_with_multiple_args(
 def test_multiple_open_fastq(kwargs, expected_class) -> None:
     with dnaio.open(os.devnull, os.devnull, os.devnull, **kwargs) as f:
         assert isinstance(f, expected_class)
+
+
+def test_deprecated_file1_file2_keyword_arguments(tmp_path):
+    path = Path("tests/data/simple.fasta")
+    expected = SIMPLE_RECORDS["fasta"]
+    with dnaio.open(file1=path) as f:
+        records = list(f)
+    assert records == expected
+
+    with dnaio.open(path, file2=path) as f:
+        records = list(f)
+    assert records == list(zip(expected, expected))
+
+    with dnaio.open(file1=path, file2=path) as f:
+        records = list(f)
+    assert records == list(zip(expected, expected))
+
+
+def test_positional_with_file1():
+    with pytest.raises(ValueError) as error:
+        with dnaio.open("in.fastq", file1="in2.fastq"):
+            pass  # pragma: no cover
+    error.match("file1 keyword argument cannot be used together")
+
+
+def test_positional_with_file1_and_file2():
+    with pytest.raises(ValueError) as error:
+        with dnaio.open("in.fastq", file1="in2.fastq", file2="in3.fastq"):
+            pass  # pragma: no cover
+    error.match("cannot be used together")

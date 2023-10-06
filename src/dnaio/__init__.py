@@ -278,9 +278,14 @@ def open(
         this parameter. This parameter does not work when a custom opener is
         set.
     """
-    if files and (file1 is not None):
+    if files and (file1 is not None) and (file2 is not None):
         raise ValueError(
-            "The file1 keyword argument cannot be used together with files specified"
+            "file1 and file2 arguments cannot be used together with files specified "
+            "as positional arguments"
+        )
+    elif files and (file1 is not None):
+        raise ValueError(
+            "The file1 keyword argument cannot be used together with files specified "
             "as positional arguments"
         )
     elif len(files) > 1 and file2 is not None:
@@ -288,15 +293,15 @@ def open(
             "The file2 argument cannot be used together with more than one "
             "file specified as positional argument"
         )
-    elif file1 is not None and file2 is not None and files:
-        raise ValueError(
-            "file1 and file2 arguments cannot be used together with files specified"
-            "as positional arguments"
-        )
     elif file1 is not None and file2 is not None:
         files = (file1, file2)
-    elif file2 is not None and len(files) == 1:
+    elif file1 is not None:
+        files = (file1,)
+    elif len(files) == 1 and file2 is not None:
         files = (files[0], file2)
+
+    del file1
+    del file2
 
     if len(files) > 1 and interleaved:
         raise ValueError("When interleaved is True, only one file must be specified.")
