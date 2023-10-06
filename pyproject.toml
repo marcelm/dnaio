@@ -64,6 +64,7 @@ precision = 1
 exclude_also = [
     "def __repr__",
     "@overload",
+    "if TYPE_CHECKING:",
 ]
 
 [tool.coverage.run]
