@@ -39,7 +39,7 @@ def paired_fastq_heads(
 def records_are_mates(
     __first_record: SequenceRecord,
     __second_record: SequenceRecord,
-    *__other_records: SequenceRecord
+    *__other_records: SequenceRecord,
 ) -> bool: ...
 
 T = TypeVar("T")
