@@ -22,6 +22,10 @@ class SingleEndReader(AbstractContextManager):
                 if there was a parse error
         """
 
+    @abstractmethod
+    def close(self) -> None:
+        pass
+
 
 class PairedEndReader(AbstractContextManager):
     @abstractmethod
@@ -40,11 +44,19 @@ class PairedEndReader(AbstractContextManager):
                 `SequenceRecord.is_mate`).
         """
 
+    @abstractmethod
+    def close(self) -> None:
+        pass
+
 
 class SingleEndWriter(AbstractContextManager):
     @abstractmethod
     def write(self, record: SequenceRecord) -> None:
         """Write a `SequenceRecord` to the output."""
+
+    @abstractmethod
+    def close(self) -> None:
+        pass
 
 
 class PairedEndWriter(AbstractContextManager):
@@ -59,6 +71,10 @@ class PairedEndWriter(AbstractContextManager):
         ``record1.is_mate(record2)`` returns True before calling
         this method.
         """
+
+    @abstractmethod
+    def close(self) -> None:
+        pass
 
 
 class MultipleFileWriter(AbstractContextManager):
@@ -84,3 +100,7 @@ class MultipleFileWriter(AbstractContextManager):
         This method may provide a speed boost over calling write for each
         tuple of SequenceRecords individually.
         """
+
+    @abstractmethod
+    def close(self) -> None:
+        pass
