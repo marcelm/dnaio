@@ -2,6 +2,13 @@
 Changelog
 =========
 
+v1.0.1 (2023-10-06)
+-------------------
+
+* :pr:`120`: Improved type annotations.
+* Dropped support for Python 3.7
+* Added support for Python 3.12
+
 v1.0.0 (2023-09-06)
 -------------------
 * :pr:`110`: Added ``id`` and ``comment`` properties to ``SequenceRecord``.
