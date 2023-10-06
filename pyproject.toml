@@ -53,3 +53,8 @@ test-command = ["cd {project}", "pytest tests"]
 [[tool.cibuildwheel.overrides]]
 select = "*-win*"
 test-command = ["cd /d {project}", "pytest tests"]
+
+[tool.mypy]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true

@@ -30,34 +30,34 @@ SIMPLE_RECORDS = {
 }
 
 
-def formatted_sequence(record, fileformat):
+def formatted_sequence(record, fileformat) -> str:
     if fileformat == "fastq":
         return "@{}\n{}\n+\n{}\n".format(record.name, record.sequence, record.qualities)
     else:
         return ">{}\n{}\n".format(record.name, record.sequence)
 
 
-def formatted_sequences(records, fileformat):
+def formatted_sequences(records, fileformat) -> str:
     return "".join(formatted_sequence(record, fileformat) for record in records)
 
 
-def test_formatted_sequence():
+def test_formatted_sequence() -> None:
     s = dnaio.SequenceRecord("s1", "ACGT", "HHHH")
     assert ">s1\nACGT\n" == formatted_sequence(s, "fasta")
     assert "@s1\nACGT\n+\nHHHH\n" == formatted_sequence(s, "fastq")
 
 
-def test_version():
+def test_version() -> None:
     _ = dnaio.__version__
 
 
-def test_open_nonexistent(tmp_path):
+def test_open_nonexistent(tmp_path) -> None:
     with pytest.raises(FileNotFoundError):
         with dnaio.open(tmp_path / "nonexistent"):
             pass  # pragma: no cover
 
 
-def test_open_empty_file_with_unrecognized_extension(tmp_path):
+def test_open_empty_file_with_unrecognized_extension(tmp_path) -> None:
     path = tmp_path / "unrecognized-extension.tmp"
     path.touch()
     with dnaio.open(path) as f:
@@ -65,7 +65,7 @@ def test_open_empty_file_with_unrecognized_extension(tmp_path):
     assert records == []
 
 
-def test_fileformat_error(tmp_path):
+def test_fileformat_error(tmp_path) -> None:
     with open(tmp_path / "file.fastq", mode="w") as f:
         print("this is not a FASTQ file", file=f)
     with pytest.raises(FileFormatError) as e:
@@ -74,13 +74,13 @@ def test_fileformat_error(tmp_path):
     assert "at line 2" in str(e.value)  # Premature end of file
 
 
-def test_write_unknown_file_format(tmp_path):
+def test_write_unknown_file_format(tmp_path) -> None:
     with pytest.raises(UnknownFileFormat):
         with dnaio.open(tmp_path / "out.txt", mode="w") as f:
             f.write(dnaio.SequenceRecord("name", "ACG", "###"))  # pragma: no cover
 
 
-def test_read_unknown_file_format(tmp_path):
+def test_read_unknown_file_format(tmp_path) -> None:
     with open(tmp_path / "file.txt", mode="w") as f:
         print("text file", file=f)
     with pytest.raises(UnknownFileFormat):
@@ -88,13 +88,13 @@ def test_read_unknown_file_format(tmp_path):
             _ = list(f)  # pragma: no cover
 
 
-def test_invalid_format(tmp_path):
+def test_invalid_format(tmp_path) -> None:
     with pytest.raises(UnknownFileFormat):
         with dnaio.open(tmp_path / "out.txt", mode="w", fileformat="foo"):
             pass  # pragma: no cover
 
 
-def test_write_qualities_to_file_without_fastq_extension(tmp_path):
+def test_write_qualities_to_file_without_fastq_extension(tmp_path) -> None:
     with dnaio.open(tmp_path / "out.txt", mode="w", qualities=True) as f:
         f.write(dnaio.SequenceRecord("name", "ACG", "###"))
 
@@ -102,20 +102,20 @@ def test_write_qualities_to_file_without_fastq_extension(tmp_path):
         f.write(dnaio.SequenceRecord("name", "ACG", None))
 
 
-def test_read(fileformat, extension):
+def test_read(fileformat, extension) -> None:
     with dnaio.open("tests/data/simple." + fileformat + extension) as f:
         records = list(f)
     assert records == SIMPLE_RECORDS[fileformat]
 
 
-def test_read_pathlib_path(fileformat, extension):
+def test_read_pathlib_path(fileformat, extension) -> None:
     path = Path("tests/data/simple." + fileformat + extension)
     with dnaio.open(path) as f:
         records = list(f)
     assert records == SIMPLE_RECORDS[fileformat]
 
 
-def test_read_opener(fileformat, extension):
+def test_read_opener(fileformat, extension) -> None:
     def my_opener(path, mode):
         import io
 
@@ -134,14 +134,14 @@ def test_read_opener(fileformat, extension):
     assert records[0].sequence == "ACG"
 
 
-def test_read_paired_fasta():
+def test_read_paired_fasta() -> None:
     path = "tests/data/simple.fasta"
-    with dnaio.open(file1=path, file2=path) as f:
+    with dnaio.open(path, path) as f:
         list(f)
 
 
 @pytest.mark.parametrize("interleaved", [False, True])
-def test_paired_opener(fileformat, extension, interleaved):
+def test_paired_opener(fileformat, extension, interleaved) -> None:
     def my_opener(_path, _mode):
         import io
 
@@ -154,7 +154,7 @@ def test_paired_opener(fileformat, extension, interleaved):
     path1 = "ignored-filename." + fileformat + extension
     path2 = "also-ignored-filename." + fileformat + extension
     if interleaved:
-        with dnaio.open(path1, file2=path2, opener=my_opener) as f:
+        with dnaio.open(path1, path2, opener=my_opener) as f:
             records = list(f)
         expected = 2
     else:
@@ -168,21 +168,21 @@ def test_paired_opener(fileformat, extension, interleaved):
     assert records[0][1].sequence == "ACG"
 
 
-def test_detect_fastq_from_content():
+def test_detect_fastq_from_content() -> None:
     """FASTQ file that is not named .fastq"""
     with dnaio.open("tests/data/missingextension") as f:
         record = next(iter(f))
         assert record.name == "prefix:1_13_573/1"
 
 
-def test_detect_compressed_fastq_from_content():
+def test_detect_compressed_fastq_from_content() -> None:
     """Compressed FASTQ file that is not named .fastq.gz"""
     with dnaio.open("tests/data/missingextension.gz") as f:
         record = next(iter(f))
     assert record.name == "prefix:1_13_573/1"
 
 
-def test_write(tmp_path, extension):
+def test_write(tmp_path, extension) -> None:
     out_fastq = tmp_path / ("out.fastq" + extension)
     with dnaio.open(str(out_fastq), mode="w") as f:
         f.write(dnaio.SequenceRecord("name", "ACGT", "HHHH"))
@@ -190,7 +190,7 @@ def test_write(tmp_path, extension):
         assert f.read() == "@name\nACGT\n+\nHHHH\n"
 
 
-def test_write_with_xopen(tmp_path, fileformat, extension):
+def test_write_with_xopen(tmp_path, fileformat, extension) -> None:
     s = dnaio.SequenceRecord("name", "ACGT", "HHHH")
     out_fastq = tmp_path / ("out." + fileformat + extension)
     with xopen(out_fastq, "wb") as outer_f:
@@ -204,7 +204,7 @@ def test_write_with_xopen(tmp_path, fileformat, extension):
             assert f.read() == "@name\nACGT\n+\nHHHH\n"
 
 
-def test_write_str_path(tmp_path, fileformat, extension):
+def test_write_str_path(tmp_path, fileformat, extension) -> None:
     s1 = dnaio.SequenceRecord("s1", "ACGT", "HHHH")
     path = str(tmp_path / ("out." + fileformat + extension))
     with dnaio.open(path, mode="w") as f:
@@ -217,15 +217,15 @@ def test_write_str_path(tmp_path, fileformat, extension):
         assert f.read() == expected
 
 
-def test_write_paired_same_path(tmp_path):
+def test_write_paired_same_path(tmp_path) -> None:
     path1 = tmp_path / "same.fastq"
     path2 = tmp_path / "same.fastq"
     with pytest.raises(ValueError):
-        with dnaio.open(file1=path1, file2=path2, mode="w"):
+        with dnaio.open(path1, path2, mode="w"):
             pass  # pragma: no cover
 
 
-def test_write_paired(tmp_path, fileformat, extension):
+def test_write_paired(tmp_path, fileformat, extension) -> None:
     r1 = [
         dnaio.SequenceRecord("s1", "ACGT", "HHHH"),
         dnaio.SequenceRecord("s2", "CGCA", "8383"),
@@ -237,7 +237,7 @@ def test_write_paired(tmp_path, fileformat, extension):
     path1 = tmp_path / ("out.1." + fileformat + extension)
     path2 = tmp_path / ("out.2." + fileformat + extension)
 
-    with dnaio.open(path1, file2=path2, fileformat=fileformat, mode="w") as f:
+    with dnaio.open(path1, path2, fileformat=fileformat, mode="w") as f:
         f.write(r1[0], r2[0])
         f.write(r1[1], r2[1])
     with xopen(path1) as f:
@@ -246,7 +246,7 @@ def test_write_paired(tmp_path, fileformat, extension):
         assert formatted_sequences(r2, fileformat) == f.read()
 
 
-def test_write_interleaved(tmp_path, fileformat, extension):
+def test_write_interleaved(tmp_path, fileformat, extension) -> None:
     r1 = [
         dnaio.SequenceRecord("s1", "ACGT", "HHHH"),
         dnaio.SequenceRecord("s2", "CGCA", "8383"),
@@ -265,7 +265,7 @@ def test_write_interleaved(tmp_path, fileformat, extension):
         assert formatted_sequences(expected, fileformat) == f.read()
 
 
-def test_append(tmp_path, fileformat, extension):
+def test_append(tmp_path, fileformat, extension) -> None:
     s1 = dnaio.SequenceRecord("s1", "ACGT", "HHHH")
     s2 = dnaio.SequenceRecord("s2", "CGCA", "8383")
     path = tmp_path / ("out." + fileformat + extension)
@@ -277,7 +277,7 @@ def test_append(tmp_path, fileformat, extension):
         assert formatted_sequences([s1, s2], fileformat) == f.read()
 
 
-def test_append_paired(tmp_path, fileformat, extension):
+def test_append_paired(tmp_path, fileformat, extension) -> None:
     r1 = [
         dnaio.SequenceRecord("s1", "ACGT", "HHHH"),
         dnaio.SequenceRecord("s2", "CGCA", "8383"),
@@ -289,9 +289,9 @@ def test_append_paired(tmp_path, fileformat, extension):
     path1 = tmp_path / ("out.1." + fileformat + extension)
     path2 = tmp_path / ("out.2." + fileformat + extension)
 
-    with dnaio.open(path1, file2=path2, fileformat=fileformat, mode="w") as f:
+    with dnaio.open(path1, path2, fileformat=fileformat, mode="w") as f:
         f.write(r1[0], r2[0])
-    with dnaio.open(path1, file2=path2, fileformat=fileformat, mode="a") as f:
+    with dnaio.open(path1, path2, fileformat=fileformat, mode="a") as f:
         f.write(r1[1], r2[1])
     with xopen(path1) as f:
         assert formatted_sequences(r1, fileformat) == f.read()
@@ -299,7 +299,7 @@ def test_append_paired(tmp_path, fileformat, extension):
         assert formatted_sequences(r2, fileformat) == f.read()
 
 
-def test_append_interleaved(tmp_path, fileformat, extension):
+def test_append_interleaved(tmp_path, fileformat, extension) -> None:
     r1 = [
         dnaio.SequenceRecord("s1", "ACGT", "HHHH"),
         dnaio.SequenceRecord("s2", "CGCA", "8383"),
@@ -319,7 +319,7 @@ def test_append_interleaved(tmp_path, fileformat, extension):
         assert formatted_sequences(expected, fileformat) == f.read()
 
 
-def make_random_fasta(path, n_records):
+def make_random_fasta(path, n_records) -> None:
     from random import choice
 
     with xopen(path, "w") as f:
@@ -329,7 +329,7 @@ def make_random_fasta(path, n_records):
             print(">", name, "\n", sequence, sep="", file=f)
 
 
-def test_islice_gzip_does_not_fail(tmp_path):
+def test_islice_gzip_does_not_fail(tmp_path) -> None:
     path = tmp_path / "file.fasta.gz"
     make_random_fasta(path, 100)
     f = dnaio.open(path)
@@ -337,22 +337,22 @@ def test_islice_gzip_does_not_fail(tmp_path):
     f.close()
 
 
-def test_unsupported_mode():
+def test_unsupported_mode() -> None:
     with pytest.raises(ValueError) as error:
-        _ = dnaio.open(os.devnull, mode="x")
+        _ = dnaio.open(os.devnull, mode="x")  # type: ignore
     error.match("Mode must be")
 
 
-def test_no_file2_with_multiple_args():
+def test_no_file2_with_multiple_args() -> None:
     with pytest.raises(ValueError) as error:
-        _ = dnaio.open(os.devnull, os.devnull, file2=os.devnull)
+        _ = dnaio.open(os.devnull, os.devnull, file2=os.devnull)  # type: ignore
     error.match("as positional argument")
     error.match("file2")
 
 
-def test_no_multiple_files_interleaved():
+def test_no_multiple_files_interleaved() -> None:
     with pytest.raises(ValueError) as error:
-        _ = dnaio.open(os.devnull, os.devnull, interleaved=True)
+        _ = dnaio.open(os.devnull, os.devnull, interleaved=True)  # type: ignore
     error.match("interleaved")
     error.match("one file")
 
@@ -361,7 +361,9 @@ def test_no_multiple_files_interleaved():
     ["mode", "expected_class"],
     [("r", dnaio.PairedEndReader), ("w", dnaio.PairedEndWriter)],
 )
-def test_paired_open_with_multiple_args(tmp_path, fileformat, mode, expected_class):
+def test_paired_open_with_multiple_args(
+    tmp_path, fileformat, mode, expected_class
+) -> None:
     path = tmp_path / "file"
     path2 = tmp_path / "file2"
     path.touch()
@@ -379,6 +381,6 @@ def test_paired_open_with_multiple_args(tmp_path, fileformat, mode, expected_cla
         ({"mode": "w", "fileformat": "fasta"}, dnaio.multipleend.MultipleFastaWriter),
     ],
 )
-def test_multiple_open_fastq(kwargs, expected_class):
+def test_multiple_open_fastq(kwargs, expected_class) -> None:
     with dnaio.open(os.devnull, os.devnull, os.devnull, **kwargs) as f:
         assert isinstance(f, expected_class)

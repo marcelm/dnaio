@@ -55,3 +55,6 @@ class FastqIter(Generic[T]):
 
 # Deprecated
 def record_names_match(header1: str, header2: str) -> bool: ...
+
+# Private
+def bytes_ascii_check(b: bytes, length: int = -1) -> bool: ...
