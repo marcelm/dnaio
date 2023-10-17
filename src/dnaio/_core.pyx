@@ -807,6 +807,14 @@ cdef class BamIter:
                 self._read_into_buffer()
                 continue
             header = (<BamRecordHeader *>record_start)[0]
+            if header.flag != 4:
+                raise NotImplementedError(
+                    "The BAM parser has been implemented with unmapped single "
+                    "reads in mind to support ONT sequencing input. Mapped "
+                    "BAM files or files with multiple reads are not supported. "
+                    "Please use samtools fastq to make the appropriate "
+                    "conversion to FASTQ format."
+                )
             bam_name_start = record_start + sizeof(BamRecordHeader)
             name_length = header.l_read_name
             bam_seq_start = bam_name_start + name_length + header.n_cigar_op * sizeof(uint32_t)
