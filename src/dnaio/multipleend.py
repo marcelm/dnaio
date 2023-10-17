@@ -58,9 +58,7 @@ class MultipleFileReader:
         self._stack = contextlib.ExitStack()
         self._readers: List[Union[FastaReader, FastqReader]] = [
             self._stack.enter_context(
-                _open_single(  # type: ignore
-                    file, opener=opener, fileformat=fileformat, mode="r"
-                )
+                _open_single(file, opener=opener, fileformat=fileformat, mode="r")
             )
             for file in self._files
         ]
@@ -145,7 +143,7 @@ class MultipleFastaWriter(MultipleFileWriter):
         self._stack = contextlib.ExitStack()
         self._writers: List[Union[FastaWriter, FastqWriter]] = [
             self._stack.enter_context(
-                _open_single(  # type: ignore
+                _open_single(
                     file,
                     opener=opener,
                     fileformat="fasta",

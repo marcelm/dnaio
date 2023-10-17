@@ -39,7 +39,7 @@ def paired_fastq_heads(
 def records_are_mates(
     __first_record: SequenceRecord,
     __second_record: SequenceRecord,
-    *__other_records: SequenceRecord
+    *__other_records: SequenceRecord,
 ) -> bool: ...
 
 T = TypeVar("T")
@@ -64,3 +64,6 @@ class BamIter:
 
 # Deprecated
 def record_names_match(header1: str, header2: str) -> bool: ...
+
+# Private
+def bytes_ascii_check(b: bytes, length: int = -1) -> bool: ...

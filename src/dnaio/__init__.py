@@ -33,7 +33,7 @@ __all__ = [
 
 import functools
 from os import PathLike
-from typing import Optional, Union, BinaryIO
+from typing import Optional, Union, BinaryIO, Literal, overload
 
 from xopen import xopen
 
@@ -78,11 +78,138 @@ from ._version import version as __version__
 # Backwards compatibility alias
 Sequence = SequenceRecord
 
+_FileOrPath = Union[str, PathLike, BinaryIO]
+
+
+@overload
+def open(
+    _file: _FileOrPath,
+    *,
+    fileformat: Optional[str] = ...,
+    interleaved: Literal[False] = ...,
+    mode: Literal["r"] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> SingleEndReader:
+    ...
+
+
+@overload
+def open(
+    _file1: _FileOrPath,
+    _file2: _FileOrPath,
+    *,
+    fileformat: Optional[str] = ...,
+    interleaved: Literal[False] = ...,
+    mode: Literal["r"] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> PairedEndReader:
+    ...
+
+
+@overload
+def open(
+    _file: _FileOrPath,
+    *,
+    interleaved: Literal[True],
+    fileformat: Optional[str] = ...,
+    mode: Literal["r"] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> PairedEndReader:
+    ...
+
+
+@overload
+def open(
+    _file1: _FileOrPath,
+    _file2: _FileOrPath,
+    _file3: _FileOrPath,
+    *files: _FileOrPath,
+    fileformat: Optional[str] = ...,
+    mode: Literal["r"] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> MultipleFileReader:
+    ...
+
+
+@overload
+def open(
+    _file: _FileOrPath,
+    *,
+    mode: Literal["w", "a"],
+    fileformat: Optional[str] = ...,
+    interleaved: Literal[False] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> SingleEndWriter:
+    ...
+
+
+@overload
+def open(
+    _file1: _FileOrPath,
+    _file2: _FileOrPath,
+    *,
+    mode: Literal["w", "a"],
+    fileformat: Optional[str] = ...,
+    interleaved: Literal[False] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> PairedEndWriter:
+    ...
+
+
+@overload
+def open(
+    _file: _FileOrPath,
+    *,
+    mode: Literal["w", "a"],
+    interleaved: Literal[True],
+    fileformat: Optional[str] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> PairedEndWriter:
+    ...
+
+
+@overload
+def open(
+    _file1: _FileOrPath,
+    _file2: _FileOrPath,
+    _file3: _FileOrPath,
+    *files: _FileOrPath,
+    mode: Literal["w", "a"],
+    fileformat: Optional[str] = ...,
+    interleaved: Literal[False] = ...,
+    qualities: Optional[bool] = ...,
+    opener=...,
+    compression_level: int = ...,
+    open_threads: int = ...,
+) -> MultipleFileWriter:
+    ...
+
 
 def open(
-    *files: Union[str, PathLike, BinaryIO],
-    file1: Optional[Union[str, PathLike, BinaryIO]] = None,
-    file2: Optional[Union[str, PathLike, BinaryIO]] = None,
+    *files: _FileOrPath,
+    file1: Optional[_FileOrPath] = None,
+    file2: Optional[_FileOrPath] = None,
     fileformat: Optional[str] = None,
     interleaved: bool = False,
     mode: str = "r",
@@ -90,6 +217,7 @@ def open(
     opener=xopen,
     compression_level: int = 1,
     open_threads: int = 0,
+    **_kwargs,  # TODO Can we get rid of this? Only here to satisfy type checker
 ) -> Union[
     SingleEndReader,
     PairedEndReader,
@@ -151,9 +279,14 @@ def open(
         this parameter. This parameter does not work when a custom opener is
         set.
     """
-    if files and (file1 is not None):
+    if files and (file1 is not None) and (file2 is not None):
         raise ValueError(
-            "The file1 keyword argument cannot be used together with files specified"
+            "file1 and file2 arguments cannot be used together with files specified "
+            "as positional arguments"
+        )
+    elif files and (file1 is not None):
+        raise ValueError(
+            "The file1 keyword argument cannot be used together with files specified "
             "as positional arguments"
         )
     elif len(files) > 1 and file2 is not None:
@@ -161,15 +294,15 @@ def open(
             "The file2 argument cannot be used together with more than one "
             "file specified as positional argument"
         )
-    elif file1 is not None and file2 is not None and files:
-        raise ValueError(
-            "file1 and file2 arguments cannot be used together with files specified"
-            "as positional arguments"
-        )
     elif file1 is not None and file2 is not None:
         files = (file1, file2)
-    elif file2 is not None and len(files) == 1:
+    elif file1 is not None:
+        files = (file1,)
+    elif len(files) == 1 and file2 is not None:
         files = (files[0], file2)
+
+    del file1
+    del file2
 
     if len(files) > 1 and interleaved:
         raise ValueError("When interleaved is True, only one file must be specified.")

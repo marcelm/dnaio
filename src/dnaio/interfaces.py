@@ -1,10 +1,11 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+from contextlib import AbstractContextManager
 from typing import Iterable, Iterator, Tuple
 
 from dnaio import SequenceRecord
 
 
-class SingleEndReader(ABC):
+class SingleEndReader(AbstractContextManager):
     delivers_qualities: bool
     number_of_records: int
 
@@ -21,8 +22,12 @@ class SingleEndReader(ABC):
                 if there was a parse error
         """
 
+    @abstractmethod
+    def close(self) -> None:
+        pass
 
-class PairedEndReader(ABC):
+
+class PairedEndReader(AbstractContextManager):
     @abstractmethod
     def __iter__(self) -> Iterator[Tuple[SequenceRecord, SequenceRecord]]:
         """
@@ -39,14 +44,22 @@ class PairedEndReader(ABC):
                 `SequenceRecord.is_mate`).
         """
 
+    @abstractmethod
+    def close(self) -> None:
+        pass
 
-class SingleEndWriter(ABC):
+
+class SingleEndWriter(AbstractContextManager):
     @abstractmethod
     def write(self, record: SequenceRecord) -> None:
         """Write a `SequenceRecord` to the output."""
 
+    @abstractmethod
+    def close(self) -> None:
+        pass
 
-class PairedEndWriter(ABC):
+
+class PairedEndWriter(AbstractContextManager):
     @abstractmethod
     def write(self, record1: SequenceRecord, record2: SequenceRecord) -> None:
         """
@@ -59,8 +72,12 @@ class PairedEndWriter(ABC):
         this method.
         """
 
+    @abstractmethod
+    def close(self) -> None:
+        pass
 
-class MultipleFileWriter(ABC):
+
+class MultipleFileWriter(AbstractContextManager):
     _number_of_files: int
 
     @abstractmethod
@@ -83,3 +100,7 @@ class MultipleFileWriter(ABC):
         This method may provide a speed boost over calling write for each
         tuple of SequenceRecords individually.
         """
+
+    @abstractmethod
+    def close(self) -> None:
+        pass
