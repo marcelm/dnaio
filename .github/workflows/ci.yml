@@ -85,8 +85,6 @@ jobs:
       uses: pypa/cibuildwheel@v2.11.2
       env:
         CIBW_BUILD: "cp*-manylinux_x86_64 cp3*-win_amd64 cp3*-macosx_x86_64"
-        CIBW_ENVIRONMENT_MACOS: "CFLAGS=-DNDEBUG -g0"
-        CIBW_ENVIRONMENT_LINUX: "CFLAGS=-DNDEBUG -g0 -mssse3"
     - uses: actions/upload-artifact@v2
       with:
         name: wheels
