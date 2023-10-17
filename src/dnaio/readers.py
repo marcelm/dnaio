@@ -227,7 +227,7 @@ class BamReader(BinaryFileReader, SingleEndReader):
         self.two_headers: bool = False
 
     def __iter__(self) -> Iterator[SequenceRecord]:
-        """Iterate over the records in this FASTQ file."""
+        """Iterate over the records in this BAM file."""
         return self._iter
 
     @property

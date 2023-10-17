@@ -710,7 +710,7 @@ class TestRecordsAreMates:
 
 class TestBamReader:
     bam_file = (
-        Path(__file__).parent
+        TEST_DATA
         / "data"
         / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878"
         ".bwa.markDuplicates.bam"
@@ -781,7 +781,7 @@ class TestBamReader:
 
     def test_bam_parser_not_binary_error(self):
         file = io.StringIO(
-            "Don't be too proud of this technological terror " "you have constructed."
+            "Don't be too proud of this technological terror you have constructed."
         )
         with pytest.raises(TypeError) as error:
             BamReader(file)  # type: ignore
