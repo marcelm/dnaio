@@ -785,7 +785,7 @@ class TestBamReader:
             "Don't be too proud of this technological terror you have constructed."
         )
         with pytest.raises(TypeError) as error:
-            BamReader(file)  # type: ignore
+            BamReader(file)
         error.match("binary IO")
 
     @pytest.mark.parametrize("buffersize", [4, 8, 10, 20, 40])
