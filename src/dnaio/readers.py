@@ -210,10 +210,6 @@ class BamReader(BinaryFileReader, SingleEndReader):
         opener=xopen,
         _close_file: Optional[bool] = None,
     ):
-        """
-        file is a filename or a file-like object.
-        If file is a filename, then .gz files are supported.
-        """
         super().__init__(file, opener=opener, _close_file=_close_file)
         self.sequence_class = sequence_class
         self.delivers_qualities = True
