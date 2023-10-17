@@ -711,7 +711,7 @@ class TestRecordsAreMates:
 class TestBamReader:
     bam_file = (
         TEST_DATA / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878"
-        ".bwa.markDuplicates.bam"
+        ".bwa.markDuplicates.unmapped.bam"
     )
     raw_bam_bytes = gzip.decompress(bam_file.read_bytes())
     complete_record_with_header = raw_bam_bytes[:6661]
@@ -789,3 +789,14 @@ class TestBamReader:
     def test_small_buffersize(self, buffersize):
         reader = BamReader(str(self.bam_file), buffer_size=buffersize)
         assert len(list(reader)) == 3
+
+    def test_error_on_mapped_bam(self):
+        bam = TEST_DATA / (
+            "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878"
+            ".bwa.markDuplicates.bam"
+        )
+        reader = BamReader(str(bam))
+        it = iter(reader)
+        with pytest.raises(NotImplementedError) as error:
+            next(it)
+        assert error.match("unmapped single reads")
