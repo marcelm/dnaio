@@ -710,9 +710,7 @@ class TestRecordsAreMates:
 
 class TestBamReader:
     bam_file = (
-        TEST_DATA
-        / "data"
-        / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878"
+        TEST_DATA / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878"
         ".bwa.markDuplicates.bam"
     )
     raw_bam_bytes = gzip.decompress(bam_file.read_bytes())
