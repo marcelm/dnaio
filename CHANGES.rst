@@ -2,6 +2,13 @@
 Changelog
 =========
 
+unreleased
+----------
+
+* :pr:`116`: Added experimental support for reading unaligned BAM files
+  (single-end only at the moment). This uses a custom, highly efficient
+  BAM parser, making dnaio faster than htslib in this particular case.
+
 v1.0.1 (2023-10-06)
 -------------------
 

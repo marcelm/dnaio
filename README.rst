@@ -13,7 +13,7 @@
 dnaio processes FASTQ and FASTA files
 =====================================
 
-``dnaio`` is a Python 3.7+ library for very efficient parsing and writing of FASTQ and also FASTA files.
+``dnaio`` is a Python 3.8+ library for very efficient parsing and writing of FASTQ and also FASTA files.
 The code was previously part of the
 `Cutadapt <https://cutadapt.readthedocs.io/>`_ tool and has been improved significantly since it has been split out.
 
@@ -38,6 +38,7 @@ Features and supported file types
 
 - FASTQ input and output
 - FASTA input and output
+- BAM input
 - Compressed input and output (``.gz``, ``.bz2`` and ``.xz``, detected automatically)
 - Paired-end data in two files
 - Interleaved paired-end data in a single file
@@ -48,7 +49,7 @@ Limitations
 ===========
 
 - Multi-line FASTQ files are not supported.
-- FASTQ parsing is the focus of this library. The FASTA parser is not as optimized.
+- FASTQ and BAM parsing is the focus of this library. The FASTA parser is not as optimized.
 
 Links
 =====

@@ -227,7 +227,8 @@ def open(
     MultipleFileWriter,
 ]:
     """
-    Open one or more FASTQ or FASTA files for reading or writing.
+    Open one or more FASTQ or FASTA files for reading or writing,
+    or open one (unaligned) BAM file for reading.
 
     Parameters:
       files:
@@ -243,6 +244,7 @@ def open(
 
       mode:
         Set to ``'r'`` for reading, ``'w'`` for writing or ``'a'`` for appending.
+        For BAM files, only reading is supported.
 
       interleaved:
         If True, then there must be only one file argument that contains
@@ -250,7 +252,7 @@ def open(
 
       fileformat:
         If *None*, the file format is autodetected from the file name
-        extension. Set to ``'fasta'`` or ``'fastq'`` to not auto-detect.
+        extension. Set to ``'fasta'``, ``'fastq'`` or ``'bam'`` to not auto-detect.
 
       qualities:
         When mode is ``'w'`` and fileformat is *None*, this can be set

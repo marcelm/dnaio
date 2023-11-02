@@ -197,6 +197,9 @@ class BamReader(BinaryFileReader, SingleEndReader):
     """
     Reader for BAM files.
 
+    All records in the input BAM must be unmapped single-end reads
+    (with a flag value of 4).
+
     While this class can be instantiated directly, the recommended way is to
     use `dnaio.open` with appropriate arguments.
     """

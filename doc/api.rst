@@ -59,6 +59,9 @@ They can also be used directly if needed.
 .. autoclass:: FastqWriter
    :show-inheritance:
 
+.. autoclass:: BamReader
+   :show-inheritance:
+
 .. autoclass:: TwoFilePairedEndReader
    :show-inheritance:
 
