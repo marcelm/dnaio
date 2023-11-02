@@ -1,6 +1,4 @@
-import os
 import platform
-import sys
 
 from setuptools import setup, Extension
 import setuptools_scm  # noqa  Ensure it’s installed
