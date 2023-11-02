@@ -9,7 +9,7 @@ from typing import Union, BinaryIO, Optional, Iterator, List
 
 from xopen import xopen
 
-from ._core import FastqIter, SequenceRecord
+from ._core import BamIter, FastqIter, SequenceRecord
 from ._util import shorten as _shorten
 from .exceptions import FastaFormatError
 from .interfaces import SingleEndReader
@@ -191,3 +191,51 @@ class FastqReader(BinaryFileReader, SingleEndReader):
             return self._iter.number_of_records
         except AttributeError:
             return 0
+
+
+class BamReader(BinaryFileReader, SingleEndReader):
+    """
+    Reader for BAM files.
+
+    While this class can be instantiated directly, the recommended way is to
+    use `dnaio.open` with appropriate arguments.
+    """
+
+    def __init__(
+        self,
+        file: Union[PathLike, str, BinaryIO],
+        *,
+        sequence_class=SequenceRecord,
+        buffer_size: int = 128 * 1024,  # Buffer size used by cat, pigz etc.
+        opener=xopen,
+        _close_file: Optional[bool] = None,
+    ):
+        super().__init__(file, opener=opener, _close_file=_close_file)
+        self.sequence_class = sequence_class
+        self.delivers_qualities = True
+        self.buffer_size = buffer_size
+        try:
+            self._iter: Iterator[SequenceRecord] = BamIter(self._file, self.buffer_size)
+        except Exception:
+            self.close()
+            raise
+
+        self.two_headers: bool = False
+
+    def __iter__(self) -> Iterator[SequenceRecord]:
+        """Iterate over the records in this BAM file."""
+        return self._iter
+
+    @property
+    def number_of_records(self):
+        try:
+            return self._iter.number_of_records
+        except AttributeError:
+            return 0
+
+    @property
+    def header(self):
+        try:
+            return self._iter.header
+        except AttributeError:
+            return b""

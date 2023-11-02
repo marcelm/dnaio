@@ -46,7 +46,10 @@ write_to = "src/dnaio/_version.py"
 testpaths = ["tests"]
 
 [tool.cibuildwheel]
-environment = "CFLAGS=-g0"
+environment_windows = "CFLAGS=-g0 -DNDEBUG"
+environment_macos = "CFLAGS=-g0 -DNDEBUG"
+environment_linux = "CFLAGS=-g0 -DNDEBUG -mssse3"
+
 test-requires = "pytest"
 test-command = ["cd {project}", "pytest tests"]
 

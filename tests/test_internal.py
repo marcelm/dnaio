@@ -1,3 +1,5 @@
+import gzip
+import io
 import os
 import shutil
 import subprocess
@@ -12,6 +14,7 @@ from pytest import raises, mark
 
 import dnaio
 from dnaio import (
+    BamReader,
     FileFormatError,
     FastaFormatError,
     FastqFormatError,
@@ -706,3 +709,97 @@ class TestRecordsAreMates:
         with pytest.raises(TypeError) as error:
             records_are_mates(SequenceRecord("A", "A", "A"))  # type: ignore
         error.match("records_are_mates requires at least two arguments")
+
+
+class TestBamReader:
+    bam_file = (
+        TEST_DATA / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878"
+        ".bwa.markDuplicates.unmapped.bam"
+    )
+    raw_bam_bytes = gzip.decompress(bam_file.read_bytes())
+    complete_record_with_header = raw_bam_bytes[:6661]
+    complete_header = complete_record_with_header[:6359]
+
+    def test_parse_bam(self):
+        with dnaio.open(self.bam_file) as reader:
+            records = list(reader)
+        assert len(records) == 3
+        assert reader.number_of_records == 3
+        assert records[0].name == "HWI-D00119:50:H7AP8ADXX:1:1104:8519:18990"
+        assert records[0].sequence == (
+            "GATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCT"
+            "GGGGGGTATGCACGCGATAGCATTGCGAGACGCTGG"
+        )
+        assert records[0].qualities == (
+            "CCCFFFFFHFFHHJIJJIJGGJJJJJJJJJJJJJIGHIIEHIJJJJJJIJJJJIBGGIIIHIIII"
+            "HHHHDD;9CCDEDDDDDDDDDDEDDDDDDDDDDDDD"
+        )
+        assert records[1].name == "HWI-D00119:50:H7AP8ADXX:1:2104:18479:82511"
+        assert records[1].sequence == (
+            "GATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCT"
+            "GGGGGGTATGCACGCGATAGCATTGCGAGACGCTGG"
+        )
+        assert records[1].qualities == (
+            "CCCFFFFFHFFHHJJJJIJJJJIIJJJJJGIJJJJGIJJJJJJJJGJIJJIJJJGHIJJJJJJJI"
+            "HHHHDD@>CDDEDDDDDDDDDDEDDCDDDDD?BBD9"
+        )
+        assert records[2].name == "HWI-D00119:50:H7AP8ADXX:1:2105:7076:23015"
+        assert records[2].sequence == (
+            "GATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCT"
+            "GGGGGGTATGCACGCGATAGCATTGCGAGACGCTGG"
+        )
+        assert records[2].qualities == (
+            "@@CFFFDFGFHHHJIIJIJIJJJJJJJIIJJJJIIJIJFIIJJJJIIIGIJJJJDHIJIIJIJJJ"
+            "HHGGCB>BDDDDDDDDDDDBDDEDDDDDDDDDDDDD"
+        )
+
+    def test_parse_header(self):
+        header = (
+            Path(__file__).parent
+            / "data"
+            / "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878.bwa"
+            ".markDuplicates.header.sam"
+        )
+        header_bytes = header.read_bytes()
+        with dnaio.open(self.bam_file) as bam:
+            assert bam.header == header_bytes
+
+    @pytest.mark.parametrize(
+        "end", range(len(complete_header) + 1, len(complete_record_with_header))
+    )
+    def test_truncated_record(self, end: int):
+        file = io.BytesIO(self.complete_record_with_header[:end])
+        with pytest.raises(EOFError) as e:
+            list(BamReader(file))
+        e.match("Incomplete record at the end of file")
+
+    @pytest.mark.parametrize("end", [3, 5, 2000, 6000])
+    def test_truncated_header(self, end):
+        file = io.BytesIO(self.complete_record_with_header[:end])
+        with pytest.raises(EOFError) as e:
+            list(BamReader(file))
+        e.match("Truncated BAM file")
+
+    def test_bam_parser_not_binary_error(self):
+        file = io.StringIO(
+            "Don't be too proud of this technological terror you have constructed."
+        )
+        with pytest.raises(TypeError) as error:
+            BamReader(file)
+        error.match("binary IO")
+
+    @pytest.mark.parametrize("buffersize", [4, 8, 10, 20, 40])
+    def test_small_buffersize(self, buffersize):
+        reader = BamReader(str(self.bam_file), buffer_size=buffersize)
+        assert len(list(reader)) == 3
+
+    def test_error_on_mapped_bam(self):
+        bam = TEST_DATA / (
+            "project.NIST_NIST7035_H7AP8ADXX_TAAGGCGA_1_NA12878"
+            ".bwa.markDuplicates.bam"
+        )
+        reader = BamReader(str(bam))
+        it = iter(reader)
+        with pytest.raises(NotImplementedError) as error:
+            next(it)
+        assert error.match("unmapped single reads")
