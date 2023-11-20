@@ -2,8 +2,8 @@
 Changelog
 =========
 
-unreleased
-----------
+v1.1.0 (2023-11-20)
+-------------------
 
 * :pr:`116`: Added experimental support for reading unaligned BAM files
   (single-end only at the moment). This uses a custom, highly efficient
