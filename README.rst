@@ -39,7 +39,7 @@ Features and supported file types
 - FASTQ input and output
 - FASTA input and output
 - BAM input
-- Compressed input and output (``.gz``, ``.bz2``, ``.xz`` and ``.zst`` are detected automatically; z)
+- Compressed input and output (``.gz``, ``.bz2``, ``.xz`` and ``.zst`` are detected automatically)
 - Paired-end data in two files
 - Interleaved paired-end data in a single file
 - Files with DOS/Windows linebreaks can be read
