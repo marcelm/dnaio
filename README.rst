@@ -33,13 +33,22 @@ The main interface is the `dnaio.open <https://dnaio.readthedocs.io/en/latest/ap
 For more, see the `tutorial <https://dnaio.readthedocs.io/en/latest/tutorial.html>`_ and
 `API documentation <https://dnaio.readthedocs.io/en/latest/api.html>`_.
 
+Installation
+============
+
+Using pip:: 
+
+    pip install dnaio zstandard
+
+``zstandard`` can be omitted if support for Zstandard (``.zst``) files is not required.
+
 Features and supported file types
 =================================
 
 - FASTQ input and output
 - FASTA input and output
 - BAM input
-- Compressed input and output (``.gz``, ``.bz2`` and ``.xz``, detected automatically)
+- Compressed input and output (``.gz``, ``.bz2``, ``.xz`` and ``.zst`` are detected automatically)
 - Paired-end data in two files
 - Interleaved paired-end data in a single file
 - Files with DOS/Windows linebreaks can be read
@@ -48,8 +57,8 @@ Features and supported file types
 Limitations
 ===========
 
-- Multi-line FASTQ files are not supported.
-- FASTQ and BAM parsing is the focus of this library. The FASTA parser is not as optimized.
+- Multi-line FASTQ files are not supported
+- FASTQ and BAM parsing is the focus of this library. The FASTA parser is not as optimized
 
 Links
 =====
