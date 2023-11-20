@@ -33,6 +33,15 @@ The main interface is the `dnaio.open <https://dnaio.readthedocs.io/en/latest/ap
 For more, see the `tutorial <https://dnaio.readthedocs.io/en/latest/tutorial.html>`_ and
 `API documentation <https://dnaio.readthedocs.io/en/latest/api.html>`_.
 
+Installation
+============
+
+Using pip:: 
+
+    pip install dnaio zstandard
+
+``zstandard`` can be omitted if support for Zstandard (``.zst``) files is not required.
+
 Features and supported file types
 =================================
 
@@ -48,10 +57,8 @@ Features and supported file types
 Limitations
 ===========
 
-- Multi-line FASTQ files are not supported.
-- FASTQ and BAM parsing is the focus of this library. The FASTA parser is not as optimized.
-- For reading and writing Zstandard (``.zst``) files, either the ``zstd`` command-line
-  program or the Python ``zstandard`` package needs to be installed.
+- Multi-line FASTQ files are not supported
+- FASTQ and BAM parsing is the focus of this library. The FASTA parser is not as optimized
 
 Links
 =====
