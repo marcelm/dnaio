@@ -50,8 +50,7 @@ Limitations
 
 - Multi-line FASTQ files are not supported.
 - FASTQ and BAM parsing is the focus of this library. The FASTA parser is not as optimized.
-- For reading and writing Zstandard (``.zst``) files, either the ``zstd`` command-line
-program or the Python ``zstandard`` package needs to be installed.
+- For reading and writing Zstandard (``.zst``) files, either the ``zstd`` command-line program or the Python ``zstandard`` package needs to be installed.
 
 Links
 =====
