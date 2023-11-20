@@ -39,7 +39,7 @@ Features and supported file types
 - FASTQ input and output
 - FASTA input and output
 - BAM input
-- Compressed input and output (``.gz``, ``.bz2`` and ``.xz``, detected automatically)
+- Compressed input and output (``.gz``, ``.bz2``, ``.xz`` and ``.zst`` are detected automatically; z)
 - Paired-end data in two files
 - Interleaved paired-end data in a single file
 - Files with DOS/Windows linebreaks can be read
@@ -50,6 +50,8 @@ Limitations
 
 - Multi-line FASTQ files are not supported.
 - FASTQ and BAM parsing is the focus of this library. The FASTA parser is not as optimized.
+- For reading and writing Zstandard (``.zst``) files, either the ``zstd`` command-line
+program or the Python ``zstandard`` package needs to be installed.
 
 Links
 =====

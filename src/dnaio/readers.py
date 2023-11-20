@@ -33,7 +33,7 @@ class BinaryFileReader:
     ):
         """
         The file is a path or a file-like object. In both cases, the file may
-        be compressed (.gz, .bz2, .xz).
+        be compressed (.gz, .bz2, .xz, .zst).
         """
         if isinstance(file, str):
             self._file = opener(file, self.mode)
@@ -80,7 +80,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
     ):
         """
         file is a path or a file-like object. In both cases, the file may
-        be compressed (.gz, .bz2, .xz).
+        be compressed (.gz, .bz2, .xz, .zst).
 
         keep_linebreaks -- whether to keep newline characters in the sequence
         """
