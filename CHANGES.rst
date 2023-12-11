@@ -2,10 +2,10 @@
 Changelog
 =========
 
-development version
+v1.2.0 (2023-12-11)
 -------------------
 
-* Added support for chunking FASTA reads to ``read_paired_chunks``.
+* :pr:`124`: Added support for chunking FASTA reads to ``read_paired_chunks``.
   Previously, only FASTQ was supported.
 
 v1.1.0 (2023-11-20)
