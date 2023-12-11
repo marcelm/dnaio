@@ -591,7 +591,7 @@ cdef class FastqIter:
             second_header_start = sequence_end + 1
             remaining_bytes = (buffer_end - second_header_start)
             # Usually there is no second header, so we skip the memchr call.
-            if remaining_bytes > 2 and second_header_start[0] == b'+' and second_header_start[1] == b'\n':
+            if remaining_bytes > 2 and memcmp(second_header_start, b"+\n", 2) == 0:
                 second_header_end = second_header_start + 1
             else:
                 second_header_end = <char *>memchr(second_header_start, b'\n', <size_t>(remaining_bytes))
