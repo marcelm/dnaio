@@ -34,6 +34,34 @@ def _fasta_head(buf: bytes, end: Optional[int] = None) -> int:
     )
 
 
+def _paired_fasta_heads(
+    buf1: bytes, buf2: bytes, end1: int, end2: int
+) -> Tuple[int, int]:
+    """
+    Return positions pos1, pos2 where right1 <= end1 and right2 <= end2
+    such that buf1[:pos1] and buf2[:pos2] contain the same number of complete FASTA
+    records.
+    """
+    if end1 == 0 or end2 == 0:
+        return (0, 0)
+
+    if (end1 > 0 and buf1[:1] != b">") or (end2 > 0 and buf2[:1] != b">"):
+        raise FastaFormatError("FASTA file expected to start with '>'", line=None)
+
+    # Count complete records
+    n_records1 = buf1.count(b"\n>", 0, end1)
+    n_records2 = buf2.count(b"\n>", 0, end2)
+    n_records = min(n_records1, n_records2)
+
+    pos1 = pos2 = 0
+    while n_records > 0:
+        pos1 = buf1.find(b"\n>", pos1, end1) + 1
+        pos2 = buf2.find(b"\n>", pos2, end2) + 1
+        n_records -= 1
+
+    return (pos1, pos2)
+
+
 def _fastq_head(buf: bytes, end: Optional[int] = None) -> int:
     """
     Search for the end of the last complete *two* FASTQ records in buf[:end].
@@ -129,7 +157,7 @@ def read_paired_chunks(
     buffer_size: int = 4 * 1024**2,
 ) -> Iterator[Tuple[memoryview, memoryview]]:
     """
-    Read chunks of paired-end FASTQ reads from two files.
+    Read chunks of paired-end FASTA or FASTQ records from two files.
     A pair of chunks (memoryview objects) is yielded on each iteration,
     and both chunks are guaranteed to have the same number of sequences.
     That is, the paired-end reads will stay in sync.
@@ -138,7 +166,6 @@ def read_paired_chunks(
     buffer is re-used in the next iteration.
 
     This is similar to `read_chunks`, but for paired-end data.
-    Unlike `read_chunks`, this only works for FASTQ input.
 
     Args:
         f: File with R1 reads; must have been opened in binary mode
@@ -149,7 +176,7 @@ def read_paired_chunks(
         Pairs of memoryview objects.
 
     Raises:
-         ValueError: A FASTQ record was encountered that is larger than *buffer_size*.
+         ValueError: A FASTA or FASTQ record was encountered that is larger than *buffer_size*.
     """
     if buffer_size < 6:
         raise ValueError("Buffer size too small")
@@ -160,27 +187,51 @@ def read_paired_chunks(
     # Read one byte to make sure we are processing FASTQ
     start1 = f.readinto(memoryview(buf1)[0:1])
     start2 = f2.readinto(memoryview(buf2)[0:1])
-    if (start1 == 1 and buf1[0:1] != b"@") or (start2 == 1 and buf2[0:1] != b"@"):
+
+    if start1 == 0 and start2 == 0:
+        return memoryview(b""), memoryview(b"")
+
+    if (start1 == 0) != (start2 == 0):
+        i = 2 if start1 == 0 else 1
+        raise FileFormatError(
+            f"Paired-end reads not in sync: File with R{i} reads is empty and the other is not",
+            line=None,
+        )
+
+    if buf1[:1] == b"@" != buf2[:1] == b"@":
         raise FileFormatError(
             "Paired-end data must be in FASTQ format when using multiple cores",
+            line=None,
+        )
+
+    if buf1[:1] == b"@":
+        file_format = "FASTQ"
+        paired_heads = _paired_fastq_heads
+    elif buf1[:1] == b">":
+        file_format = "FASTA"
+        paired_heads = _paired_fasta_heads
+    else:
+        raise FileFormatError(
+            "First character in input file must be '@' (FASTQ) or '>' (FASTA), "
+            f"but found {buf1[:1]}",
             line=None,
         )
 
     while True:
         if start1 == len(buf1) and start2 == len(buf2):
             raise ValueError(
-                f"FASTQ records do not fit into buffer of size {buffer_size}"
+                f"FASTA/FASTQ records do not fit into buffer of size {buffer_size}"
             )
         bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1  # type: ignore
         bufend2 = f2.readinto(memoryview(buf2)[start2:]) + start2  # type: ignore
         if start1 == bufend1 and start2 == bufend2:
             break
 
-        end1, end2 = _paired_fastq_heads(buf1, buf2, bufend1, bufend2)
+        end1, end2 = paired_heads(buf1, buf2, bufend1, bufend2)
         assert end1 <= bufend1
         assert end2 <= bufend2
 
-        if end1 > 0 or end2 > 0:
+        if end1 > 0 or end2 > 0 or file_format == "FASTA":
             yield (memoryview(buf1)[0:end1], memoryview(buf2)[0:end2])
         else:
             assert end1 == 0 and end2 == 0
@@ -189,7 +240,7 @@ def read_paired_chunks(
                 i = 1 if bufend1 == 0 else 2
                 extra = f". File {i} ended, but more data found in the other file"
             raise FileFormatError(
-                f"Premature end of paired FASTQ input{extra}.", line=None
+                f"Premature end of paired-end input{extra}.", line=None
             )
         start1 = bufend1 - end1
         assert start1 >= 0

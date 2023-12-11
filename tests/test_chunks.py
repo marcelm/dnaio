@@ -1,9 +1,18 @@
+import textwrap
+
 from pytest import raises
 from io import BytesIO
 
+import dnaio
 from dnaio import UnknownFileFormat, FileFormatError
 from dnaio._core import paired_fastq_heads
-from dnaio.chunks import _fastq_head, _fasta_head, read_chunks, read_paired_chunks
+from dnaio.chunks import (
+    _fastq_head,
+    _fasta_head,
+    read_chunks,
+    read_paired_chunks,
+    _paired_fasta_heads,
+)
 
 
 def test_fasta_head():
@@ -30,6 +39,52 @@ def test_fasta_head_with_comment():
     assert _fasta_head(b"#\n>3\n5") == 2
     assert _fasta_head(b"#\n>3\n5\n") == 2
     assert _fasta_head(b"#\n>3\n5\n>") == 7
+
+
+def test_paired_fasta_heads():
+    def pheads(buf1, buf2):
+        return _paired_fasta_heads(buf1, buf2, len(buf1), len(buf2))
+
+    assert pheads(b"", b"") == (0, 0)
+    assert pheads(b">r", b">r") == (0, 0)
+    assert pheads(b">r\nA\n>s", b">r") == (0, 0)
+    assert pheads(b">r\nA\n>s", b">r\nCT\n>s") == (5, 6)
+    assert pheads(b">r\nA\n>s\nG\n>t\n", b">r\nCT\n>s") == (5, 6)
+
+    buf1 = (
+        textwrap.dedent(
+            """
+        >1
+        a
+        b
+        >2
+        c
+        >3
+        uv
+        """
+        )
+        .strip()
+        .encode()
+    )
+    buf2 = (
+        textwrap.dedent(
+            """
+        >1
+        def
+        >2
+        gh
+        i
+        >3
+        """
+        )
+        .strip()
+        .encode()
+    )
+
+    assert pheads(buf1, buf2) == (
+        len(b">1\na\nb\n>2\nc\n"),
+        len(b">1\ndef\n>2\ngh\ni\n"),
+    )
 
 
 def test_paired_fastq_heads():
@@ -67,11 +122,25 @@ def test_fastq_head():
     assert _fastq_head(b"A\nB\nC\nD\nE\nF\nG\nH\nI\n") == 16
 
 
-def test_read_paired_chunks():
+def test_read_paired_chunks_fastq():
     with open("tests/data/paired.1.fastq", "rb") as f1:
         with open("tests/data/paired.2.fastq", "rb") as f2:
             for c1, c2 in read_paired_chunks(f1, f2, buffer_size=128):
                 print(c1, c2)
+
+
+def test_paired_chunks_fasta(tmp_path):
+    for i in (1, 2):
+        with dnaio.open(f"tests/data/paired.{i}.fastq") as infile:
+            with dnaio.open(tmp_path / f"{i}.fasta", mode="w") as outfile:
+                for record in infile:
+                    record.qualities = None
+                    outfile.write(record)
+
+    with open(tmp_path / "1.fasta", "rb") as r1:
+        with open(tmp_path / "2.fasta", "rb") as r2:
+            for c1, c2 in read_paired_chunks(r1, r2, buffer_size=128):
+                print(c1.tobytes(), c2.tobytes())
 
 
 def test_paired_chunks_different_number_of_records():
