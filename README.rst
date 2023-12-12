@@ -9,11 +9,15 @@
     :target: https://codecov.io/gh/marcelm/dnaio
     :alt: Codecov badge
 
-=====================================
-dnaio processes FASTQ and FASTA files
-=====================================
+===========================================
+dnaio processes FASTQ, FASTA and uBAM files
+===========================================
 
 ``dnaio`` is a Python 3.8+ library for very efficient parsing and writing of FASTQ and also FASTA files.
+Since ``dnaio`` version 1.1.0, support for efficiently parsing uBAM files has been implemented.
+This allows reading ONT files from the `dorado <https://github.com/nanoporetech/dorado>`_
+basecaller directly.
+
 The code was previously part of the
 `Cutadapt <https://cutadapt.readthedocs.io/>`_ tool and has been improved significantly since it has been split out.
 
@@ -58,7 +62,7 @@ Limitations
 ===========
 
 - Multi-line FASTQ files are not supported
-- FASTQ and BAM parsing is the focus of this library. The FASTA parser is not as optimized
+- FASTQ and uBAM parsing is the focus of this library. The FASTA parser is not as optimized
 
 Links
 =====
