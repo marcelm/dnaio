@@ -9,6 +9,9 @@ authors:
     name-particle: H P
     family-names: Vorderman
     orcid: 'https://orcid.org/0000-0002-8813-1528'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.10548864
 repository-code: 'https://github.com/marcelm/dnaio/'
 url: 'https://dnaio.readthedocs.io/'
 license: MIT

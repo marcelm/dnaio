@@ -1,3 +1,6 @@
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10548864.svg
+  :target: https://doi.org/10.5281/zenodo.10548864
+
 .. image:: https://github.com/marcelm/dnaio/workflows/CI/badge.svg
     :alt: GitHub Actions badge
 
@@ -36,7 +39,7 @@ For more, see the `tutorial <https://dnaio.readthedocs.io/en/latest/tutorial.htm
 Installation
 ============
 
-Using pip:: 
+Using pip::
 
     pip install dnaio zstandard
 
