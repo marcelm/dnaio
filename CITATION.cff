@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+title: dnaio
+type: software
+authors:
+  - given-names: Marcel
+    family-names: Martin
+    orcid: 'https://orcid.org/0000-0002-0680-200X'
+  - given-names: Ruben Harmen Paul
+    family-names: Vorderman
+    orcid: 'https://orcid.org/0000-0002-8813-1528'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.10548864
+repository-code: 'https://github.com/marcelm/dnaio/'
+url: 'https://dnaio.readthedocs.io/'
+license: MIT
