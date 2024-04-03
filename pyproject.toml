@@ -52,7 +52,7 @@ CFLAGS = "-g0 -DNDEBUG"
 CFLAGS = "-g0 -DNDEBUG"
 
 [tool.cibuildwheel.linux.environment]
-CFLAGS = "-g0 -DNDEBUG -mssse3"
+CFLAGS = "-g0 -DNDEBUG"
 
 [tool.cibuildwheel]
 test-requires = "pytest"
