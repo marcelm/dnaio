@@ -1,11 +1,17 @@
 #include <stddef.h>
-#include <stdint.h>
-#ifdef __SSE2__
-#include "emmintrin.h"
-#endif
 
 #define ASCII_MASK_8BYTE 0x8080808080808080ULL
 #define ASCII_MASK_1BYTE 0x80
+
+static inline int string_is_ascii_fallback(const char *string, size_t length)
+{
+    /* Combining all characters with OR allows for only one bit check at the end */
+    size_t all_chars = 0;
+    for (size_t i=0; i<length; i++) {
+        all_chars |= string[i];
+    }
+    return !(all_chars & ASCII_MASK_1BYTE);
+}
 
 /**
  * @brief Check if a string of given length only contains ASCII characters.
@@ -16,33 +22,37 @@
  * @returns 1 if the string is ASCII-only, 0 otherwise.
  */
 static int
-string_is_ascii(const char * string, size_t length) {
-    // By performing bitwise OR on all characters in 8-byte chunks (16-byte
-    // with SSE2) we can
-    // determine ASCII status in a non-branching (except the loops) fashion.
-    uint64_t all_chars = 0;
-    const char *cursor = string;
-    const char *string_end_ptr = string + length;
-    const char *string_8b_end_ptr = string_end_ptr - sizeof(uint64_t);
-    int non_ascii_in_vec = 0;
-    #ifdef __SSE2__
-    const char *string_16b_end_ptr = string_end_ptr - sizeof(__m128i);
-    __m128i vec_all_chars = _mm_setzero_si128();
-    while (cursor < string_16b_end_ptr) {
-        __m128i loaded_chars = _mm_loadu_si128((__m128i *)cursor);
-        vec_all_chars = _mm_or_si128(loaded_chars, vec_all_chars);
-        cursor += sizeof(__m128i);
+string_is_ascii(const char *string, size_t length)
+{
+    if (length < sizeof(size_t)) {
+        return string_is_ascii_fallback(string, length);
     }
-    non_ascii_in_vec = _mm_movemask_epi8(vec_all_chars);
-    #endif
-
-    while (cursor < string_8b_end_ptr) {
-        all_chars |= *(uint64_t *)cursor;
-        cursor += sizeof(uint64_t);
+    size_t number_of_chunks = length / sizeof(size_t);
+    size_t *chunks = (size_t *)string;
+    size_t number_of_unrolls = number_of_chunks / 4;
+    size_t remaining_chunks = number_of_chunks - (number_of_unrolls * 4);
+    size_t *chunk_ptr = chunks;
+    size_t all_chars0 = 0;
+    size_t all_chars1 = 0;
+    size_t all_chars2 = 0;
+    size_t all_chars3 = 0;
+    for (size_t i=0; i < number_of_unrolls; i++) {
+        /* Performing indepedent OR calculations allows the compiler to use
+           vectors. It also allows out of order execution. */
+        all_chars0 |= chunk_ptr[0];
+        all_chars1 |= chunk_ptr[1];
+        all_chars2 |= chunk_ptr[2];
+        all_chars3 |= chunk_ptr[3];
+        chunk_ptr += 4;
     }
-    while (cursor < string_end_ptr) {
-        all_chars |= *cursor;
-        cursor += 1;
+    size_t all_chars = all_chars0 | all_chars1 | all_chars2 | all_chars3;
+    for (size_t i=0; i<remaining_chunks; i++) {
+        all_chars |= chunk_ptr[i];
     }
-    return !(non_ascii_in_vec + (all_chars & ASCII_MASK_8BYTE));
+    /* Load the last few bytes left in a single integer for fast operations.
+       There is some overlap here with the work done before, but for a simple
+       ascii check this does not matter. */
+    size_t last_chunk = *(size_t *)(string + length - sizeof(size_t));
+    all_chars |= last_chunk;
+    return !(all_chars & ASCII_MASK_8BYTE);
 }
