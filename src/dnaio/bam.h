@@ -6,14 +6,21 @@
 # define GCC_AT_LEAST(major, minor) 0
 #endif
 
-#ifdef __clang__
-#ifdef __has_attribute
+#if defined(__clang__) && defined(__has_attribute)
 #define CLANG_COMPILER_HAS(attribute) __has_attribute(attribute)
-#endif 
-#endif
-#ifndef CLANG_COMPILER_HAS 
+#else
 #define CLANG_COMPILER_HAS(attribute) 0
-#endif 
+#endif
+
+#define COMPILER_HAS_TARGET (GCC_AT_LEAST(4, 8) || CLANG_COMPILER_HAS(__target__))
+#define COMPILER_HAS_OPTIMIZE (GCC_AT_LEAST(4,4) || CLANG_COMPILER_HAS(optimize))
+
+#if defined(__x86_64__) || defined(_M_X64)
+#define BUILD_IS_X86_64 1
+#include "immintrin.h"
+#else
+#define BUILD_IS_X86_64 0
+#endif
 
 #include <stdint.h>
 #include <string.h>
@@ -49,9 +56,7 @@ decode_bam_sequence_default(uint8_t *dest, const uint8_t *encoded_sequence, size
     }
 }
 
-#if GCC_AT_LEAST(4, 8) 
-#include "immintrin.h"
-
+#if COMPILER_HAS_TARGET && BUILD_IS_X86_64
 __attribute__((__target__("ssse3")))
 static void 
 decode_bam_sequence_ssse3(uint8_t *dest, const uint8_t *encoded_sequence, size_t length) 
@@ -138,7 +143,7 @@ static inline void decode_bam_sequence(uint8_t *dest, const uint8_t *encoded_seq
 #endif 
 
 // Code is simple enough to be auto vectorized.
-#if GCC_AT_LEAST(4,4) || CLANG_COMPILER_HAS(optimize)
+#if COMPILER_HAS_OPTIMIZE
 __attribute__((optimize("O3")))
 #endif
 static void 
