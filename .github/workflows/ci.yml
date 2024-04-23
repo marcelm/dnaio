@@ -71,7 +71,9 @@ jobs:
     - name: Test
       run: tox -e py
     - name: Upload coverage report
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   wheels:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
