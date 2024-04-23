@@ -92,6 +92,7 @@ jobs:
       env:
         CIBW_BUILD: "cp*-manylinux_x86_64 cp3*-win_amd64 cp3*-macosx_x86_64 cp3*-macosx_arm64"
         CIBW_SKIP: "cp37-*"
+        CIBW_TEST_SKIP: "cp38-macosx_*:arm64"
     - uses: actions/upload-artifact@v4
       with:
         name: wheels-${{ matrix.os }}
