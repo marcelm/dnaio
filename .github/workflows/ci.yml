@@ -94,7 +94,7 @@ jobs:
         CIBW_SKIP: "cp37-*"
     - uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.os }}
         path: wheelhouse/*.whl
 
   publish:
@@ -102,14 +102,15 @@ jobs:
     needs: [build, wheels]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: sdist
         path: dist/
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
-        name: wheels
+        pattern: wheels-*
         path: dist/
+        merge-multiple: true
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@v1.5.1
       with:
