@@ -189,7 +189,7 @@ def read_paired_chunks(
     start2 = f2.readinto(memoryview(buf2)[0:1])
 
     if start1 == 0 and start2 == 0:
-        return memoryview(b""), memoryview(b"")
+        return
 
     if (start1 == 0) != (start2 == 0):
         i = 2 if start1 == 0 else 1

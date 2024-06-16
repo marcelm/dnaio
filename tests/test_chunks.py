@@ -122,6 +122,15 @@ def test_fastq_head():
     assert _fastq_head(b"A\nB\nC\nD\nE\nF\nG\nH\nI\n") == 16
 
 
+def test_read_paired_chunks_empty_input(tmp_path):
+    empty_fastq = tmp_path / "empty.fastq"
+    empty_fastq.write_text("")
+    with open(empty_fastq, "rb") as f1:
+        with open(empty_fastq, "rb") as f2:
+            chunks = list(read_paired_chunks(f1, f2))
+    assert len(chunks) == 0
+
+
 def test_read_paired_chunks_fastq():
     with open("tests/data/paired.1.fastq", "rb") as f1:
         with open("tests/data/paired.2.fastq", "rb") as f2:
