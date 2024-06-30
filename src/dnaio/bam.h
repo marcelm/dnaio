@@ -13,7 +13,9 @@
 #endif
 
 #define COMPILER_HAS_TARGET (GCC_AT_LEAST(4, 8) || CLANG_COMPILER_HAS(__target__))
+#define COMPILER_HAS_CONSTRUCTOR (__GNUC__ || CLANG_COMPILER_HAS(constructor))
 #define COMPILER_HAS_OPTIMIZE (GCC_AT_LEAST(4,4) || CLANG_COMPILER_HAS(optimize))
+
 
 #if defined(__x86_64__) || defined(_M_X64)
 #define BUILD_IS_X86_64 1
@@ -56,7 +58,11 @@ decode_bam_sequence_default(uint8_t *dest, const uint8_t *encoded_sequence, size
     }
 }
 
-#if COMPILER_HAS_TARGET && BUILD_IS_X86_64
+static void (*decode_bam_sequence)(
+    uint8_t *dest, const uint8_t *encoded_sequence, size_t length
+) = decode_bam_sequence_default;
+
+#if COMPILER_HAS_TARGET && COMPILER_HAS_CONSTRUCTOR && BUILD_IS_X86_64
 __attribute__((__target__("ssse3")))
 static void 
 decode_bam_sequence_ssse3(uint8_t *dest, const uint8_t *encoded_sequence, size_t length) 
@@ -115,30 +121,16 @@ decode_bam_sequence_ssse3(uint8_t *dest, const uint8_t *encoded_sequence, size_t
     decode_bam_sequence_default(dest_cursor, encoded_cursor, dest_end_ptr - dest_cursor);
 }
 
-static void (*decode_bam_sequence)(
-    uint8_t *dest, const uint8_t *encoded_sequence, size_t length);
-
-/* Simple dispatcher function, updates the function pointer after testing the
-   CPU capabilities. After this, the dispatcher function is not needed anymore. */
-static void decode_bam_sequence_dispatch(
-        uint8_t *dest, const uint8_t *encoded_sequence, size_t length) {
+/* Constructor functions run at dynamic link time. This checks the CPU capabilities 
+   and updates the function pointer accordingly. */
+__attribute__((constructor))
+static void decode_bam_sequence_dispatch(void) {
     if (__builtin_cpu_supports("ssse3")) {
         decode_bam_sequence = decode_bam_sequence_ssse3;
     }
     else {
         decode_bam_sequence = decode_bam_sequence_default;
     }
-    decode_bam_sequence(dest, encoded_sequence, length);
-}
-
-static void (*decode_bam_sequence)(
-    uint8_t *dest, const uint8_t *encoded_sequence, size_t length
-) = decode_bam_sequence_dispatch;
-
-#else
-static inline void decode_bam_sequence(uint8_t *dest, const uint8_t *encoded_sequence, size_t length) 
-{
-    decode_bam_sequence_default(dest, encoded_sequence, length);
 }
 #endif 
 
