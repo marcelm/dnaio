@@ -16,7 +16,6 @@
 #define COMPILER_HAS_CONSTRUCTOR (__GNUC__ || CLANG_COMPILER_HAS(constructor))
 #define COMPILER_HAS_OPTIMIZE (GCC_AT_LEAST(4,4) || CLANG_COMPILER_HAS(optimize))
 
-
 #if defined(__x86_64__) || defined(_M_X64)
 #define BUILD_IS_X86_64 1
 #include "immintrin.h"
