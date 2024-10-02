@@ -2,6 +2,11 @@
 Changelog
 =========
 
+develop
+-------------------
+* :pr:`139`: Fix an error that occurred when decoding BAM records with missing
+  quality values. These are now converted to strings of '!'.
+
 v1.2.1 (2024-06-17)
 -------------------
 

@@ -7,7 +7,7 @@ from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH, PyUnico
 from cpython.object cimport Py_TYPE, PyTypeObject
 from cpython.ref cimport PyObject
 from cpython.tuple cimport PyTuple_GET_ITEM
-from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove
+from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove, memset
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t
 
 cimport cython
@@ -827,7 +827,11 @@ cdef class BamIter:
             qualities = PyUnicode_New(seq_length, 127)
             memcpy(<uint8_t *>PyUnicode_DATA(name), bam_name_start, name_length)
             decode_bam_sequence(<uint8_t *>PyUnicode_DATA(sequence), bam_seq_start, seq_length)
-            decode_bam_qualities(<uint8_t *>PyUnicode_DATA(qualities), bam_qual_start, seq_length)
+            if (bam_qual_start[0] == 0xff):
+                # 0xff means qualities are missing. Set them to 0 instead.
+                memset(<char *>PyUnicode_DATA(qualities), 33, seq_length)
+            else:
+                decode_bam_qualities(<uint8_t *>PyUnicode_DATA(qualities), bam_qual_start, seq_length)
             seq_record = SequenceRecord.__new__(SequenceRecord)
             seq_record._name = name
             seq_record._sequence = sequence
