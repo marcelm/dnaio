@@ -824,10 +824,14 @@ cdef class BamIter:
             bam_qual_start = bam_seq_start + encoded_seq_length
             name = PyUnicode_New(name_length, 127)
             sequence = PyUnicode_New(seq_length, 127)
-            qualities = PyUnicode_New(seq_length, 127)
             memcpy(<uint8_t *>PyUnicode_DATA(name), bam_name_start, name_length)
             decode_bam_sequence(<uint8_t *>PyUnicode_DATA(sequence), bam_seq_start, seq_length)
-            decode_bam_qualities(<uint8_t *>PyUnicode_DATA(qualities), bam_qual_start, seq_length)
+            if seq_length and bam_qual_start[0] == 0xff:
+                # 0xff means qualities are missing.
+                qualities = None
+            else:
+                qualities = PyUnicode_New(seq_length, 127)
+                decode_bam_qualities(<uint8_t *>PyUnicode_DATA(qualities), bam_qual_start, seq_length)
             seq_record = SequenceRecord.__new__(SequenceRecord)
             seq_record._name = name
             seq_record._sequence = sequence
