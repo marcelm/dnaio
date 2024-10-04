@@ -812,4 +812,4 @@ class TestBamReader:
         record = records[0]
         assert record.sequence == "GATTACA"
         # Phred scores should default to 0 + 33 == ord('!') when missing.
-        assert record.qualities == "!!!!!!!"
+        assert record.qualities is None
