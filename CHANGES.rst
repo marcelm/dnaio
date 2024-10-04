@@ -2,7 +2,7 @@
 Changelog
 =========
 
-develop
+v1.2.2 (2024-10-04)
 -------------------
 * :pr:`139`: Fix an error that occurred when decoding BAM records with missing
   quality values. These are now converted to ``None``.
