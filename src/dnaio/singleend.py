@@ -64,6 +64,11 @@ def _open_single(
             return BamReader(file, _close_file=close_file)
         # This should not be reached
         raise NotImplementedError("Only reading is supported for BAM files")
+    elif fileformat == "bam_no_header":
+        if "r" in mode:
+            return BamReader(file, _close_file=close_file, with_header=False)
+        # This should not be reached
+        raise NotImplementedError("Only reading is supported for headerless BAM files")
     if close_file:
         file.close()
     raise UnknownFileFormat(

@@ -12,6 +12,8 @@ from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t
 
 cimport cython
 
+from ._bam import read_bam_header
+
 cdef extern from "Python.h":
     void *PyUnicode_DATA(object o)
     bint PyUnicode_IS_COMPACT_ASCII(object o)
@@ -688,6 +690,22 @@ cdef struct BamRecordHeader:
     int32_t tlen
 
 cdef class BamIter:
+    """
+    Parse a uBAM file and yield SequenceRecord objects
+
+    Arguments:
+        file: a file-like object, opened in binary mode (it must have a readinto
+            method)
+
+        buffer_size: size of the initial buffer. This is automatically grown
+            if a BAM record is encountered that does not fit.
+
+        with_header: The BAM file has a header that needs parsing. Default is True.
+            False can be used in circumstances where chunks of BAM records are read.
+
+    Yields:
+        SequenceRecord Objects
+    """
     cdef:
         uint8_t *record_start
         uint8_t *buffer_end
@@ -701,42 +719,16 @@ cdef class BamIter:
     def __dealloc__(self):
         PyMem_Free(self.read_in_buffer)
 
-    def __cinit__(self, fileobj, read_in_size = 48 * 1024):
+    def __cinit__(self, fileobj, read_in_size = 48 * 1024, with_header = True):
         if read_in_size < 4:
             raise ValueError(f"read_in_size must be at least 4 got "
                               f"{read_in_size}")
 
-        # Skip ahead and save the BAM header for later inspection
-        magic_and_header_size = fileobj.read(8)
-        if not isinstance(magic_and_header_size, bytes):
-            raise TypeError(f"fileobj {fileobj} is not a binary IO type, "
-                            f"got {type(fileobj)}")
-        if len(magic_and_header_size) < 8:
-            raise EOFError("Truncated BAM file")
-        if magic_and_header_size[:4] != b"BAM\1":
-            raise ValueError(
-                f"fileobj: {fileobj}, is not a BAM file. No BAM magic, instead "
-                f"found {magic_and_header_size[:4]}")
-        l_text = int.from_bytes(magic_and_header_size[4:], "little", signed=False)
-        header =  fileobj.read(l_text)
-        if len(header) < l_text:
-            raise EOFError("Truncated BAM file")
-        n_ref_obj = fileobj.read(4)
-        if len(n_ref_obj) < 4:
-            raise EOFError("Truncated BAM file")
-        n_ref = int.from_bytes(n_ref_obj, "little", signed=False)
-        for i in range(n_ref):
-            l_name_obj = fileobj.read(4)
-            if len(l_name_obj) < 4:
-                raise EOFError("Truncated BAM file")
-            l_name = int.from_bytes(l_name_obj, "little", signed=False)
-            reference_chunk_size = l_name + 4  # Include name and uint32_t of size
-            reference_chunk = fileobj.read(reference_chunk_size)
-            if len(reference_chunk) < reference_chunk_size:
-                raise EOFError("Truncated BAM file")
-        # Fileobj is now skipped ahead and at the start of the BAM records
-
-        self.header = header
+        if with_header:
+            # Skip ahead and save the BAM header for later inspection
+            self.header = read_bam_header(fileobj)
+        else:
+            self.header = b""
         self.read_in_size = read_in_size
         self.file = fileobj
         self.read_in_buffer = NULL
@@ -746,9 +738,9 @@ cdef class BamIter:
 
     def __iter__(self):
         return self
-    
+
     cdef _read_into_buffer(self):
-        cdef size_t read_in_size 
+        cdef size_t read_in_size
         cdef size_t leftover_size = self.buffer_end - self.record_start
         cdef uint32_t block_size
         memmove(self.read_in_buffer, self.record_start, leftover_size)
@@ -769,7 +761,7 @@ cdef class BamIter:
             raise StopIteration()
         elif new_bytes_size == 0:
             raise EOFError("Incomplete record at the end of file")
-        cdef uint8_t *tmp 
+        cdef uint8_t *tmp
         if new_buffer_size > self.read_in_buffer_size:
             tmp = <uint8_t *>PyMem_Realloc(self.read_in_buffer, new_buffer_size)
             if tmp == NULL:
@@ -802,6 +794,7 @@ cdef class BamIter:
                 self._read_into_buffer()
                 continue
             record_size = (<uint32_t *>record_start)[0]
+            print(record_size)
             record_end = record_start + 4 + record_size
             if record_end > buffer_end:
                 self._read_into_buffer()
