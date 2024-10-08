@@ -818,7 +818,6 @@ cdef class BamIter:
                 self._read_into_buffer()
                 continue
             record_size = (<uint32_t *>record_start)[0]
-            print(record_size)
             record_end = record_start + 4 + record_size
             if record_end > buffer_end:
                 self._read_into_buffer()
