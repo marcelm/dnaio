@@ -33,8 +33,6 @@ from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 from dnaio._core import bytes_ascii_check
 
-from tests.test_open import fileformat
-
 TEST_DATA = Path(__file__).parent / "data"
 SIMPLE_FASTQ = str(TEST_DATA / "simple.fastq")
 # files tests/data/simple.fast{q,a}
