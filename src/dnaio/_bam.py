@@ -1,8 +1,8 @@
 import struct
-from typing import BinaryIO
+from io import BufferedIOBase
 
 
-def read_bam_header(fileobj: BinaryIO) -> bytes:
+def read_bam_header(fileobj: BufferedIOBase) -> bytes:
     magic = fileobj.read(4)
     if not isinstance(magic, bytes):
         raise TypeError(
@@ -13,12 +13,12 @@ def read_bam_header(fileobj: BinaryIO) -> bytes:
     if magic[:4] != b"BAM\1":
         raise ValueError(
             f"fileobj: {fileobj}, is not a BAM file. No BAM magic, instead "
-            f"found {magic}"
+            f"found {magic!r}"
         )
     return read_bam_header_after_magic(fileobj)
 
 
-def read_bam_header_after_magic(fileobj: BinaryIO) -> bytes:
+def read_bam_header_after_magic(fileobj: BufferedIOBase) -> bytes:
     header_size = fileobj.read(4)
     if len(header_size) < 4:
         raise EOFError("Truncated BAM file")

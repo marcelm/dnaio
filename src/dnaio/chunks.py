@@ -6,7 +6,7 @@ without actually parsing the records. The chunks can then be distributed to work
 or subprocess and be parsed and processed there.
 """
 
-from io import RawIOBase
+from io import BufferedIOBase
 from typing import Optional, Iterator, Tuple
 
 from ._bam import read_bam_header_after_magic
@@ -81,7 +81,9 @@ def _fastq_head(buf: bytes, end: Optional[int] = None) -> int:
     return right + 1  # type: ignore
 
 
-def read_chunks(f: RawIOBase, buffer_size: int = 4 * 1024**2) -> Iterator[memoryview]:
+def read_chunks(
+    f: BufferedIOBase, buffer_size: int = 4 * 1024**2
+) -> Iterator[memoryview]:
     """
     Read chunks of complete FASTA or FASTQ records from a file.
     If the format is detected to be FASTQ, all chunks except possibly the last contain
@@ -141,7 +143,7 @@ def read_chunks(f: RawIOBase, buffer_size: int = 4 * 1024**2) -> Iterator[memory
     while True:
         if start == len(buf):
             raise OverflowError("FASTA/FASTQ record does not fit into buffer")
-        bufend = f.readinto(memoryview(buf)[start:]) + start  # type: ignore
+        bufend = f.readinto(memoryview(buf)[start:]) + start
         if start == bufend:
             # End of file
             break
@@ -158,8 +160,8 @@ def read_chunks(f: RawIOBase, buffer_size: int = 4 * 1024**2) -> Iterator[memory
 
 
 def read_paired_chunks(
-    f: RawIOBase,
-    f2: RawIOBase,
+    f: BufferedIOBase,
+    f2: BufferedIOBase,
     buffer_size: int = 4 * 1024**2,
 ) -> Iterator[Tuple[memoryview, memoryview]]:
     """
@@ -228,8 +230,8 @@ def read_paired_chunks(
             raise ValueError(
                 f"FASTA/FASTQ records do not fit into buffer of size {buffer_size}"
             )
-        bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1  # type: ignore
-        bufend2 = f2.readinto(memoryview(buf2)[start2:]) + start2  # type: ignore
+        bufend1 = f.readinto(memoryview(buf1)[start1:]) + start1
+        bufend2 = f2.readinto(memoryview(buf2)[start2:]) + start2
         if start1 == bufend1 and start2 == bufend2:
             break
 

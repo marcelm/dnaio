@@ -434,14 +434,17 @@ def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
     return record_start1 - data1, record_start2 - data2
 
 
-def bam_head(buf, Py_ssize_t end = PY_SSIZE_T_MAX):
+def bam_head(buf, end = None):
     """Return the end of the last complete BAM record in the buf."""
+    cdef Py_ssize_t c_end = PY_SSIZE_T_MAX
+    if end is not None:
+        c_end = end
     cdef Py_buffer buffer
     PyObject_GetBuffer(buf, &buffer, PyBUF_SIMPLE)
     cdef:
         uint8_t *buffer_start = <uint8_t *>buffer.buf
         uint8_t *record_start = buffer_start
-        uint8_t *buffer_end = buffer_start + min(end, buffer.len)
+        uint8_t *buffer_end = buffer_start + min(c_end, buffer.len)
         uint32_t block_size
         size_t record_size
 
