@@ -1,3 +1,4 @@
+import sys
 from typing import (
     Generic,
     Optional,
@@ -36,6 +37,7 @@ class SequenceRecord:
 def paired_fastq_heads(
     buf1: ByteString, buf2: ByteString, end1: int, end2: int
 ) -> Tuple[int, int]: ...
+def bam_head(buf: ByteString, end: int = sys.maxsize) -> int: ...
 def records_are_mates(
     __first_record: SequenceRecord,
     __second_record: SequenceRecord,

@@ -9,7 +9,9 @@ or subprocess and be parsed and processed there.
 from io import RawIOBase
 from typing import Optional, Iterator, Tuple
 
+from ._bam import read_bam_header_after_magic
 from ._core import paired_fastq_heads as _paired_fastq_heads
+from ._core import bam_head as _bam_head
 from .exceptions import FileFormatError, FastaFormatError, UnknownFileFormat
 
 
@@ -104,19 +106,23 @@ def read_chunks(f: RawIOBase, buffer_size: int = 4 * 1024**2) -> Iterator[memory
 
     # Read one byte to determine file format.
     # If there is a comment char, we assume FASTA!
-    start = f.readinto(memoryview(buf)[0:1])
+    start = f.readinto(memoryview(buf)[0:4])
     if start == 0:
         # Empty file
         return
-    assert start == 1
+    assert start == 4
     if buf[0:1] == b"@":
         head = _fastq_head
     elif buf[0:1] == b"#" or buf[0:1] == b">":
         head = _fasta_head
+    elif buf[0:4] == b"BAM\x01":
+        head = _bam_head
+        _ = read_bam_header_after_magic(f)
+        start = 0  # Skip header and start at the records.
     else:
         raise UnknownFileFormat(
-            f"Cannnot determine input file format: First character expected to be '>' or '@', "
-            f"but found {repr(chr(buf[0]))}"
+            f"Cannnot determine input file format: First characters expected "
+            f"to be '>'. '@', or 'BAM\1', but found {repr(buf[0:4])}"
         )
 
     # Layout of buf

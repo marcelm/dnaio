@@ -5,6 +5,7 @@ from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH, PyUnicode_DecodeASCII
 from cpython.object cimport Py_TYPE, PyTypeObject
+from cpython.pyport cimport PY_SSIZE_T_MAX
 from cpython.ref cimport PyObject
 from cpython.tuple cimport PyTuple_GET_ITEM
 from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove
@@ -431,6 +432,25 @@ def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
     PyBuffer_Release(&data1_buffer)
     PyBuffer_Release(&data2_buffer)
     return record_start1 - data1, record_start2 - data2
+
+
+def bam_head(buf, Py_ssize_t end = PY_SSIZE_T_MAX):
+    """Return the end of the last complete BAM record in the buf."""
+    cdef Py_buffer buffer;
+    PyObject_GetBuffer(buf, &buffer, PyBUF_SIMPLE)
+    cdef:
+        uint8_t *buffer_start = <uint8_t *>buffer.buf
+        uint8_t *record_start = buffer_start
+        uint8_t *buffer_end = buffer_start + min(end, buffer.len)
+        uint32_t block_size
+        size_t record_size
+
+    while (record_start + 4) < buffer_end:
+        record_size = (<uint32_t *>record_start)[0] + 4
+        if (record_start + record_size) > buffer_end:
+            break
+        record_start += record_size
+    return <Py_ssize_t>(record_start - buffer_start)
 
 
 cdef class FastqIter:
