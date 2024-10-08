@@ -1,11 +1,13 @@
 # cython: language_level=3, emit_code_comments=False
 
 from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
-from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact
+from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact, _PyBytes_Resize
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
+from cpython.number cimport PyNumber_AsSsize_t
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH, PyUnicode_DecodeASCII
 from cpython.object cimport Py_TYPE, PyTypeObject
 from cpython.ref cimport PyObject
+from cpython.slice cimport PySlice_Check, PySlice_GetIndicesEx
 from cpython.tuple cimport PyTuple_GET_ITEM
 from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, int8_t, int16_t, int32_t
@@ -57,6 +59,96 @@ def is_not_ascii_message(field, value):
             f", but found '{value[e.start:e.end]}' at index {e.start}"
         )
     return f"'{field}' in sequence file must be ASCII encoded{detail}"
+
+
+cdef inline slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
+    cdef:
+        uint8_t *tag_start = <uint8_t *>PyBytes_AS_STRING(tags)
+        Py_ssize_t tags_length = PyBytes_GET_SIZE(tags)
+        uint8_t *tags_end = tag_start + tags_length
+        Py_ssize_t start = 0
+        Py_ssize_t stop = original_size
+        Py_ssize_t step = 1
+        Py_ssize_t slice_length = original_size
+
+    if PySlice_Check(slice_obj):
+        PySlice_GetIndicesEx(slice_obj, original_size, &start, &stop, &step, &slice_length)
+    else:
+        start = PyNumber_AsSsize_t(slice_obj, OverflowError)
+        if start < 0:
+            start = original_size - start
+            if start < 0:
+                start = 0
+        if start >= original_size:
+            start = original_size
+            stop = original_size
+            slice_length = 0
+        else:
+            stop = start + 1
+            slice_length = 1
+    if step != 1:
+        raise NotImplementedError("Steps other than 1 are not supported")
+    if start == 0 and stop == original_size:
+        # No need to do work
+        return tags
+    cdef:
+        object sliced_tags = PyBytes_FromStringAndSize(NULL, tags_length)
+        PyObject *sliced_tags_ptr = <PyObject *>sliced_tags
+        uint8_t *destination = <uint8_t *>PyBytes_AS_STRING(sliced_tags)
+        uint8_t *dest_ptr = destination
+        uint8_t *tag_end
+        uint8_t tag_type
+        uint8_t array_type
+        size_t item_size
+        size_t array_length
+        Py_ssize_t tag_length
+    while tag_start < tags_end:
+        tag_type = tag_start[2]
+        # For singular values, simply copy them. Calling memcpy with a fixed
+        # size allows compiler inling
+        if tag_type == b'A' or tag_type == b'c' or tag_type == b'C' :
+            memcpy(dest_ptr, tag_start, 4)
+            dest_ptr += 4
+            tag_start += 4
+        elif tag_type == b's' or tag_type == b'S':
+            memcpy(dest_ptr, tag_start, 5)
+            dest_ptr += 5
+            tag_start += 5
+        elif tag_type == b'i' or tag_type == b'I' or tag_type == b'f':
+            memcpy(dest_ptr, tag_start, 7)
+            dest_ptr += 7
+            tag_start += 7
+        # Array and string types that maybe cut from here
+        elif tag_type == b'H' or tag_type == b'Z':
+            tag_end = <uint8_t *>memchr(<void *>tag_start + 3, 0, tags_end - (tag_start + 3))
+            if tag_end == NULL:
+                raise ValueError("Tag should be NULL-terminated")
+            tag_end += 1  # The NULL-byte counts towards the length
+            tag_length = tag_end - tag_start
+            memcpy(dest_ptr, tag_start, tag_length)
+            dest_ptr += tag_length
+            tag_start += tag_length
+        elif tag_type == b'B':
+            array_type = tag_start[3]
+            array_length = (<uint32_t *>(tag_start + 4))[0]
+            if array_type == b'c' or array_type == b'C':
+                item_size = 1
+            elif array_type == b's' or array_type == b'S':
+                item_size = 2
+            elif array_type == b'i' or array_type == b'I' or array_type == b'f':
+                item_size = 4
+            else:
+                raise ValueError(f"Unknown array type {chr(array_type)}")
+            tag_length = 8 + (item_size * array_length)
+            memcpy(dest_ptr, tag_start, tag_length)
+            dest_ptr += tag_length
+            tag_start += tag_length
+        else:
+            raise ValueError(f"Unknown tag {chr(tag_type)}")
+    cdef Py_ssize_t destination_size = dest_ptr - destination
+    if destination_size != tags_length:
+        _PyBytes_Resize(&sliced_tags_ptr, destination_size)
+    return <object>sliced_tags_ptr
 
 
 cdef class SequenceRecord:
@@ -219,6 +311,7 @@ cdef class SequenceRecord:
             self._name,
             self._sequence[key],
             self._qualities[key] if self._qualities is not None else None,
+            slice_tags(self._tags, PyUnicode_GET_LENGTH(self._sequence), key) if self._tags is not None else None,
         )
 
     def __repr__(self):
