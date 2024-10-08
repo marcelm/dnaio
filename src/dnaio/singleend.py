@@ -6,7 +6,7 @@ from .readers import BamReader, FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 
 
-def _open_single(
+def _open_single(  # noqa: C901
     file_or_path: Union[str, os.PathLike, BinaryIO],
     opener,
     *,
