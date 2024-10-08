@@ -1,3 +1,4 @@
+import io
 import os
 from pathlib import Path
 
@@ -190,6 +191,15 @@ def test_detect_bam_from_content() -> None:
 
 def test_detect_bam_from_filename() -> None:
     with dnaio.open("tests/data/simple.unaligned.bam") as f:
+        record = next(iter(f))
+        assert record.name == "Myheader"
+
+
+def test_read_raw_bam_no_header_from_memory() -> None:
+    with open("tests/data/missing_header_no_bgzip_raw_bam_bytes", "rb") as f:
+        raw_bam = f.read()
+    in_memory_bam = io.BytesIO(raw_bam)
+    with dnaio.open(in_memory_bam, fileformat="bam_no_header") as f:
         record = next(iter(f))
         assert record.name == "Myheader"
 
