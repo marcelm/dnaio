@@ -436,7 +436,7 @@ def paired_fastq_heads(buf1, buf2, Py_ssize_t end1, Py_ssize_t end2):
 
 def bam_head(buf, Py_ssize_t end = PY_SSIZE_T_MAX):
     """Return the end of the last complete BAM record in the buf."""
-    cdef Py_buffer buffer;
+    cdef Py_buffer buffer
     PyObject_GetBuffer(buf, &buffer, PyBUF_SIMPLE)
     cdef:
         uint8_t *buffer_start = <uint8_t *>buffer.buf
@@ -450,8 +450,9 @@ def bam_head(buf, Py_ssize_t end = PY_SSIZE_T_MAX):
         if (record_start + record_size) > buffer_end:
             break
         record_start += record_size
-    return <Py_ssize_t>(record_start - buffer_start)
-
+    cdef Py_ssize_t head = <Py_ssize_t>(record_start - buffer_start)
+    PyBuffer_Release(&buffer)
+    return head
 
 cdef class FastqIter:
     """
