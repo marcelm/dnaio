@@ -843,7 +843,7 @@ cdef class BamIter:
 def record_names_match(header1: str, header2: str):
     """
     Check whether the sequence record ids id1 and id2 are compatible, ignoring a
-    suffix of '1', '2' or '3'. This exception allows to check some old
+    suffix of '1', '2' or '3'. This exception allows one to check some old
     paired-end reads that have IDs ending in '/1' and '/2'. Also, the
     fastq-dump tool (used for converting SRA files to FASTQ) appends '.1', '.2'
     and sometimes '.3' to paired-end reads if option -I is used.
