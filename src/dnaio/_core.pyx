@@ -1,4 +1,5 @@
 # cython: language_level=3, emit_code_comments=False
+from importlib.metadata import pass_none
 
 from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact, _PyBytes_Resize
@@ -122,6 +123,10 @@ cdef inline uint8_t *skip_tag(uint8_t *tag):
         return tag + 8 + (item_size * array_length)
     else:
         raise ValueError("Invalid tag")
+
+
+cdef inline copy_tag(uint8_t *tag, uint8_t *dest, uint8_t **next_tag, uint8_t **next_dest):
+    pass
 
 cdef inline slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
     cdef:
