@@ -114,7 +114,15 @@ cdef inline slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
             memcpy(dest_ptr, tag_start, 5)
             dest_ptr += 5
             tag_start += 5
-        elif tag_type == b'i' or tag_type == b'I' or tag_type == b'f':
+        elif tag_type == b'i' or tag_type == b'I':
+            memcpy(dest_ptr, tag_start, 7)
+            dest_ptr += 7
+            tag_start += 7
+        elif tag_type == b'f':
+            if (memcmp(tag_start, "du", 2) == 0):
+                # Skip duration tag, it only makes sense for original length.
+                tag_start += 7
+                continue
             memcpy(dest_ptr, tag_start, 7)
             dest_ptr += 7
             tag_start += 7
