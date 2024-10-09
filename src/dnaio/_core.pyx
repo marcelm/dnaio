@@ -9,7 +9,7 @@ from cpython.object cimport Py_TYPE, PyTypeObject
 from cpython.ref cimport PyObject
 from cpython.slice cimport PySlice_Check, PySlice_GetIndicesEx
 from cpython.tuple cimport PyTuple_GET_ITEM
-from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove
+from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove, strlen
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, int8_t, int16_t, int32_t
 
 cimport cython
@@ -60,6 +60,68 @@ def is_not_ascii_message(field, value):
         )
     return f"'{field}' in sequence file must be ASCII encoded{detail}"
 
+cdef inline Py_ssize_t get_tag_int_value(uint8_t *tag_ptr, uint8_t **next_tag):
+    """
+    Retrieve a integer value from a known integer tag. 
+    
+    There is a tendency for BAM programs to choose the smallest possible 
+    representation for an integer. So even for known integer tags it is unsure
+    what the type is going to be.
+    """
+    cdef uint8_t tag_type = tag_ptr[2]
+    cdef uint8_t *value_ptr = tag_ptr + 3
+    if tag_type == b"c":
+        next_tag[0] = tag_ptr + 4
+        return (< int8_t * > value_ptr)[0]
+    elif tag_type == b"C":
+        next_tag[0] = tag_ptr + 4
+        return (<uint8_t *>value_ptr)[0]
+    elif tag_type == b"s":
+        next_tag[0] = tag_ptr + 5
+        return (<int16_t *>value_ptr)[0]
+    elif tag_type == b"S":
+        next_tag[0] = tag_ptr + 5
+        return (<uint16_t *>value_ptr)[0]
+    elif tag_type == b"i":
+        next_tag[0] = tag_ptr + 7
+        return (<int32_t *>value_ptr)[0]
+    elif tag_type == b"I":
+        next_tag[0] = tag_ptr + 7
+        return (<uint32_t *>value_ptr)[0]
+    else:
+        next_tag[0] = NULL
+        return -1
+
+cdef inline Py_ssize_t get_array_item_size(uint8_t array_type):
+    if array_type == b'c' or array_type == b'C':
+        return 1
+    elif array_type == b's' or array_type == b'S':
+        return 2
+    elif array_type == b'i' or array_type == b'I' or array_type == b'f':
+        return 4
+    else:
+        raise ValueError(f"Unknown array type {chr(array_type)}")
+
+cdef inline uint8_t *skip_tag(uint8_t *tag):
+    cdef:
+        uint8_t tag_type = tag[2]
+        uint8_t *tag_end = NULL
+        Py_ssize_t array_length
+        Py_ssize_t item_size
+    if tag_type == b"c" or tag_type == b"C" or tag_type == b"A":
+        return tag + 4 
+    elif tag_type == b"s" or tag_type == b"S":
+        return tag + 5
+    elif tag_type == b"i" or tag_type == b"I" or tag_type == b"F":
+        return tag + 7
+    elif tag_type == b"H" or b"Z":
+        return tag + 3 + strlen(<char *>(tag + 3))
+    elif tag_type == b"B":
+        item_size = get_array_item_size(tag[3])
+        array_length = (<uint32_t *>(tag + 4))[0]
+        return tag + 8 + (item_size * array_length)
+    else:
+        raise ValueError("Invalid tag")
 
 cdef inline slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
     cdef:
@@ -102,7 +164,33 @@ cdef inline slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
         size_t item_size
         size_t array_length
         Py_ssize_t tag_length
+        Py_ssize_t ns = -1
+        Py_ssize_t ts = -1
+        uint8_t *next_tag = NULL
+
     while tag_start < tags_end:
+        # Do not directly write ns, ts and MN as these are invalidated by cutting.
+        if memcmp(tag_start, b"ns", 2) == 0:
+            ns = get_tag_int_value(tag_start, &next_tag)
+            if next_tag != NULL:
+                tag_start = next_tag
+            else:
+                tag_start = skip_tag(tag_start)
+            continue
+        if memcmp(tag_start, b"ts", 2) == 0:
+            ns = get_tag_int_value(tag_start, &next_tag)
+            if next_tag != NULL:
+                tag_start = next_tag
+            else:
+                tag_start = skip_tag(tag_start)
+            continue
+        if memcmp(tag_start, b"MN", 2) == 0:
+            tag_start = skip_tag(tag_start)
+            continue
+        if (memcmp(tag_start, b"du", 2) == 0):
+            # Skip duration tag, it only makes sense for original length.
+            tag_start += 7
+            continue
         tag_type = tag_start[2]
         # For singular values, simply copy them. Calling memcpy with a fixed
         # size allows compiler inling
@@ -119,10 +207,6 @@ cdef inline slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
             dest_ptr += 7
             tag_start += 7
         elif tag_type == b'f':
-            if (memcmp(tag_start, "du", 2) == 0):
-                # Skip duration tag, it only makes sense for original length.
-                tag_start += 7
-                continue
             memcpy(dest_ptr, tag_start, 7)
             dest_ptr += 7
             tag_start += 7
@@ -137,16 +221,8 @@ cdef inline slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
             dest_ptr += tag_length
             tag_start += tag_length
         elif tag_type == b'B':
-            array_type = tag_start[3]
+            item_size = get_array_item_size( tag_start[3])
             array_length = (<uint32_t *>(tag_start + 4))[0]
-            if array_type == b'c' or array_type == b'C':
-                item_size = 1
-            elif array_type == b's' or array_type == b'S':
-                item_size = 2
-            elif array_type == b'i' or array_type == b'I' or array_type == b'f':
-                item_size = 4
-            else:
-                raise ValueError(f"Unknown array type {chr(array_type)}")
             tag_length = 8 + (item_size * array_length)
             memcpy(dest_ptr, tag_start, tag_length)
             dest_ptr += tag_length
