@@ -129,6 +129,35 @@ cdef inline Py_ssize_t get_tag_length(uint8_t *tag, Py_ssize_t max_length):
     return tag_length
 
 
+cdef unpack_index_key(
+    object key, Py_ssize_t original_size, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step, Py_ssize_t *slice_length):
+    """An index can be a slice or a number. Unpack both."""
+    if PySlice_Check(key):
+        PySlice_GetIndicesEx(
+            key, original_size, start, stop, step, slice_length)
+        return
+    cdef:
+        Py_ssize_t slice_step = 1
+        Py_ssize_t slice_start = PyNumber_AsSsize_t(key, OverflowError)
+        Py_ssize_t slice_stop
+        Py_ssize_t length = 1
+    if slice_start < 0:
+        slice_start = original_size - slice_start
+        if slice_start < 0:
+            slice_start = 0
+    if slice_start >= original_size:
+        slice_start = original_size
+        slice_stop = original_size
+        length = 0
+    else:
+        slice_stop = slice_start + 1
+        length = 1
+    start[0] = slice_start
+    stop[0] = slice_stop
+    step[0] = slice_step
+    slice_length[0] = length
+
+
 cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
     cdef:
         uint8_t *tag_start = <uint8_t *>PyBytes_AS_STRING(tags)
@@ -140,21 +169,7 @@ cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
         Py_ssize_t step = 1
         Py_ssize_t slice_length = original_size
 
-    if PySlice_Check(slice_obj):
-        PySlice_GetIndicesEx(slice_obj, original_size, &start, &stop, &step, &slice_length)
-    else:
-        start = PyNumber_AsSsize_t(slice_obj, OverflowError)
-        if start < 0:
-            start = original_size - start
-            if start < 0:
-                start = 0
-        if start >= original_size:
-            start = original_size
-            stop = original_size
-            slice_length = 0
-        else:
-            stop = start + 1
-            slice_length = 1
+    unpack_index_key(slice_obj, original_size, &start, &stop, &step, &slice_length)
     if step != 1:
         raise NotImplementedError("Steps other than 1 are not supported")
     if start == 0 and stop == original_size:
