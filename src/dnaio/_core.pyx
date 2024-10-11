@@ -7,6 +7,7 @@ from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
 from cpython.number cimport PyNumber_AsSsize_t
 from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH, PyUnicode_DecodeASCII
 from cpython.object cimport Py_TYPE, PyTypeObject
+from cpython.pyport cimport PY_SSIZE_T_MAX
 from cpython.ref cimport PyObject
 from cpython.slice cimport PySlice_Check, PySlice_GetIndicesEx
 from cpython.tuple cimport PyTuple_GET_ITEM
@@ -61,9 +62,10 @@ def is_not_ascii_message(field, value):
         )
     return f"'{field}' in sequence file must be ASCII encoded{detail}"
 
-cdef inline Py_ssize_t get_tag_int_value(uint8_t *tag_ptr, uint8_t **next_tag):
+cdef inline Py_ssize_t get_tag_int_value(uint8_t *tag_ptr):
     """
-    Retrieve a integer value from a known integer tag. 
+    Retrieve a integer value from a known integer tag. Return PY_SSIZE_T_MAX
+    when an error occurs. 
     
     There is a tendency for BAM programs to choose the smallest possible 
     representation for an integer. So even for known integer tags it is unsure
@@ -72,26 +74,19 @@ cdef inline Py_ssize_t get_tag_int_value(uint8_t *tag_ptr, uint8_t **next_tag):
     cdef uint8_t tag_type = tag_ptr[2]
     cdef uint8_t *value_ptr = tag_ptr + 3
     if tag_type == b"c":
-        next_tag[0] = tag_ptr + 4
-        return (< int8_t * > value_ptr)[0]
+        return (<int8_t *> value_ptr)[0]
     elif tag_type == b"C":
-        next_tag[0] = tag_ptr + 4
         return (<uint8_t *>value_ptr)[0]
     elif tag_type == b"s":
-        next_tag[0] = tag_ptr + 5
         return (<int16_t *>value_ptr)[0]
     elif tag_type == b"S":
-        next_tag[0] = tag_ptr + 5
         return (<uint16_t *>value_ptr)[0]
     elif tag_type == b"i":
-        next_tag[0] = tag_ptr + 7
         return (<int32_t *>value_ptr)[0]
     elif tag_type == b"I":
-        next_tag[0] = tag_ptr + 7
         return (<uint32_t *>value_ptr)[0]
     else:
-        next_tag[0] = NULL
-        return -1
+        return PY_SSIZE_T_MAX
 
 cdef inline Py_ssize_t get_array_item_size(uint8_t array_type):
     if array_type == b'c' or array_type == b'C':
@@ -101,36 +96,43 @@ cdef inline Py_ssize_t get_array_item_size(uint8_t array_type):
     elif array_type == b'i' or array_type == b'I' or array_type == b'f':
         return 4
     else:
-        raise ValueError(f"Unknown array type {chr(array_type)}")
+        return -1
 
-cdef inline uint8_t *skip_tag(uint8_t *tag):
+
+cdef inline Py_ssize_t get_tag_length(uint8_t *tag, Py_ssize_t max_length):
     cdef:
         uint8_t tag_type = tag[2]
         uint8_t *tag_end = NULL
         Py_ssize_t array_length
         Py_ssize_t item_size
+        Py_ssize_t tag_length = -1
     if tag_type == b"c" or tag_type == b"C" or tag_type == b"A":
-        return tag + 4 
+        tag_length = 4
     elif tag_type == b"s" or tag_type == b"S":
-        return tag + 5
+        tag_length = 5
     elif tag_type == b"i" or tag_type == b"I" or tag_type == b"F":
-        return tag + 7
+        tag_length = 7
     elif tag_type == b"H" or b"Z":
-        return tag + 3 + strlen(<char *>(tag + 3)) + 1  # Ensure NULL-terminator is counted.
+        tag_end = <uint8_t *>memchr(<void *> tag + 3, 0, max_length)
+        if tag_end == NULL:
+            return -1
     elif tag_type == b"B":
         item_size = get_array_item_size(tag[3])
+        if item_size == -1:
+            return -1
         array_length = (<uint32_t *>(tag + 4))[0]
-        return tag + 8 + (item_size * array_length)
+        tag_length = 8 + (item_size * array_length)
     else:
-        raise ValueError("Invalid tag")
+        tag_length = -1
+    if tag_length > max_length:
+        return -1
+    return tag_length
 
 
-cdef inline copy_tag(uint8_t *tag, uint8_t *dest, uint8_t **next_tag, uint8_t **next_dest):
-    pass
-
-cdef inline slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
+cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
     cdef:
         uint8_t *tag_start = <uint8_t *>PyBytes_AS_STRING(tags)
+        uint8_t *tag = tag_start
         Py_ssize_t tags_length = PyBytes_GET_SIZE(tags)
         uint8_t *tags_end = tag_start + tags_length
         Py_ssize_t start = 0
@@ -163,77 +165,39 @@ cdef inline slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
         PyObject *sliced_tags_ptr = <PyObject *>sliced_tags
         uint8_t *destination = <uint8_t *>PyBytes_AS_STRING(sliced_tags)
         uint8_t *dest_ptr = destination
-        uint8_t *tag_end
-        uint8_t tag_type
-        uint8_t array_type
-        size_t item_size
-        size_t array_length
-        Py_ssize_t tag_length
         Py_ssize_t ns = -1
         Py_ssize_t ts = -1
-        uint8_t *next_tag = NULL
 
-    while tag_start < tags_end:
+    while tag < tags_end:
         # Do not directly write ns, ts and MN as these are invalidated by cutting.
-        if memcmp(tag_start, b"ns", 2) == 0:
-            ns = get_tag_int_value(tag_start, &next_tag)
-            if next_tag != NULL:
-                tag_start = next_tag
-            else:
-                tag_start = skip_tag(tag_start)
+        tag_length  = get_tag_length(tag, tags_end - tag)
+        if tag_length == -1:
+            raise ValueError(f"Invalid tag starting from {tags[tag - tag_start:]}")
+        if memcmp(tag, b"ns", 2) == 0:
+            ns = get_tag_int_value(tag)
+            if ns == PY_SSIZE_T_MAX:
+                ns = -1  # Non-dorado ns tag. Just ignore.
+            tag += tag_length
             continue
-        if memcmp(tag_start, b"ts", 2) == 0:
-            ns = get_tag_int_value(tag_start, &next_tag)
-            if next_tag != NULL:
-                tag_start = next_tag
-            else:
-                tag_start = skip_tag(tag_start)
+        if memcmp(tag, b"ts", 2) == 0:
+            ts = get_tag_int_value(tag)
+            if ts == PY_SSIZE_T_MAX:
+                ts = -1  # Non-dorado ts tag. Just ignore.
+            tag += tag_length
             continue
-        if memcmp(tag_start, b"MN", 2) == 0:
-            tag_start = skip_tag(tag_start)
+        if memcmp(tag, b"MN", 2) == 0:
+            # Value is invalidated by slicing.
+            tag += tag_length
             continue
-        if (memcmp(tag_start, b"du", 2) == 0):
+        if (memcmp(tag, b"du", 2) == 0):
             # Skip duration tag, it only makes sense for original length.
-            tag_start += 7
+            tag += tag_length
             continue
-        tag_type = tag_start[2]
-        # For singular values, simply copy them. Calling memcpy with a fixed
-        # size allows compiler inling
-        if tag_type == b'A' or tag_type == b'c' or tag_type == b'C' :
-            memcpy(dest_ptr, tag_start, 4)
-            dest_ptr += 4
-            tag_start += 4
-        elif tag_type == b's' or tag_type == b'S':
-            memcpy(dest_ptr, tag_start, 5)
-            dest_ptr += 5
-            tag_start += 5
-        elif tag_type == b'i' or tag_type == b'I':
-            memcpy(dest_ptr, tag_start, 7)
-            dest_ptr += 7
-            tag_start += 7
-        elif tag_type == b'f':
-            memcpy(dest_ptr, tag_start, 7)
-            dest_ptr += 7
-            tag_start += 7
-        # Array and string types that maybe cut from here
-        elif tag_type == b'H' or tag_type == b'Z':
-            tag_end = <uint8_t *>memchr(<void *>tag_start + 3, 0, tags_end - (tag_start + 3))
-            if tag_end == NULL:
-                raise ValueError("Tag should be NULL-terminated")
-            tag_end += 1  # The NULL-byte counts towards the length
-            tag_length = tag_end - tag_start
-            memcpy(dest_ptr, tag_start, tag_length)
-            dest_ptr += tag_length
-            tag_start += tag_length
-        elif tag_type == b'B':
-            item_size = get_array_item_size( tag_start[3])
-            array_length = (<uint32_t *>(tag_start + 4))[0]
-            tag_length = 8 + (item_size * array_length)
-            memcpy(dest_ptr, tag_start, tag_length)
-            dest_ptr += tag_length
-            tag_start += tag_length
-        else:
-            raise ValueError(f"Unknown tag {chr(tag_type)}")
+        # In other cases just copy the tag
+        memcpy(dest_ptr, tag, tag_length)
+        tag += tag_length
+        dest_ptr += tag_length
+
     cdef Py_ssize_t destination_size = dest_ptr - destination
     if destination_size != tags_length:
         _PyBytes_Resize(&sliced_tags_ptr, destination_size)
