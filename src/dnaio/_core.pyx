@@ -12,7 +12,9 @@ from cpython.ref cimport PyObject
 from cpython.slice cimport PySlice_Check, PySlice_GetIndicesEx
 from cpython.tuple cimport PyTuple_GET_ITEM
 from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove, strlen
-from libc.stdint cimport uint8_t, uint16_t, uint32_t, int8_t, int16_t, int32_t
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, int8_t, int16_t, int32_t, \
+    UINT8_MAX, UINT16_MAX, UINT32_MAX, INT8_MIN, INT8_MAX, INT16_MIN, INT16_MAX, \
+    INT32_MIN, INT32_MAX
 
 cimport cython
 
@@ -87,6 +89,42 @@ cdef inline Py_ssize_t get_tag_int_value(uint8_t *tag_ptr):
         return (<uint32_t *>value_ptr)[0]
     else:
         return PY_SSIZE_T_MAX
+
+cdef inline Py_ssize_t store_tag_int_value(char *tag, Py_ssize_t value, uint8_t *dest):
+    """
+    Writes both the tag type and the value at dest. 
+    Returns the amount of written bytes or -1 for error.
+    """
+    cdef void *value_ptr = <void *>(dest + 3)
+    if value < INT32_MIN or value > UINT32_MAX:
+        return -1
+    memcpy(dest, tag, 2)
+    if INT8_MIN <= value <= INT8_MAX:
+       dest[2] = b'c'
+       (<int8_t *>value_ptr)[0] = <int8_t>value
+       return 4
+    elif INT8_MAX < value <= UINT8_MAX:
+       dest[2] = b'C'
+       (<uint8_t *>value_ptr)[0] = <uint8_t>value
+       return 4
+    if INT16_MIN <= value <= INT16_MAX:
+       dest[2] = b's'
+       (<int16_t *>value_ptr)[0] = <int16_t>value
+       return 5
+    elif INT16_MAX < value <= UINT16_MAX:
+       dest[2] = b'S'
+       (<uint16_t *>value_ptr)[0] = <uint16_t>value
+       return 5
+    if INT32_MIN <= value <= INT32_MAX:
+       dest[2] = b'i'
+       (<int32_t *>value_ptr)[0] = <int32_t>value
+       return 7
+    elif INT32_MAX < value <= UINT32_MAX:
+       dest[2] = b'I'
+       (<uint32_t *>value_ptr)[0] = <uint32_t>value
+       return 7
+    return -1
+
 
 cdef inline Py_ssize_t get_array_item_size(uint8_t array_type):
     if array_type == b'c' or array_type == b'C':
