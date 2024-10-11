@@ -220,6 +220,9 @@ cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
         uint8_t *dest_ptr = destination
         Py_ssize_t ns = -1
         Py_ssize_t ts = -1
+        uint8_t *MM = NULL
+        uint8_t *ML = NULL
+        uint8_t *mv = NULL
 
     while tag < tags_end:
         # Do not directly write ns, ts and MN as these are invalidated by cutting.
@@ -236,6 +239,18 @@ cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
             ts = get_tag_int_value(tag)
             if ts == PY_SSIZE_T_MAX:
                 ts = -1  # Non-dorado ts tag. Just ignore.
+            tag += tag_length
+            continue
+        if memcmp(tag, b"mv", 2) == 0:  # Signal to move table
+            mv = tag
+            tag += tag_length
+            continue
+        if memcmp(tag, b"ML", 2) == 0:
+            ML = tag
+            tag += tag_length
+            continue
+        if memcmp(tag, b"MM", 2) == 0:
+            MM = tag
             tag += tag_length
             continue
         if memcmp(tag, b"MN", 2) == 0:
