@@ -115,7 +115,7 @@ cdef inline uint8_t *skip_tag(uint8_t *tag):
     elif tag_type == b"i" or tag_type == b"I" or tag_type == b"F":
         return tag + 7
     elif tag_type == b"H" or b"Z":
-        return tag + 3 + strlen(<char *>(tag + 3))
+        return tag + 3 + strlen(<char *>(tag + 3)) + 1  # Ensure NULL-terminator is counted.
     elif tag_type == b"B":
         item_size = get_array_item_size(tag[3])
         array_length = (<uint32_t *>(tag + 4))[0]
