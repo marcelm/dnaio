@@ -67,9 +67,9 @@ def is_not_ascii_message(field, value):
 cdef inline Py_ssize_t get_tag_int_value(uint8_t *tag_ptr):
     """
     Retrieve a integer value from a known integer tag. Return PY_SSIZE_T_MAX
-    when an error occurs. 
-    
-    There is a tendency for BAM programs to choose the smallest possible 
+    when an error occurs.
+
+    There is a tendency for BAM programs to choose the smallest possible
     representation for an integer. So even for known integer tags it is unsure
     what the type is going to be.
     """
@@ -92,7 +92,7 @@ cdef inline Py_ssize_t get_tag_int_value(uint8_t *tag_ptr):
 
 cdef inline Py_ssize_t store_tag_int_value(char *tag, Py_ssize_t value, uint8_t *dest):
     """
-    Writes both the tag type and the value at dest. 
+    Writes both the tag type and the value at dest.
     Returns the amount of written bytes or -1 for error.
     """
     cdef void *value_ptr = <void *>(dest + 3)
@@ -196,6 +196,81 @@ cdef unpack_index_key(
     slice_length[0] = length
 
 
+cdef Py_ssize_t trim_move_table_tag(
+    uint8_t *mv_tag,
+    uint8_t *dest,
+    Py_ssize_t ts,
+    Py_ssize_t ns,
+    Py_ssize_t start,
+    Py_ssize_t stop):
+    """
+    Trims the move table in the mv_tag and recalculates the ts and ns values.
+    the new mv, ts and ns tags are stored in dest.
+    return the amount of bytes written to dest
+    """
+    if memcmp(mv_tag, b"mvBc", 4) != 0:
+        return -1
+    cdef:
+        size_t raw_length = (<uint32_t *>(mv_tag + 4))[0]
+        size_t mv_length = raw_length - 1
+        # First entry in the mv_table is the stride.
+        size_t stride = mv_tag[8]
+        # Actual move table starts after that at a +1 offset.
+        int8_t *mv_table = <int8_t *>(mv_tag + 9)
+        int8_t *cursor = mv_table
+        int8_t *mv_table_end = mv_table + mv_length
+        Py_ssize_t sequence_pos = 0
+        Py_ssize_t trimmed_positions = 0
+        int8_t mv
+    # Find the beginning
+    while cursor < mv_table_end:
+        mv = cursor[0]
+        if mv == 1:
+            sequence_pos += 1
+        # 1,0,0,0,1,0,0,0,0,1,0,0,1,0
+        # 0 starts here
+        #         1 starts here
+        #                   2 starts here
+        if sequence_pos > start:
+            sequence_pos -= 1
+            break
+        trimmed_positions += 1
+        cursor += 1
+    cdef int8_t *new_mv_table_start = cursor
+    while cursor < mv_table_end and sequence_pos < stop:
+        mv = cursor[0]
+        if mv == 1:
+            sequence_pos += 1
+        cursor += 1
+    cdef int8_t *new_mv_table_end = cursor
+    cdef Py_ssize_t new_mv_table_size = new_mv_table_end - new_mv_table_start
+    if new_mv_table_size == 0:
+        ts = -1
+        ns = -1
+    else:
+        if ts >= 0:
+            ts += (trimmed_positions * stride)
+        if ns >= 0:
+            # Treat ts as 0 if missing (-1)
+            ns = new_mv_table_size * stride + max(ts, 0)
+    cdef uint8_t *dest_ptr = dest
+    memcpy(dest, b"mvBc", 4)
+    dest_ptr += 4
+    (<uint32_t *>dest_ptr)[0] = new_mv_table_size + 1
+    dest_ptr += 4
+    dest_ptr[0] = stride
+    dest_ptr += 1
+    memcpy(dest_ptr, new_mv_table_start, new_mv_table_size)
+    dest_ptr += new_mv_table_size
+    cdef Py_ssize_t ns_tag_size = store_tag_int_value("ns", ns, dest_ptr)
+    if ns_tag_size >= 0:
+        dest_ptr += ns_tag_size
+    cdef Py_ssize_t ts_tag_size = store_tag_int_value("ts", ts, dest_ptr)
+    if ts_tag_size >= 0:
+        dest_ptr += ts_tag_size
+    return dest_ptr - dest
+
+
 cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
     cdef:
         uint8_t *tag_start = <uint8_t *>PyBytes_AS_STRING(tags)
@@ -208,8 +283,6 @@ cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
         Py_ssize_t slice_length = original_size
 
     unpack_index_key(slice_obj, original_size, &start, &stop, &step, &slice_length)
-    if step != 1:
-        raise NotImplementedError("Steps other than 1 are not supported")
     if start == 0 and stop == original_size:
         # No need to do work
         return tags
@@ -265,6 +338,16 @@ cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
         memcpy(dest_ptr, tag, tag_length)
         tag += tag_length
         dest_ptr += tag_length
+
+    cdef Py_ssize_t trim_move_table_size = 0
+    if step == 1:
+        # If step != 1 the appropriate cutting is not implemented. So the tags
+        # are simply removed instead of adapted.
+        trim_move_table_size = trim_move_table_tag(mv, dest_ptr, ts, ns, start, stop)
+        if trim_move_table_size >= 0:
+            dest_ptr += trim_move_table_size
+        else:
+            trim_move_table_size = 0
 
     cdef Py_ssize_t destination_size = dest_ptr - destination
     if destination_size != tags_length:
