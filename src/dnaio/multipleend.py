@@ -202,7 +202,7 @@ class MultipleFastqWriter(MultipleFileWriter):
         self._stack = contextlib.ExitStack()
         self._writers: List[IO] = [
             self._stack.enter_context(
-                opener(file, mode + "b") if not hasattr(file, "write") else file
+                opener(file, mode + "b") if not hasattr(file, "write") else file  # type: ignore
             )
             for file in self._files
         ]
