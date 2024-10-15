@@ -1,6 +1,4 @@
 # cython: language_level=3, emit_code_comments=False
-from importlib.metadata import pass_none
-
 from cpython.buffer cimport PyBUF_SIMPLE, PyObject_GetBuffer, PyBuffer_Release
 from cpython.bytes cimport PyBytes_FromStringAndSize, PyBytes_AS_STRING, PyBytes_GET_SIZE, PyBytes_CheckExact, _PyBytes_Resize
 from cpython.mem cimport PyMem_Free, PyMem_Malloc, PyMem_Realloc
