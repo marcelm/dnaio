@@ -272,18 +272,22 @@ cdef Py_ssize_t trim_mm_ml_tag(
     uint8_t *MM,
     uint8_t *ML,
     uint8_t *dest,
+    uint8_t *sequence,
+    Py_ssize_t sequence_length,
     Py_ssize_t start,
     Py_ssize_t stop
 ):
     return 0
 
 
-cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
+cdef inline object slice_tags(bytes tags, str sequence, slice_obj):
     cdef:
         uint8_t *tag_start = <uint8_t *>PyBytes_AS_STRING(tags)
         uint8_t *tag = tag_start
         Py_ssize_t tags_length = PyBytes_GET_SIZE(tags)
         uint8_t *tags_end = tag_start + tags_length
+        Py_ssize_t original_size = PyUnicode_GET_LENGTH(sequence)
+        uint8_t *sequence = <uint8_t *>PyUnicode_DATA(sequence)
         Py_ssize_t start = 0
         Py_ssize_t stop = original_size
         Py_ssize_t step = 1
@@ -351,10 +355,12 @@ cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
     if step == 1:
         # If step != 1 the appropriate cutting is not implemented. So the tags
         # are simply removed instead of adapted.
-        trim_move_table_size = trim_move_table_tag(mv, dest_ptr, ts, ns, start, stop)
+        if mv != NULL:
+            trim_move_table_size = trim_move_table_tag(mv, dest_ptr, ts, ns, start, stop)
         if trim_move_table_size >= 0:
             dest_ptr += trim_move_table_size
-        trim_mm_ml_size = trim_mm_ml_tag(MM, ML, dest_ptr, start, stop)
+        if MM != NULL and ML != NULL:
+            trim_mm_ml_size = trim_mm_ml_tag(MM, ML, dest_ptr, sequence, original_size, start, stop)
         if trim_mm_ml_size >= 0:
             dest_ptr += trim_mm_ml_size
     cdef Py_ssize_t destination_size = dest_ptr - destination
