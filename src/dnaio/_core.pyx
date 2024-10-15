@@ -268,6 +268,15 @@ cdef Py_ssize_t trim_move_table_tag(
         dest_ptr += ts_tag_size
     return dest_ptr - dest
 
+cdef Py_ssize_t trim_mm_ml_tag(
+    uint8_t *MM,
+    uint8_t *ML,
+    uint8_t *dest,
+    Py_ssize_t start,
+    Py_ssize_t stop
+):
+    return 0
+
 
 cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
     cdef:
@@ -338,15 +347,16 @@ cdef inline object slice_tags(bytes tags, Py_ssize_t original_size, slice_obj):
         dest_ptr += tag_length
 
     cdef Py_ssize_t trim_move_table_size = 0
+    cdef Py_ssize_t trim_mm_ml_size = 0
     if step == 1:
         # If step != 1 the appropriate cutting is not implemented. So the tags
         # are simply removed instead of adapted.
         trim_move_table_size = trim_move_table_tag(mv, dest_ptr, ts, ns, start, stop)
         if trim_move_table_size >= 0:
             dest_ptr += trim_move_table_size
-        else:
-            trim_move_table_size = 0
-
+        trim_mm_ml_size = trim_mm_ml_tag(MM, ML, dest_ptr, start, stop)
+        if trim_mm_ml_size >= 0:
+            dest_ptr += trim_mm_ml_size
     cdef Py_ssize_t destination_size = dest_ptr - destination
     if destination_size != tags_length:
         _PyBytes_Resize(&sliced_tags_ptr, destination_size)
