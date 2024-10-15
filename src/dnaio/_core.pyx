@@ -8,7 +8,7 @@ from cpython.object cimport Py_TYPE, PyTypeObject
 from cpython.ref cimport PyObject
 from cpython.tuple cimport PyTuple_GET_ITEM
 from libc.string cimport memcmp, memcpy, memchr, strcspn, strspn, memmove
-from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, int8_t, int16_t, int32_t
 
 cimport cython
 
@@ -85,6 +85,7 @@ cdef class SequenceRecord:
         object _qualities
         object _id
         object _comment
+        readonly object _tags
 
     def __init__(self, object name, object sequence, object qualities = None):
         if not PyUnicode_CheckExact(name):
@@ -746,9 +747,9 @@ cdef class BamIter:
 
     def __iter__(self):
         return self
-    
+
     cdef _read_into_buffer(self):
-        cdef size_t read_in_size 
+        cdef size_t read_in_size
         cdef size_t leftover_size = self.buffer_end - self.record_start
         cdef uint32_t block_size
         memmove(self.read_in_buffer, self.record_start, leftover_size)
@@ -769,7 +770,7 @@ cdef class BamIter:
             raise StopIteration()
         elif new_bytes_size == 0:
             raise EOFError("Incomplete record at the end of file")
-        cdef uint8_t *tmp 
+        cdef uint8_t *tmp
         if new_buffer_size > self.read_in_buffer_size:
             tmp = <uint8_t *>PyMem_Realloc(self.read_in_buffer, new_buffer_size)
             if tmp == NULL:
@@ -793,6 +794,8 @@ cdef class BamIter:
             uint8_t *bam_seq_start
             uint32_t seq_length
             uint8_t *bam_qual_start
+            uint8_t *bam_tags_start
+            size_t bam_tags_length
             uint32_t encoded_seq_length
 
         while True:
@@ -822,8 +825,12 @@ cdef class BamIter:
             seq_length = header.l_seq
             encoded_seq_length = (seq_length + 1) // 2
             bam_qual_start = bam_seq_start + encoded_seq_length
+            bam_tags_start = bam_qual_start + seq_length
+            bam_tags_length = record_end - bam_tags_start
             name = PyUnicode_New(name_length, 127)
             sequence = PyUnicode_New(seq_length, 127)
+            qualities = PyUnicode_New(seq_length, 127)
+            tags = PyBytes_FromStringAndSize(<char *>bam_tags_start, bam_tags_length)
             memcpy(<uint8_t *>PyUnicode_DATA(name), bam_name_start, name_length)
             decode_bam_sequence(<uint8_t *>PyUnicode_DATA(sequence), bam_seq_start, seq_length)
             if seq_length and bam_qual_start[0] == 0xff:
@@ -836,6 +843,7 @@ cdef class BamIter:
             seq_record._name = name
             seq_record._sequence = sequence
             seq_record._qualities = qualities
+            seq_record._tags = tags
             self.number_of_records += 1
             self.record_start = record_end
             return seq_record
