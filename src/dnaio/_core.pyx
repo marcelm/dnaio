@@ -149,7 +149,7 @@ cdef inline Py_ssize_t get_tag_length(uint8_t *tag, Py_ssize_t max_length):
     elif tag_type == b"i" or tag_type == b"I" or tag_type == b"F":
         tag_length = 7
     elif tag_type == b"H" or b"Z":
-        tag_end = <uint8_t *>memchr(<void *> tag + 3, 0, max_length)
+        tag_end = <uint8_t *>memchr(<void *>(tag + 3), 0, max_length)
         if tag_end == NULL:
             return -1
     elif tag_type == b"B":
