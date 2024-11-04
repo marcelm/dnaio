@@ -6,13 +6,13 @@ def read_bam_header(fileobj: BufferedIOBase) -> bytes:
     magic = fileobj.read(4)
     if not isinstance(magic, bytes):
         raise TypeError(
-            f"fileobj {fileobj} is not a binary IO type, " f"got {type(fileobj)}"
+            f"fileobj {fileobj} (type: {type(fileobj)}), was not opened in binary mode."
         )
     if len(magic) < 4:
         raise EOFError("Truncated BAM file")
     if magic[:4] != b"BAM\1":
         raise ValueError(
-            f"fileobj: {fileobj}, is not a BAM file. No BAM magic, instead "
+            f"fileobj: {fileobj}, is not a BAM file. No BAM file signature, instead "
             f"found {magic!r}"
         )
     return read_bam_header_after_magic(fileobj)

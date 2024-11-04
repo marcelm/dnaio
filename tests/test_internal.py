@@ -785,7 +785,7 @@ class TestBamReader:
         )
         with pytest.raises(TypeError) as error:
             BamReader(file)
-        error.match("binary IO")
+        error.match("binary mode")
 
     @pytest.mark.parametrize("buffersize", [4, 8, 10, 20, 40])
     def test_small_buffersize(self, buffersize):
