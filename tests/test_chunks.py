@@ -1,3 +1,5 @@
+import gzip
+import struct
 import textwrap
 
 from pytest import raises
@@ -7,6 +9,7 @@ import dnaio
 from dnaio import UnknownFileFormat, FileFormatError
 from dnaio._core import paired_fastq_heads
 from dnaio.chunks import (
+    _bam_head,
     _fastq_head,
     _fasta_head,
     read_chunks,
@@ -39,6 +42,13 @@ def test_fasta_head_with_comment():
     assert _fasta_head(b"#\n>3\n5") == 2
     assert _fasta_head(b"#\n>3\n5\n") == 2
     assert _fasta_head(b"#\n>3\n5\n>") == 7
+
+
+def test_bam_head():
+    assert _bam_head(struct.pack("<Ix", 32)) == 0
+    assert _bam_head(struct.pack("<I32x", 32)) == 36
+    assert _bam_head(struct.pack("<I32xI32x", 32, 33)) == 36
+    assert _bam_head(struct.pack("<I32xI33x", 32, 33)) == 73
 
 
 def test_paired_fasta_heads():
@@ -179,3 +189,15 @@ def test_read_chunks_empty():
 def test_invalid_file_format():
     with raises(UnknownFileFormat):
         list(read_chunks(BytesIO(b"invalid format")))
+
+
+def test_read_chunks_bam():
+    with gzip.open("tests/data/simple.unaligned.bam", "rb") as f:
+        for i, chunk in enumerate(read_chunks(f, 70)):
+            if i == 0:
+                assert b"Myheader" in chunk.tobytes()
+            if i == 1:
+                assert b"AnotherHeader" in chunk.tobytes()
+            if i == 2:
+                assert b"YetAnotherHeader" in chunk.tobytes()
+            assert b"RGZA\x00" in chunk.tobytes()

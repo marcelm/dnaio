@@ -212,13 +212,16 @@ class BamReader(BinaryFileReader, SingleEndReader):
         buffer_size: int = 128 * 1024,  # Buffer size used by cat, pigz etc.
         opener=xopen,
         _close_file: Optional[bool] = None,
+        with_header: bool = True,
     ):
         super().__init__(file, opener=opener, _close_file=_close_file)
         self.sequence_class = sequence_class
         self.delivers_qualities = True
         self.buffer_size = buffer_size
         try:
-            self._iter: Iterator[SequenceRecord] = BamIter(self._file, self.buffer_size)
+            self._iter: Iterator[SequenceRecord] = BamIter(
+                self._file, read_in_size=self.buffer_size, with_header=with_header
+            )
         except Exception:
             self.close()
             raise

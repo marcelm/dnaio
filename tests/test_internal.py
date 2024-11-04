@@ -33,7 +33,6 @@ from dnaio.writers import FileWriter
 from dnaio.readers import BinaryFileReader
 from dnaio._core import bytes_ascii_check
 
-
 TEST_DATA = Path(__file__).parent / "data"
 SIMPLE_FASTQ = str(TEST_DATA / "simple.fastq")
 # files tests/data/simple.fast{q,a}
@@ -786,7 +785,7 @@ class TestBamReader:
         )
         with pytest.raises(TypeError) as error:
             BamReader(file)
-        error.match("binary IO")
+        error.match("binary mode")
 
     @pytest.mark.parametrize("buffersize", [4, 8, 10, 20, 40])
     def test_small_buffersize(self, buffersize):

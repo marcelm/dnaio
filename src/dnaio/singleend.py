@@ -6,7 +6,7 @@ from .readers import BamReader, FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 
 
-def _open_single(
+def _open_single(  # noqa: C901
     file_or_path: Union[str, os.PathLike, BinaryIO],
     opener,
     *,
@@ -64,6 +64,11 @@ def _open_single(
             return BamReader(file, _close_file=close_file)
         # This should not be reached
         raise NotImplementedError("Only reading is supported for BAM files")
+    elif fileformat == "bam_no_header":
+        if "r" in mode:
+            return BamReader(file, _close_file=close_file, with_header=False)
+        # This should not be reached
+        raise NotImplementedError("Only reading is supported for headerless BAM files")
     if close_file:
         file.close()
     raise UnknownFileFormat(
