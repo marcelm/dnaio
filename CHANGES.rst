@@ -2,9 +2,10 @@
 Changelog
 =========
 
-unreleased
-----------
+v1.2.3 (2024-11-11)
+-------------------
 
+* :pr:`141`: Allow chunked reading of uBAM.
 * Added support for Python 3.13
 * Dropped support for Python 3.8
 
