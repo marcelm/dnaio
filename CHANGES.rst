@@ -2,6 +2,12 @@
 Changelog
 =========
 
+unreleased
+----------
+
+* Added support for Python 3.13
+* Dropped support for Python 3.8
+
 v1.2.2 (2024-10-04)
 -------------------
 * :pr:`139`: Fix an error that occurred when decoding BAM records with missing
