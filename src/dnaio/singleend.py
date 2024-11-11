@@ -126,13 +126,13 @@ def _detect_format_from_content(file: BinaryIO) -> Optional[str]:
     """
     Return 'fasta', 'fastq' or None
     """
-    if file.seekable():
+    if hasattr(file, "peek"):
+        magic = file.peek(4)[0:4]
+    else:
+        # We cannot always use peek() because BytesIO objects do not suppert it
         original_position = file.tell()
         magic = file.read(4)
         file.seek(original_position)
-    else:
-        # We cannot always use peek() because BytesIO objects do not suppert it
-        magic = file.peek(4)[0:4]  # type: ignore
     if magic.startswith(b"@") or magic == b"":
         # Pretend FASTQ for empty input
         return "fastq"
