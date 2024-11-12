@@ -2,7 +2,7 @@
 Changelog
 =========
 
-v1.2.3 (2024-11-11)
+v1.2.3 (2024-11-12)
 -------------------
 
 * :pr:`141`: Allow chunked reading of uBAM.
