@@ -2,6 +2,11 @@
 Changelog
 =========
 
+development version
+-------------------
+
+* Dropped support for Python 3.8
+
 v1.2.0 (2023-12-11)
 -------------------
 
