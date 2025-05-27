@@ -45,17 +45,18 @@ write_to = "src/dnaio/_version.py"
 testpaths = ["tests"]
 
 [tool.cibuildwheel.windows.environment]
-CFLAGS = "-g0 -DNDEBUG"
+CFLAGS = "-O3 -DNDEBUG"
 
 [tool.cibuildwheel.macos.environment]
-CFLAGS = "-g0 -DNDEBUG"
+CFLAGS = "-O3 -DNDEBUG"
 
 [tool.cibuildwheel.linux.environment]
-CFLAGS = "-g0 -DNDEBUG"
+CFLAGS = "-O3 -DNDEBUG"
 
 [tool.cibuildwheel]
 test-requires = "pytest"
 test-command = ["cd {project}", "pytest tests"]
+build-verbosity = 1
 
 [[tool.cibuildwheel.overrides]]
 select = "*-win*"
