@@ -16,7 +16,7 @@
 dnaio processes FASTQ, FASTA and uBAM files
 ===========================================
 
-``dnaio`` is a Python 3.9+ library for very efficient parsing and writing of FASTQ and also FASTA files.
+``dnaio`` is a Python 3 library for very efficient parsing and writing of FASTQ and also FASTA files.
 Since ``dnaio`` version 1.1.0, support for efficiently parsing uBAM files has been implemented.
 This allows reading ONT files from the `dorado <https://github.com/nanoporetech/dorado>`_
 basecaller directly.
