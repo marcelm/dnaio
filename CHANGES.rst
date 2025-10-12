@@ -2,6 +2,12 @@
 Changelog
 =========
 
+v1.2.4 (2025-10-12)
+-------------------
+
+* Added support for Python 3.14 (including the free-threaded "3.14t" variant)
+* Dropped support for Python 3.9
+
 v1.2.3 (2024-11-12)
 -------------------
 
