@@ -7,7 +7,6 @@ from typing import (
     Iterator,
     Type,
     TypeVar,
-    ByteString,
 )
 
 class SequenceRecord:
@@ -30,14 +29,10 @@ class SequenceRecord:
     @property
     def comment(self) -> Optional[str]: ...
 
-# Bytestring = Union[bytes, bytearray, memoryview]. Technically just 'bytes' is
-# acceptable as an alias, but even more technically this function supports all
-# types that implement the buffer protocol, for which there is no type yet.
-# See: https://github.com/python/typing/issues/593
 def paired_fastq_heads(
-    buf1: ByteString, buf2: ByteString, end1: int, end2: int
+    buf1: bytes | bytearray, buf2: bytes | bytearray, end1: int, end2: int
 ) -> Tuple[int, int]: ...
-def bam_head(buf: bytes, end: Optional[int] = None) -> int: ...
+def bam_head(buf: bytes | bytearray, end: Optional[int] = None) -> int: ...
 def records_are_mates(
     __first_record: SequenceRecord,
     __second_record: SequenceRecord,

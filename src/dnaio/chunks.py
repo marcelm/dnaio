@@ -15,7 +15,7 @@ from ._core import bam_head as _bam_head
 from .exceptions import FileFormatError, FastaFormatError, UnknownFileFormat
 
 
-def _fasta_head(buf: bytes, end: Optional[int] = None) -> int:
+def _fasta_head(buf: bytes | bytearray, end: Optional[int] = None) -> int:
     """
     Search for the end of the last complete FASTA record within buf[:end]
 
@@ -37,7 +37,7 @@ def _fasta_head(buf: bytes, end: Optional[int] = None) -> int:
 
 
 def _paired_fasta_heads(
-    buf1: bytes, buf2: bytes, end1: int, end2: int
+    buf1: bytes | bytearray, buf2: bytes | bytearray, end1: int, end2: int
 ) -> Tuple[int, int]:
     """
     Return positions pos1, pos2 where right1 <= end1 and right2 <= end2
@@ -64,7 +64,7 @@ def _paired_fasta_heads(
     return (pos1, pos2)
 
 
-def _fastq_head(buf: bytes, end: Optional[int] = None) -> int:
+def _fastq_head(buf: bytes | bytearray, end: Optional[int] = None) -> int:
     """
     Search for the end of the last complete *two* FASTQ records in buf[:end].
 
