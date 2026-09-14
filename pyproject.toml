@@ -91,19 +91,13 @@ source = [
 
 [tool.ruff.lint]
 ignore = [
-    "B010", # Do not call `setattr` with a constant attribute value. It is not any safer than normal property access.
     "C408", # Unnecessary `dict()` call (rewrite as a literal)
-    "F401", # `sys` imported but unused
     "I001", # Import block is un-sorted or un-formatted
-    "PIE810", # Call `startswith` once with a `tuple`
-    "PT014", # Duplicate of test case at index 0 in `pytest.mark.parametrize`
     "PYI001", # Name of private `TypeVar` must start with `_`
-    "PYI029", # Defining `__repr__` in a stub is almost always redundant
     "PYI057", # Do not use `typing.ByteString`, which has unclear semantics and is deprecated
     "PYI063", # Use PEP 570 syntax for positional-only parameters
     "RUF010", # Use explicit conversion flag
     "RUF022", # `__all__` is not sorted
-    "RUF100", # Unused `noqa` directive (non-enabled: `C901`)
     "SIM117", # Use a single `with` statement with multiple contexts instead of nested `with` statements
     "UP006", # Use `list` instead of `List` for type annotation
     "UP007", # Use `X | Y` for type annotations

@@ -121,7 +121,6 @@ class TestSequenceRecord:
             (SequenceRecord("name", "A", "="), None),
             (SequenceRecord("name ", "A", "="), None),
             (SequenceRecord("name  ", "A", "="), None),
-            (SequenceRecord("name", "A", "="), None),
             (SequenceRecord("AotC I hate sand!", "A", "="), "I hate sand!"),
             (
                 SequenceRecord("Givemesome                       space", "A", "="),
@@ -138,7 +137,6 @@ class TestSequenceRecord:
             (SequenceRecord("name", "A", "="), "name"),
             (SequenceRecord("name ", "A", "="), "name"),
             (SequenceRecord("name  ", "A", "="), "name"),
-            (SequenceRecord("name", "A", "="), "name"),
             (SequenceRecord("AotC I hate sand!", "A", "="), "AotC"),
         ],
     )

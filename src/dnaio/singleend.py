@@ -6,7 +6,7 @@ from .readers import BamReader, FastaReader, FastqReader
 from .writers import FastaWriter, FastqWriter
 
 
-def _open_single(  # noqa: C901
+def _open_single(
     file_or_path: Union[str, os.PathLike, BinaryIO],
     opener,
     *,
@@ -136,7 +136,7 @@ def _detect_format_from_content(file: BinaryIO) -> Optional[str]:
     if magic.startswith(b"@") or magic == b"":
         # Pretend FASTQ for empty input
         return "fastq"
-    elif magic.startswith(b">") or magic.startswith(b"#"):
+    elif magic.startswith((b">", b"#")):
         # Some FASTA variants allow comments
         return "fasta"
     elif magic == b"BAM\1":

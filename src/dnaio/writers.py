@@ -130,7 +130,7 @@ class FastqWriter(FileWriter, SingleEndWriter):
         super().__init__(file, opener=opener, _close_file=_close_file)
         self._two_headers = two_headers
         # setattr avoids a complaint from Mypy
-        setattr(
+        setattr(  # noqa: B010
             self, "write", self._write_two_headers if self._two_headers else self._write
         )
 
