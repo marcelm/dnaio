@@ -99,5 +99,4 @@ ignore = [
     "RUF010", # Use explicit conversion flag
     "RUF022", # `__all__` is not sorted
     "SIM117", # Use a single `with` statement with multiple contexts instead of nested `with` statements
-    "UP032", # Use f-string instead of `format` call
 ]

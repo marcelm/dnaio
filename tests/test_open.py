@@ -33,9 +33,9 @@ SIMPLE_RECORDS = {
 
 def formatted_sequence(record, fileformat) -> str:
     if fileformat == "fastq":
-        return "@{}\n{}\n+\n{}\n".format(record.name, record.sequence, record.qualities)
+        return f"@{record.name}\n{record.sequence}\n+\n{record.qualities}\n"
     else:
-        return ">{}\n{}\n".format(record.name, record.sequence)
+        return f">{record.name}\n{record.sequence}\n"
 
 
 def formatted_sequences(records, fileformat) -> str:
@@ -346,7 +346,7 @@ def make_random_fasta(path, n_records) -> None:
 
     with xopen(path, "w") as f:
         for i in range(n_records):
-            name = "sequence_{}".format(i)
+            name = f"sequence_{i}"
             sequence = "".join(choice("ACGT") for _ in range(300))
             print(">", name, "\n", sequence, sep="", file=f)
 
