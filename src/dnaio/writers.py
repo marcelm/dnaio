@@ -1,6 +1,6 @@
 import os
 from os import PathLike
-from typing import Union, BinaryIO, Optional
+from typing import BinaryIO
 
 from xopen import xopen
 
@@ -17,10 +17,10 @@ class FileWriter:
 
     def __init__(
         self,
-        file: Union[PathLike, str, BinaryIO],
+        file: PathLike | str | BinaryIO,
         *,
         opener=xopen,
-        _close_file: Optional[bool] = None,
+        _close_file: bool | None = None,
     ):
         try:
             os.fspath(file)  # type: ignore
@@ -62,11 +62,11 @@ class FastaWriter(FileWriter, SingleEndWriter):
 
     def __init__(
         self,
-        file: Union[PathLike, str, BinaryIO],
+        file: PathLike | str | BinaryIO,
         *,
-        line_length: Optional[int] = None,
+        line_length: int | None = None,
         opener=xopen,
-        _close_file: Optional[bool] = None,
+        _close_file: bool | None = None,
     ):
         super().__init__(file, opener=opener, _close_file=_close_file)
         self.line_length = line_length if line_length != 0 else None
@@ -74,7 +74,7 @@ class FastaWriter(FileWriter, SingleEndWriter):
     def __repr__(self) -> str:
         return f"FastaWriter('{getattr(self._file, 'name', self._file)}')"
 
-    def write(self, name_or_record, sequence: Optional[str] = None):
+    def write(self, name_or_record, sequence: str | None = None):
         """Write a record to the FASTA file.
 
         If only one parameter (name_or_record) is given, it must have
@@ -121,11 +121,11 @@ class FastqWriter(FileWriter, SingleEndWriter):
 
     def __init__(
         self,
-        file: Union[PathLike, str, BinaryIO],
+        file: PathLike | str | BinaryIO,
         *,
         two_headers: bool = False,
         opener=xopen,
-        _close_file: Optional[bool] = None,
+        _close_file: bool | None = None,
     ):
         super().__init__(file, opener=opener, _close_file=_close_file)
         self._two_headers = two_headers

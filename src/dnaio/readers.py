@@ -5,7 +5,8 @@ __all__ = ["FastaReader", "FastqReader"]
 
 import io
 from os import PathLike
-from typing import Union, BinaryIO, Optional, Iterator, List
+from typing import BinaryIO
+from collections.abc import Iterator
 
 from xopen import xopen
 
@@ -26,10 +27,10 @@ class BinaryFileReader:
 
     def __init__(
         self,
-        file: Union[PathLike, str, BinaryIO],
+        file: PathLike | str | BinaryIO,
         *,
         opener=xopen,
-        _close_file: Optional[bool] = None,
+        _close_file: bool | None = None,
     ):
         """
         The file is a path or a file-like object. In both cases, the file may
@@ -71,12 +72,12 @@ class FastaReader(BinaryFileReader, SingleEndReader):
 
     def __init__(
         self,
-        file: Union[PathLike, str, BinaryIO],
+        file: PathLike | str | BinaryIO,
         *,
         keep_linebreaks: bool = False,
         sequence_class=SequenceRecord,
         opener=xopen,
-        _close_file: Optional[bool] = None,
+        _close_file: bool | None = None,
     ):
         """
         file is a path or a file-like object. In both cases, the file may
@@ -96,7 +97,7 @@ class FastaReader(BinaryFileReader, SingleEndReader):
         Iterate over the records in this FASTA file.
         """
         name = None
-        seq: List[str] = []
+        seq: list[str] = []
         if self._file.closed:
             return
         for i, line in enumerate(self._file):
@@ -145,12 +146,12 @@ class FastqReader(BinaryFileReader, SingleEndReader):
 
     def __init__(
         self,
-        file: Union[PathLike, str, BinaryIO],
+        file: PathLike | str | BinaryIO,
         *,
         sequence_class=SequenceRecord,
         buffer_size: int = 128 * 1024,  # Buffer size used by cat, pigz etc.
         opener=xopen,
-        _close_file: Optional[bool] = None,
+        _close_file: bool | None = None,
     ):
         """
         file is a filename or a file-like object.
@@ -206,12 +207,12 @@ class BamReader(BinaryFileReader, SingleEndReader):
 
     def __init__(
         self,
-        file: Union[PathLike, str, BinaryIO],
+        file: PathLike | str | BinaryIO,
         *,
         sequence_class=SequenceRecord,
         buffer_size: int = 128 * 1024,  # Buffer size used by cat, pigz etc.
         opener=xopen,
-        _close_file: Optional[bool] = None,
+        _close_file: bool | None = None,
         with_header: bool = True,
     ):
         super().__init__(file, opener=opener, _close_file=_close_file)

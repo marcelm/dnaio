@@ -1,6 +1,3 @@
-from typing import Optional
-
-
 class UnknownFileFormat(Exception):
     """
     The file format could not be automatically detected
@@ -19,7 +16,7 @@ class FileFormatError(Exception):
 
     format = "sequence"  # Something generic that works for both FASTA and FASTQ
 
-    def __init__(self, msg: str, line: Optional[int]):
+    def __init__(self, msg: str, line: int | None):
         super().__init__(msg, line)
         self.message = msg
         self.line = line  # starts at 0!

@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Union, BinaryIO, Tuple
+from typing import BinaryIO
 
 from .exceptions import UnknownFileFormat
 from .readers import BamReader, FastaReader, FastqReader
@@ -7,13 +7,13 @@ from .writers import FastaWriter, FastqWriter
 
 
 def _open_single(
-    file_or_path: Union[str, os.PathLike, BinaryIO],
+    file_or_path: str | os.PathLike | BinaryIO,
     opener,
     *,
-    fileformat: Optional[str] = None,
+    fileformat: str | None = None,
     mode: str = "r",
-    qualities: Optional[bool] = None,
-) -> Union[BamReader, FastaReader, FastaWriter, FastqReader, FastqWriter]:
+    qualities: bool | None = None,
+) -> BamReader | FastaReader | FastaWriter | FastqReader | FastqWriter:
     """
     Open a single sequence file.
     """
@@ -77,9 +77,9 @@ def _open_single(
 
 
 def _open_file_or_path(
-    file_or_path: Union[str, os.PathLike, BinaryIO], mode: str, opener
-) -> Tuple[bool, BinaryIO, Optional[str]]:
-    path: Optional[str]
+    file_or_path: str | os.PathLike | BinaryIO, mode: str, opener
+) -> tuple[bool, BinaryIO, str | None]:
+    path: str | None
     file: BinaryIO
     try:
         path = os.fspath(file_or_path)  # type: ignore
@@ -101,7 +101,7 @@ def _open_file_or_path(
     return close_file, file, path
 
 
-def _detect_format_from_name(name: str) -> Optional[str]:
+def _detect_format_from_name(name: str) -> str | None:
     """
     name -- file name
 
@@ -122,7 +122,7 @@ def _detect_format_from_name(name: str) -> Optional[str]:
     return None
 
 
-def _detect_format_from_content(file: BinaryIO) -> Optional[str]:
+def _detect_format_from_content(file: BinaryIO) -> str | None:
     """
     Return 'fasta', 'fastq' or None
     """
