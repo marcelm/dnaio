@@ -7,7 +7,7 @@ or subprocess and be parsed and processed there.
 """
 
 from io import BufferedIOBase
-from typing import Optional, Iterator, Tuple
+from collections.abc import Iterator
 
 from ._bam import read_bam_header_after_magic
 from ._core import paired_fastq_heads as _paired_fastq_heads
@@ -15,7 +15,7 @@ from ._core import bam_head as _bam_head
 from .exceptions import FileFormatError, FastaFormatError, UnknownFileFormat
 
 
-def _fasta_head(buf: bytes, end: Optional[int] = None) -> int:
+def _fasta_head(buf: bytes | bytearray, end: int | None = None) -> int:
     """
     Search for the end of the last complete FASTA record within buf[:end]
 
@@ -37,8 +37,8 @@ def _fasta_head(buf: bytes, end: Optional[int] = None) -> int:
 
 
 def _paired_fasta_heads(
-    buf1: bytes, buf2: bytes, end1: int, end2: int
-) -> Tuple[int, int]:
+    buf1: bytes | bytearray, buf2: bytes | bytearray, end1: int, end2: int
+) -> tuple[int, int]:
     """
     Return positions pos1, pos2 where right1 <= end1 and right2 <= end2
     such that buf1[:pos1] and buf2[:pos2] contain the same number of complete FASTA
@@ -64,7 +64,7 @@ def _paired_fasta_heads(
     return (pos1, pos2)
 
 
-def _fastq_head(buf: bytes, end: Optional[int] = None) -> int:
+def _fastq_head(buf: bytes | bytearray, end: int | None = None) -> int:
     """
     Search for the end of the last complete *two* FASTQ records in buf[:end].
 
@@ -163,7 +163,7 @@ def read_paired_chunks(
     f: BufferedIOBase,
     f2: BufferedIOBase,
     buffer_size: int = 4 * 1024**2,
-) -> Iterator[Tuple[memoryview, memoryview]]:
+) -> Iterator[tuple[memoryview, memoryview]]:
     """
     Read chunks of paired-end FASTA or FASTQ records from two files.
     A pair of chunks (memoryview objects) is yielded on each iteration,

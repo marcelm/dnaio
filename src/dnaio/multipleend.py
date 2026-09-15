@@ -1,7 +1,8 @@
 import contextlib
 import os
 from os import PathLike
-from typing import BinaryIO, IO, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import BinaryIO, IO
+from collections.abc import Iterable, Iterator
 
 from xopen import xopen
 
@@ -14,10 +15,10 @@ from .writers import FastaWriter, FastqWriter
 
 
 def _open_multiple(
-    *files: Union[str, PathLike, BinaryIO],
-    fileformat: Optional[str] = None,
+    *files: str | PathLike | BinaryIO,
+    fileformat: str | None = None,
     mode: str = "r",
-    qualities: Optional[bool] = None,
+    qualities: bool | None = None,
     opener=xopen,
 ):
     if not files:
@@ -48,15 +49,15 @@ class MultipleFileReader:
 
     def __init__(
         self,
-        *files: Union[str, PathLike, BinaryIO],
-        fileformat: Optional[str] = None,
+        *files: str | PathLike | BinaryIO,
+        fileformat: str | None = None,
         opener=xopen,
     ):
         if len(files) < 1:
             raise ValueError("At least one file is required")
         self._files = files
         self._stack = contextlib.ExitStack()
-        self._readers: List[Union[FastaReader, FastqReader]] = [
+        self._readers: list[FastaReader | FastqReader] = [
             self._stack.enter_context(
                 _open_single(file, opener=opener, fileformat=fileformat, mode="r")
             )
@@ -70,7 +71,7 @@ class MultipleFileReader:
             f"({', '.join(repr(reader) for reader in self._readers)})"
         )
 
-    def __iter__(self) -> Iterator[Tuple[SequenceRecord, ...]]:
+    def __iter__(self) -> Iterator[tuple[SequenceRecord, ...]]:
         """
         Iterate over multiple inputs containing records
 
@@ -131,7 +132,7 @@ class MultipleFastaWriter(MultipleFileWriter):
 
     def __init__(
         self,
-        *files: Union[str, PathLike, BinaryIO],
+        *files: str | PathLike | BinaryIO,
         opener=xopen,
         append: bool = False,
     ):
@@ -141,7 +142,7 @@ class MultipleFastaWriter(MultipleFileWriter):
         self._files = files
         self._number_of_files = len(files)
         self._stack = contextlib.ExitStack()
-        self._writers: List[Union[FastaWriter, FastqWriter]] = [
+        self._writers: list[FastaWriter | FastqWriter] = [
             self._stack.enter_context(
                 _open_single(
                     file,
@@ -169,7 +170,7 @@ class MultipleFastaWriter(MultipleFileWriter):
         for record, writer in zip(records, self._writers):
             writer.write(record)
 
-    def write_iterable(self, records_iterable: Iterable[Tuple[SequenceRecord, ...]]):
+    def write_iterable(self, records_iterable: Iterable[tuple[SequenceRecord, ...]]):
         for records in records_iterable:
             self.write(*records)
 
@@ -190,7 +191,7 @@ class MultipleFastqWriter(MultipleFileWriter):
 
     def __init__(
         self,
-        *files: Union[str, PathLike, BinaryIO],
+        *files: str | PathLike | BinaryIO,
         opener=xopen,
         append: bool = False,
     ):
@@ -200,7 +201,7 @@ class MultipleFastqWriter(MultipleFileWriter):
         self._files = files
         self._number_of_files = len(files)
         self._stack = contextlib.ExitStack()
-        self._writers: List[IO] = [
+        self._writers: list[IO] = [
             self._stack.enter_context(
                 opener(file, mode + "b") if not hasattr(file, "write") else file  # type: ignore
             )
@@ -221,7 +222,7 @@ class MultipleFastqWriter(MultipleFileWriter):
         for record, writer in zip(records, self._writers):
             writer.write(record.fastq_bytes())
 
-    def write_iterable(self, records_iterable: Iterable[Tuple[SequenceRecord, ...]]):
+    def write_iterable(self, records_iterable: Iterable[tuple[SequenceRecord, ...]]):
         # Use faster methods for more common cases before falling back to
         # generic multiple files mode (which is much slower due to calling the
         # zip function).

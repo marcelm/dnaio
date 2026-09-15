@@ -440,7 +440,7 @@ class TestFastaWriter:
         bio = BytesIO()
         with FastaWriter(bio) as fw:
             fw.write(SequenceRecord("name", ""))
-        assert bio.getvalue() == b">name\n\n", "{!r}".format(bio.getvalue())
+        assert bio.getvalue() == b">name\n\n", f"{bio.getvalue()!r}"
 
 
 class TestFastqWriter:

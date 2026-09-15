@@ -88,3 +88,15 @@ source = [
     "src/",
     "*/site-packages/",
 ]
+
+[tool.ruff.lint]
+ignore = [
+    "C408", # Unnecessary `dict()` call (rewrite as a literal)
+    "I001", # Import block is un-sorted or un-formatted
+    "PYI001", # Name of private `TypeVar` must start with `_`
+    "PYI057", # Do not use `typing.ByteString`, which has unclear semantics and is deprecated
+    "PYI063", # Use PEP 570 syntax for positional-only parameters
+    "RUF010", # Use explicit conversion flag
+    "RUF022", # `__all__` is not sorted
+    "SIM117", # Use a single `with` statement with multiple contexts instead of nested `with` statements
+]

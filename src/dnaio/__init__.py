@@ -33,7 +33,7 @@ __all__ = [
 
 import functools
 from os import PathLike
-from typing import Optional, Union, BinaryIO, Literal, overload
+from typing import BinaryIO, Literal, overload
 
 from xopen import xopen
 
@@ -78,17 +78,17 @@ from ._version import version as __version__
 # Backwards compatibility alias
 Sequence = SequenceRecord
 
-_FileOrPath = Union[str, PathLike, BinaryIO]
+_FileOrPath = str | PathLike | BinaryIO
 
 
 @overload
 def open(
     _file: _FileOrPath,
     *,
-    fileformat: Optional[str] = ...,
+    fileformat: str | None = ...,
     interleaved: Literal[False] = ...,
     mode: Literal["r"] = ...,
-    qualities: Optional[bool] = ...,
+    qualities: bool | None = ...,
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
@@ -101,10 +101,10 @@ def open(
     _file1: _FileOrPath,
     _file2: _FileOrPath,
     *,
-    fileformat: Optional[str] = ...,
+    fileformat: str | None = ...,
     interleaved: Literal[False] = ...,
     mode: Literal["r"] = ...,
-    qualities: Optional[bool] = ...,
+    qualities: bool | None = ...,
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
@@ -117,9 +117,9 @@ def open(
     _file: _FileOrPath,
     *,
     interleaved: Literal[True],
-    fileformat: Optional[str] = ...,
+    fileformat: str | None = ...,
     mode: Literal["r"] = ...,
-    qualities: Optional[bool] = ...,
+    qualities: bool | None = ...,
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
@@ -133,9 +133,9 @@ def open(
     _file2: _FileOrPath,
     _file3: _FileOrPath,
     *files: _FileOrPath,
-    fileformat: Optional[str] = ...,
+    fileformat: str | None = ...,
     mode: Literal["r"] = ...,
-    qualities: Optional[bool] = ...,
+    qualities: bool | None = ...,
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
@@ -148,9 +148,9 @@ def open(
     _file: _FileOrPath,
     *,
     mode: Literal["w", "a"],
-    fileformat: Optional[str] = ...,
+    fileformat: str | None = ...,
     interleaved: Literal[False] = ...,
-    qualities: Optional[bool] = ...,
+    qualities: bool | None = ...,
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
@@ -164,9 +164,9 @@ def open(
     _file2: _FileOrPath,
     *,
     mode: Literal["w", "a"],
-    fileformat: Optional[str] = ...,
+    fileformat: str | None = ...,
     interleaved: Literal[False] = ...,
-    qualities: Optional[bool] = ...,
+    qualities: bool | None = ...,
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
@@ -180,8 +180,8 @@ def open(
     *,
     mode: Literal["w", "a"],
     interleaved: Literal[True],
-    fileformat: Optional[str] = ...,
-    qualities: Optional[bool] = ...,
+    fileformat: str | None = ...,
+    qualities: bool | None = ...,
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
@@ -196,9 +196,9 @@ def open(
     _file3: _FileOrPath,
     *files: _FileOrPath,
     mode: Literal["w", "a"],
-    fileformat: Optional[str] = ...,
+    fileformat: str | None = ...,
     interleaved: Literal[False] = ...,
-    qualities: Optional[bool] = ...,
+    qualities: bool | None = ...,
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
@@ -208,24 +208,17 @@ def open(
 
 def open(
     *files: _FileOrPath,
-    file1: Optional[_FileOrPath] = None,
-    file2: Optional[_FileOrPath] = None,
-    fileformat: Optional[str] = None,
+    file1: _FileOrPath | None = None,
+    file2: _FileOrPath | None = None,
+    fileformat: str | None = None,
     interleaved: bool = False,
     mode: str = "r",
-    qualities: Optional[bool] = None,
+    qualities: bool | None = None,
     opener=xopen,
     compression_level: int = 1,
     open_threads: int = 0,
     **_kwargs,  # TODO Can we get rid of this? Only here to satisfy type checker
-) -> Union[
-    SingleEndReader,
-    PairedEndReader,
-    SingleEndWriter,
-    PairedEndWriter,
-    MultipleFileReader,
-    MultipleFileWriter,
-]:
+) -> SingleEndReader | PairedEndReader | SingleEndWriter | PairedEndWriter | MultipleFileReader | MultipleFileWriter:
     """
     Open one or more FASTQ or FASTA files for reading or writing,
     or open one (unaligned) BAM file for reading.

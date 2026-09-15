@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from contextlib import AbstractContextManager
-from typing import Iterable, Iterator, Tuple
+from collections.abc import Iterable, Iterator
 
 from dnaio import SequenceRecord
 
@@ -29,7 +29,7 @@ class SingleEndReader(AbstractContextManager):
 
 class PairedEndReader(AbstractContextManager):
     @abstractmethod
-    def __iter__(self) -> Iterator[Tuple[SequenceRecord, SequenceRecord]]:
+    def __iter__(self) -> Iterator[tuple[SequenceRecord, SequenceRecord]]:
         """
         Iterate over an input containing paired-end records
 
@@ -90,7 +90,7 @@ class MultipleFileWriter(AbstractContextManager):
         """
 
     @abstractmethod
-    def write_iterable(self, list_of_records: Iterable[Tuple[SequenceRecord, ...]]):
+    def write_iterable(self, list_of_records: Iterable[tuple[SequenceRecord, ...]]):
         """
         Iterate over the list (or other iterable container) and write all
         N-tuples of SequenceRecord to disk. N must be equal

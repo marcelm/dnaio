@@ -1,6 +1,7 @@
 from contextlib import ExitStack
 from os import PathLike
-from typing import Union, BinaryIO, Optional, Iterator, Tuple
+from typing import BinaryIO
+from collections.abc import Iterator
 
 from xopen import xopen
 
@@ -13,12 +14,12 @@ from .singleend import _open_single
 
 
 def _open_paired(
-    *files: Union[str, PathLike, BinaryIO],
-    fileformat: Optional[str] = None,
+    *files: str | PathLike | BinaryIO,
+    fileformat: str | None = None,
     mode: str = "r",
-    qualities: Optional[bool] = None,
+    qualities: bool | None = None,
     opener=xopen,
-) -> Union[PairedEndReader, PairedEndWriter]:
+) -> PairedEndReader | PairedEndWriter:
     """
     Open paired-end reads
     """
@@ -65,11 +66,11 @@ class TwoFilePairedEndReader(PairedEndReader):
 
     def __init__(
         self,
-        file1: Union[str, PathLike, BinaryIO],
-        file2: Union[str, PathLike, BinaryIO],
+        file1: str | PathLike | BinaryIO,
+        file2: str | PathLike | BinaryIO,
         *,
         mode="r",
-        fileformat: Optional[str] = None,
+        fileformat: str | None = None,
         opener=xopen,
     ):
         self.mode = mode
@@ -86,7 +87,7 @@ class TwoFilePairedEndReader(PairedEndReader):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(file1={self.reader1}, file2={self.reader2})"
 
-    def __iter__(self) -> Iterator[Tuple[SequenceRecord, SequenceRecord]]:
+    def __iter__(self) -> Iterator[tuple[SequenceRecord, SequenceRecord]]:
         """
         Iterate over the paired reads.
         Each yielded item is a pair of `SequenceRecord` objects.
@@ -146,10 +147,10 @@ class InterleavedPairedEndReader(PairedEndReader):
 
     def __init__(
         self,
-        file: Union[str, PathLike, BinaryIO],
+        file: str | PathLike | BinaryIO,
         *,
         mode="r",
-        fileformat: Optional[str] = None,
+        fileformat: str | None = None,
         opener=xopen,
     ):
         self.mode = mode
@@ -161,7 +162,7 @@ class InterleavedPairedEndReader(PairedEndReader):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.reader})"
 
-    def __iter__(self) -> Iterator[Tuple[SequenceRecord, SequenceRecord]]:
+    def __iter__(self) -> Iterator[tuple[SequenceRecord, SequenceRecord]]:
         it = iter(self.reader)
         for r1 in it:
             try:
@@ -200,18 +201,18 @@ class TwoFilePairedEndWriter(PairedEndWriter):
 
     def __init__(
         self,
-        file1: Union[str, PathLike, BinaryIO],
-        file2: Union[str, PathLike, BinaryIO],
+        file1: str | PathLike | BinaryIO,
+        file2: str | PathLike | BinaryIO,
         *,
-        fileformat: Optional[str] = "fastq",
-        qualities: Optional[bool] = None,
+        fileformat: str | None = "fastq",
+        qualities: bool | None = None,
         opener=xopen,
         append: bool = False,
     ):
         mode = "a" if append else "w"
         with ExitStack() as stack:
-            self._writer1: Union[FastaWriter, FastqWriter]
-            self._writer2: Union[FastaWriter, FastqWriter]
+            self._writer1: FastaWriter | FastqWriter
+            self._writer2: FastaWriter | FastqWriter
             self._writer1 = stack.enter_context(
                 _open_single(
                     file1,
@@ -260,10 +261,10 @@ class InterleavedPairedEndWriter(PairedEndWriter):
 
     def __init__(
         self,
-        file: Union[str, PathLike, BinaryIO],
+        file: str | PathLike | BinaryIO,
         *,
-        fileformat: Optional[str] = "fastq",
-        qualities: Optional[bool] = None,
+        fileformat: str | None = "fastq",
+        qualities: bool | None = None,
         opener=xopen,
         append: bool = False,
     ):
