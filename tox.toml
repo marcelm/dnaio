@@ -1,7 +1,7 @@
-env_list = ["ruff", "black", "mypy", "docs", "py310", "py311", "py312", "py313", "py314"]
+env_list = ["ruff", "black", "mypy", "docs", "py311", "py312", "py313", "py314"]
 
 [env_run_base]
-default_base_python = "3.10"
+default_base_python = "3.11"
 deps = [
     "pytest",
     "coverage",
