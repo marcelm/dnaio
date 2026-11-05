@@ -5,6 +5,7 @@ Changelog
 development version
 -------------------
 
+* Started supporting Python 3.15
 * Dropped support for Python 3.10
 
 v1.2.4 (2025-10-12)
