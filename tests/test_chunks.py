@@ -61,9 +61,7 @@ def test_paired_fasta_heads():
     assert pheads(b">r\nA\n>s", b">r\nCT\n>s") == (5, 6)
     assert pheads(b">r\nA\n>s\nG\n>t\n", b">r\nCT\n>s") == (5, 6)
 
-    buf1 = (
-        textwrap.dedent(
-            """
+    buf1 = textwrap.dedent("""
         >1
         a
         b
@@ -71,25 +69,15 @@ def test_paired_fasta_heads():
         c
         >3
         uv
-        """
-        )
-        .strip()
-        .encode()
-    )
-    buf2 = (
-        textwrap.dedent(
-            """
+        """).strip().encode()
+    buf2 = textwrap.dedent("""
         >1
         def
         >2
         gh
         i
         >3
-        """
-        )
-        .strip()
-        .encode()
-    )
+        """).strip().encode()
 
     assert pheads(buf1, buf2) == (
         len(b">1\na\nb\n>2\nc\n"),

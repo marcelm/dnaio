@@ -20,7 +20,7 @@ deps = ["ruff"]
 commands = [["ruff", "check", "src/", "tests/", "setup.py"]]
 
 [env.black]
-deps = ["black==22.3.0"]
+deps = ["black==26.10.1"]
 skip_install = true
 commands = [["black", "--check", "src/", "tests/", "doc/", "helpers/", "setup.py"]]
 

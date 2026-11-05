@@ -1,6 +1,7 @@
 """
 Classes for reading FASTA and FASTQ files
 """
+
 __all__ = ["FastaReader", "FastqReader"]
 
 import io

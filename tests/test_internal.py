@@ -58,34 +58,26 @@ class TestFastaReader:
         assert reads == simple_fasta
 
     def test_with_comments(self) -> None:
-        fasta = BytesIO(
-            dedent(
-                """
+        fasta = BytesIO(dedent("""
             # a comment
             # another one
             >first_sequence
             SEQUENCE1
             >second_sequence
             SEQUENCE2
-            """
-            ).encode()
-        )
+            """).encode())
         reads = list(FastaReader(fasta))
         assert reads == simple_fasta
 
     def test_wrong_format(self) -> None:
-        fasta = BytesIO(
-            dedent(
-                """# a comment
+        fasta = BytesIO(dedent("""# a comment
             # another one
             unexpected
             >first_sequence
             SEQUENCE1
             >second_sequence
             SEQUENCE2
-            """
-            ).encode()
-        )
+            """).encode())
         with raises(FastaFormatError) as info:
             list(FastaReader(fasta))
         assert info.value.line == 2

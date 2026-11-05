@@ -74,7 +74,6 @@ from .interfaces import (
 from .chunks import read_chunks, read_paired_chunks
 from ._version import version as __version__
 
-
 # Backwards compatibility alias
 Sequence = SequenceRecord
 
@@ -92,8 +91,7 @@ def open(
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
-) -> SingleEndReader:
-    ...
+) -> SingleEndReader: ...
 
 
 @overload
@@ -108,8 +106,7 @@ def open(
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
-) -> PairedEndReader:
-    ...
+) -> PairedEndReader: ...
 
 
 @overload
@@ -123,8 +120,7 @@ def open(
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
-) -> PairedEndReader:
-    ...
+) -> PairedEndReader: ...
 
 
 @overload
@@ -139,8 +135,7 @@ def open(
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
-) -> MultipleFileReader:
-    ...
+) -> MultipleFileReader: ...
 
 
 @overload
@@ -154,8 +149,7 @@ def open(
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
-) -> SingleEndWriter:
-    ...
+) -> SingleEndWriter: ...
 
 
 @overload
@@ -170,8 +164,7 @@ def open(
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
-) -> PairedEndWriter:
-    ...
+) -> PairedEndWriter: ...
 
 
 @overload
@@ -185,8 +178,7 @@ def open(
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
-) -> PairedEndWriter:
-    ...
+) -> PairedEndWriter: ...
 
 
 @overload
@@ -202,8 +194,7 @@ def open(
     opener=...,
     compression_level: int = ...,
     open_threads: int = ...,
-) -> MultipleFileWriter:
-    ...
+) -> MultipleFileWriter: ...
 
 
 def open(
@@ -218,7 +209,14 @@ def open(
     compression_level: int = 1,
     open_threads: int = 0,
     **_kwargs,  # TODO Can we get rid of this? Only here to satisfy type checker
-) -> SingleEndReader | PairedEndReader | SingleEndWriter | PairedEndWriter | MultipleFileReader | MultipleFileWriter:
+) -> (
+    SingleEndReader
+    | PairedEndReader
+    | SingleEndWriter
+    | PairedEndWriter
+    | MultipleFileReader
+    | MultipleFileWriter
+):
     """
     Open one or more FASTQ or FASTA files for reading or writing,
     or open one (unaligned) BAM file for reading.
