@@ -2,7 +2,7 @@
 Changelog
 =========
 
-development version
+v1.2.5 (2026-11-05)
 -------------------
 
 * Started supporting Python 3.15
